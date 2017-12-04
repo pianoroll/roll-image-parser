@@ -18,7 +18,7 @@
 #ifndef _TIFFHEADER_H
 #define _TIFFHEADER_H
 
-#include "TiffUtilities.h"
+#include "Utilities.h"
 
 namespace tiff  {
 

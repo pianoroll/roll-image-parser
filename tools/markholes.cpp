@@ -12,6 +12,8 @@
 
 #include "RollImage.h"
 
+#include <vector>
+
 using namespace std;
 using namespace tiff;
 
@@ -38,7 +40,11 @@ int main(int argc, char** argv) {
 
 	roll.loadGreenChannel();
 	roll.analyze();
+	roll.printRollImageProperties();
+	roll.markHoleBBs();
+	roll.markTrackerPositions();
 	roll.mergePixelOverlay(output);
+
 	output.close();
 	return 0;
 }
