@@ -15,7 +15,7 @@
 
 #include "HoleInfo.h"
 
-namespace tiff  {
+namespace prp  {
 
 
 //////////////////////////////
@@ -76,7 +76,7 @@ std::ostream& operator<<(std::ostream& out, HoleInfo* hi) {
 
 
 
-} // end tiff namespace
+} // end prp namespace
 
 
 

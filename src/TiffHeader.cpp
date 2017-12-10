@@ -19,7 +19,7 @@
 #include "TiffHeader.h"
 
 
-namespace tiff {
+namespace prp {
 
 
 //////////////////////////////
@@ -425,7 +425,7 @@ ulong TiffHeader::getPixelCount(void) const {
 
 
 
-} // std::end namespace tiff
+} // std::end namespace prp
 
 
 
@@ -434,7 +434,7 @@ ulong TiffHeader::getPixelCount(void) const {
 // operator<< --
 //
 
-std::ostream& operator<<(std::ostream& out, const tiff::TiffHeader& header) {
+std::ostream& operator<<(std::ostream& out, const prp::TiffHeader& header) {
 	out << "ROWS:\t"           << header.getRows()                     << std::endl;
 	out << "COLS:\t"           << header.getCols()                     << std::endl;
 	out << "ORIENTATION:\t"    << header.getOrientation()              << std::endl;

@@ -23,7 +23,7 @@
 #include <iomanip>
 
 using namespace std;
-using namespace tiff;
+using namespace prp;
 
 class DuplicateInfo {
 	public:

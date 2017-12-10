@@ -13,6 +13,8 @@
 #ifndef _UTILITIES_H
 #define _UTILITIES_H
 
+#include "FFT.h"
+
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -20,12 +22,11 @@
 #include <utility>
 #include <cmath>
 
-namespace tiff {
+namespace prp {
 
 typedef unsigned long ulong;
 typedef unsigned short ushort;
 typedef unsigned char uchar;
-typedef std::pair<double, double> mycomplex;
 
 // File reading functions
 ulong       readLittleEndian4ByteUInt  (std::istream& input);
@@ -37,41 +38,20 @@ double      readType5Value             (std::fstream& input, int datatype, int c
 
 // misc. utility functions:
 bool        aboveThreshold             (uchar value, uchar threshold);
-
 int         getMaximum                 (std::vector<int>& array, ulong startindex = 0, 
                                         ulong length = 0);
-
 ulong       maxValueIndex              (std::vector<ulong> array);
+void        exponentialSmoothing       (std::vector<double>& array, double gain);
 
 template <class TYPE>
 double      getAverage                 (std::vector<TYPE>& array, ulong startindex = 0,
                                         ulong length = 0);
 
 
-// FFT functions
-
-void FFT(std::vector<mycomplex>& output, std::vector<mycomplex>& input);
-void shuffle(std::vector<mycomplex>& X);
-void dftmerge(std::vector<mycomplex>& XF);
-mycomplex cexp(mycomplex& Z);
-void swap(mycomplex& a, mycomplex& b);
-int bitrev(int n, int B);
-void fft_destructive(std::vector<mycomplex>& X);
-mycomplex operator*(mycomplex& a, mycomplex& b);
-mycomplex operator+(mycomplex& a, mycomplex& b);
-mycomplex operator-(mycomplex& a, mycomplex& b);
-bool isPowerOfTwo(ulong value);
-#define two(x) (1 << (x))	 /* 2**x by left-shifting */
-double magnitude(mycomplex& input);
-
-
-
-
 ///////////////////////////////////////////////////////////////////////////
 //
 //  Templates --
 //
-
 
 //////////////////////////////
 //
@@ -94,7 +74,7 @@ double getAverage(std::vector<TYPE>& array, ulong startindex, ulong length) {
 
 
 
-} // end namespace tiff
+} // end namespace prp
 
 
 #endif /* _UTILITIES_H */

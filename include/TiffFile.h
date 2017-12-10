@@ -22,7 +22,7 @@
 
 #include "TiffHeader.h"
 
-namespace tiff  {
+namespace prp  {
 
 
 class TiffFile : public TiffHeader {
@@ -46,7 +46,7 @@ class TiffFile : public TiffHeader {
 
 };
 
-} // end tiff namespace
+} // end prp namespace
 
 #endif /* _TIFFFILE_H */
 

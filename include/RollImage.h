@@ -19,8 +19,10 @@
 
 #include "TiffFile.h"
 #include "HoleInfo.h"
+#include "TearInfo.h"
+#include "RollOptions.h"
 
-namespace tiff  {
+namespace prp  {
 
 
 // Pixel functions:
@@ -31,16 +33,17 @@ namespace tiff  {
 #define PIX_PRELEADER   4    /* pixel represents non-paper in pre-leader region  */
 #define PIX_POSTLEADER  5    /* pixel represents non-paper in post-leader region */
 #define PIX_HARDMARGIN  6    /* pixel represents hard-margin                     */
-#define PIX_HOLE        7    /* pixel represents hole in roll                    */
-#define PIX_HOLEBB      8    /* pixel represents bounding box around hole        */
-#define PIX_TRACKER     9    /* pixel represents bounding box around hole        */
-#define PIX_POSTMUSIC  10    /* pixel represents after last hole in roll         */
-#define PIX_DEBUG      11    /* debugging pixel type 1                           */
-#define PIX_DEBUG2     12    /* debugging pixel type 2                           */
+#define PIX_TEAR        7    /* pixel represents uncategorized non-paper         */
+#define PIX_HOLE        8    /* pixel represents hole in roll                    */
+#define PIX_HOLEBB      9    /* pixel represents bounding box around hole        */
+#define PIX_TRACKER    10    /* pixel represents bounding box around hole        */
+#define PIX_POSTMUSIC  11    /* pixel represents after last hole in roll         */
+#define PIX_DEBUG      12    /* debugging pixel type 1                           */
+#define PIX_DEBUG2     13    /* debugging pixel type 2                           */
 
 typedef unsigned char pixtype;
 
-class RollImage : public TiffFile {
+class RollImage : public TiffFile, public RollOptions {
 	public:
 		                 RollImage                   (void);
 		                ~RollImage                   ();
@@ -67,11 +70,12 @@ class RollImage : public TiffFile {
 		ulong           getLeftMarginWidth           (ulong rowindex);
 		ulong           getRightMarginWidth          (ulong rowindex);
 		double          getAverageSoftMarginTotal    (void);
-		void            generateDriftCorrection      (void);
+		void            generateDriftCorrection      (double gain);
 		void            analyzeTrackerBarSpacing     (void);
 		void            analyzeTrackerBarPositions   (void);
 		void            analyzeHorizontalHolePosition(void);
 		void            markTrackerPositions         (void);
+		void            analyzeMidiKeyMapping        (void);
 
 		// pixelType: a bitmask which contains enumerated types for the
 		// functions of pixels (the PIX_* defines above):
@@ -103,11 +107,26 @@ class RollImage : public TiffFile {
 		// larger holes which are not anti-dust
 		std::vector<HoleInfo*> holes;
 
-		// trackerArray -- holes sorte by tracker position
+		// trackerArray -- holes sorted by tracker position
 		std::vector<std::vector<HoleInfo*>> trackerArray;
+
+		// midiToHoleMapping -- mapping from MIDI key number to hole position 
+		// (in image, not roll).  Zero means no mapping (not allowed to reference
+		// position 0 in trackerArray).
+		std::vector<int> midiToHoleMapping;
 	
+		// midiEventCount -- 0 = no events, >0 = events (currently hole counts)
+		std::vector<int> midiEventCount;
+
 		// antidust: List of holes on roll which are too small to be musical.
 		std::vector<HoleInfo*> antidust;
+
+		// bassTears -- tear info for the left side of the roll
+		std::vector<TearInfo*> bassTears;
+
+		// trebleTears -- tear info for the right side of the roll
+		std::vector<TearInfo*> trebleTears;
+
 
 	protected:
 		void       analyzeBasicMargins         (void);
@@ -130,27 +149,42 @@ class RollImage : public TiffFile {
 		void       setLeaderIndex              (ulong value);
 		void       analyzeHardMargins          (ulong leaderBoundary);
 		void       fillHoleInfo                (HoleInfo& hi, ulong r, ulong c);
+		void       fillTearInfo                (TearInfo& ti, ulong r, ulong c,
+		                                        ulong& counter);
 		void       extractHole                 (ulong row, ulong col);
 		void       markPosteriorLeader         (void);
 		void       markHoleBB                  (HoleInfo& hi);
 		double     getTrackerShiftScore        (double shift);
+		void       analyzeTears                (void);
+		ulong      findPeak                    (std::vector<double>& array, ulong r,
+		                                        ulong& peakindex, double& peakvalue);
+		void       processTears                (std::vector<PreTearInfo>& ltear,
+		                                        std::vector<PreTearInfo>& rtear,
+		                                        std::vector<double>& lslow,
+		                                        std::vector<double>& rslow,
+		                                        std::vector<double>& lfast,
+		                                        std::vector<double>& rfast);
+		void       getTearInfo                 (TearInfo& ti, PreTearInfo& pti,
+		                                        std::vector<double>& slow,
+		                                        std::vector<double>& fast, int side);
 
 	private:
-		bool			m_analyzedBasicMargins    = false;
-		bool			m_analyzedLeaders         = false;
-		bool			m_analyzedAdvancedMargins = false;
-		int         hardMarginLeftIndex       = 0;
-		int         hardMarginRightIndex      = 0;
-		ulong       preleaderIndex            = 0;
-		ulong       leaderIndex               = 0;
-		ulong       firstMusicRow             = 0;
-		ulong       lastMusicRow              = 0;
-		double      m_lastHolePosition        = 0.0;
-		double      m_firstHolePosition       = 0.0;
+		bool       m_analyzedBasicMargins      = false;
+		bool       m_analyzedLeaders           = false;
+		bool       m_analyzedAdvancedMargins   = false;
+		int        hardMarginLeftIndex         = 0;
+		int        hardMarginRightIndex        = 0;
+		ulong      preleaderIndex              = 0;
+		ulong      leaderIndex                 = 0;
+		ulong      firstMusicRow               = 0;
+		ulong      lastMusicRow                = 0;
+		double     m_lastHolePosition          = 0.0;
+		double     m_firstHolePosition         = 0.0;
+		std::vector<double> m_normalizedPosition;
 
 };
 
-} // end tiff namespace
+} // end prp namespace
 
 #endif /* _ROLLIMAGE_H */
 

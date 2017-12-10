@@ -54,7 +54,7 @@ PREFLAGS  = -c -g $(CFLAGS) $(DEFINES) -I$(INCDIR)
 PREFLAGS += -O3 -Wall
 
 # using C++ 2011 standard in Humlib:
-PREFLAGS += -std=c++11
+PREFLAGS += -std=c++11 -fext-numeric-literals
 
 # Add -static flag to compile without dynamics libraries for better portability:
 POSTFLAGS =

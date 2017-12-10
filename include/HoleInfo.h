@@ -19,7 +19,7 @@
 #include <utility>
 #include <iostream>
 
-namespace tiff  {
+namespace prp  {
 
 class HoleInfo {
 	public:
@@ -39,7 +39,7 @@ class HoleInfo {
 std::ostream& operator<<(std::ostream& out, HoleInfo& hi);
 std::ostream& operator<<(std::ostream& out, HoleInfo* hi);
 
-} // end tiff namespace
+} // end prp namespace
 
 #endif /* _HOLEINFO_H */
 

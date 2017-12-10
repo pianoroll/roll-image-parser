@@ -19,7 +19,7 @@
 #include "TiffFile.h"
 
 
-namespace tiff {
+namespace prp {
 
 
 //////////////////////////////
@@ -95,7 +95,7 @@ bool TiffFile::goToByteIndex(ulong offset) {
 //
 
 ushort TiffFile::readLittleEndian2ByteUInt(void) {
-	return tiff::readLittleEndian2ByteUInt(m_input);
+	return prp::readLittleEndian2ByteUInt(m_input);
 }
 
 
@@ -106,7 +106,7 @@ ushort TiffFile::readLittleEndian2ByteUInt(void) {
 //
 
 uchar TiffFile::read1UByte(void) {
-	return tiff::read1UByte(m_input);
+	return prp::read1UByte(m_input);
 }
 
 
@@ -117,7 +117,7 @@ uchar TiffFile::read1UByte(void) {
 //
 
 std::string TiffFile::readString(ulong count) {
-	return tiff::readString(m_input, count);
+	return prp::readString(m_input, count);
 }
 
 
@@ -172,7 +172,7 @@ void TiffFile::getImageGreenChannel(std::vector<std::vector<uchar>>& image) {
 
 
 
-} // end of namespace tiff
+} // end of namespace prp
 
 
 
