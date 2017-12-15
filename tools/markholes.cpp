@@ -43,6 +43,7 @@ int main(int argc, char** argv) {
 	roll.printRollImageProperties();
 	roll.markHoleBBs();
 	roll.markTrackerPositions();
+	// roll.drawMajorAxes();
 	roll.mergePixelOverlay(output);
 
 	output.close();

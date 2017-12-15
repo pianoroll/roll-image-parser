@@ -45,7 +45,55 @@ RollOptions::~RollOptions() {
 
 void RollOptions::reset(void) {
 	m_minTrackerSpacingToPaperEdge = 1.75;
+	m_maxHoleWidth                 = 1.25;
+	m_aspectRatioThreshold         = 1.12;
+	m_majorAxisThreshold           = 13.0;
+	m_circularityThreshold         =  0.4;
 };
+
+
+
+//////////////////////////////
+//
+// RollOptions::getAspectRatioThreshold --
+//
+
+double RollOptions::getAspectRatioThreshold(void) { 
+	return m_aspectRatioThreshold;
+}
+
+
+
+//////////////////////////////
+//
+// RollOptions::getAspectRatioThreshold --
+//
+
+void RollOptions::setAspectRatioThreshold(double value) {
+	m_aspectRatioThreshold = value;
+}
+
+
+
+//////////////////////////////
+//
+// RollOptions::getMaxHoleTrackerWidth --
+//
+
+double RollOptions::getMaxHoleTrackerWidth(void) {
+	return m_maxHoleWidth;
+}
+
+
+
+//////////////////////////////
+//
+// RollOptions::setMaxHoleTrackerWidth --
+//
+
+void RollOptions::setMaxHoleTrackerWidth(double value) {
+		m_maxHoleWidth = value;
+}
 
 
 
@@ -71,6 +119,53 @@ void RollOptions::setMinTrackerEdge(double value) {
 
 
 
+//////////////////////////////
+//
+// RollOptions::getMinTrackerEdge --
+//
+
+double RollOptions::getMajorAxisCutoff(void) {
+	return m_majorAxisThreshold;
+}
+
+
+
+//////////////////////////////
+//
+// RollOptions::setMinTrackerEdge --
+//
+
+
+void RollOptions::setMajorAxisCutoff(double value) {
+	m_majorAxisThreshold = value;
+}
+
+
+
+//////////////////////////////
+//
+// RollOptions::getCircularityThreshold --
+//
+
+double RollOptions::getCircularityThreshold(void) { 
+	return m_circularityThreshold;
+}
+
+
+
+//////////////////////////////
+//
+// RollOptions::setCircularityThreshold --
+//
+
+void RollOptions::setCircularityThreshold(double value) { 
+	m_circularityThreshold = value;
+}
+
+
+
+
 } // end prp namespace
+
 
 

@@ -20,13 +20,21 @@ namespace prp  {
 
 class RollOptions {
 	public:
-		         RollOptions     (void);
-		        ~RollOptions     ();
+		         RollOptions               (void);
+		        ~RollOptions               ();
 
-		void     reset           (void);
+		void     reset                     (void);
 
-		double   getMinTrackerEdge(void);
-		void     setMinTrackerEdge(double value);
+		double   getMinTrackerEdge         (void);
+		void     setMinTrackerEdge         (double value);
+		double   getMaxHoleTrackerWidth    (void);
+		void     setMaxHoleTrackerWidth    (double value);
+		double   getAspectRatioThreshold   (void);
+		void     setAspectRatioThreshold   (double value);
+		double   getMajorAxisCutoff        (void);
+		void     setMajorAxisCutoff        (double value);
+		double   getCircularityThreshold   (void);
+		void     setCircularityThreshold   (double value);
 
 	private:
 		// m_minTrackerSpacingToPaperEdge: minimum distance from paper
@@ -34,6 +42,21 @@ class RollOptions {
 		// of spacing between tracker lines.
 		double	m_minTrackerSpacingToPaperEdge;
 
+		// m_maxHoleWidth: maximum width of music holes in units of tracker
+		// bar spacings.
+		double	m_maxHoleWidth;
+
+		// m_aspectRatioThreshold: maximum w/h ratio
+		double   m_aspectRatioThreshold;
+
+		// m_majorAxisThreshold: maximum absolute degree deviation from 
+		// vertical that a non-circular hole can have, yet still be called
+		// a musical hole.
+		double m_majorAxisThreshold;
+
+		// m_circularityThreshold: Threshold between cicular holes and
+		// elongated holes (used for detecting bad holes).
+		double m_circularityThreshold;
 };
 
 

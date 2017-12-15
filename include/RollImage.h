@@ -16,6 +16,7 @@
 #include <vector>
 #include <fstream>
 #include <iostream>
+#include <utility>
 
 #include "TiffFile.h"
 #include "HoleInfo.h"
@@ -34,48 +35,64 @@ namespace prp  {
 #define PIX_POSTLEADER  5    /* pixel represents non-paper in post-leader region */
 #define PIX_HARDMARGIN  6    /* pixel represents hard-margin                     */
 #define PIX_TEAR        7    /* pixel represents uncategorized non-paper         */
-#define PIX_HOLE        8    /* pixel represents hole in roll                    */
-#define PIX_HOLEBB      9    /* pixel represents bounding box around hole        */
-#define PIX_TRACKER    10    /* pixel represents bounding box around hole        */
-#define PIX_POSTMUSIC  11    /* pixel represents after last hole in roll         */
-#define PIX_DEBUG      12    /* debugging pixel type 1                           */
-#define PIX_DEBUG2     13    /* debugging pixel type 2                           */
+#define PIX_ANTIDUST    8    /* pixel represents non-musical hole in paper       */
+#define PIX_HOLE        9    /* pixel represents music hole in roll              */
+#define PIX_BADHOLE    10    /* pixel represents non-music hole in roll          */
+#define PIX_HOLEBB     11    /* pixel represents bounding box around music hole  */
+#define PIX_TRACKER    12    /* pixel represents bounding box around music hole  */
+#define PIX_POSTMUSIC  13    /* pixel represents after last hole in roll         */
+#define PIX_DEBUG      14    /* debugging pixel type white                       */
+#define PIX_DEBUG1     15    /* debugging pixel type 1 red                       */
+#define PIX_DEBUG2     16    /* debugging pixel type 2 orange                    */
+#define PIX_DEBUG3     17    /* debugging pixel type 3 yellow                    */
+#define PIX_DEBUG4     18    /* debugging pixel type 4 green                     */
+#define PIX_DEBUG5     19    /* debugging pixel type 5 light blue                */
+#define PIX_DEBUG6     20    /* debugging pixel type 6 dark blue                 */
+#define PIX_DEBUG7     21    /* debugging pixel type 7 purple                    */
+
 
 typedef unsigned char pixtype;
 
 class RollImage : public TiffFile, public RollOptions {
 	public:
-		                 RollImage                   (void);
-		                ~RollImage                   ();
+		                 RollImage                    (void);
+		                ~RollImage                    ();
 
-		void	          loadGreenChannel             (void);
-		void            analyze                      (void);
-		void            analyzeHoles                 (void);
-		void            mergePixelOverlay            (std::fstream& output);
-		void            markHoleBBs                  (void);
-		std::ostream&   printRollImageProperties     (std::ostream& out = std::cout);
-		int             getHardMarginLeftWidth       (void);
-		int             getHardMarginRightWidth      (void);
-		ulong           getHardMarginLeftIndex       (void);
-		ulong           getHardMarginRightIndex      (void);
-		ulong           getLeaderIndex               (void);
-		ulong           getPreLeaderIndex            (void);
-		ulong           getPreleaderIndex            (void);
-		ulong           getFirstMusicHoleStart       (void);
-		ulong           getLastMusicHoleEnd          (void);
-		ulong           getSoftMarginLeftWidth       (ulong rowindex);
-		ulong           getSoftMarginRightWidth      (ulong rowindex);
-		double          getAvergeRollWidth           (void);
-		double          getAverageMusicalHoleWidth   (void);
-		ulong           getLeftMarginWidth           (ulong rowindex);
-		ulong           getRightMarginWidth          (ulong rowindex);
-		double          getAverageSoftMarginTotal    (void);
-		void            generateDriftCorrection      (double gain);
-		void            analyzeTrackerBarSpacing     (void);
-		void            analyzeTrackerBarPositions   (void);
-		void            analyzeHorizontalHolePosition(void);
-		void            markTrackerPositions         (void);
-		void            analyzeMidiKeyMapping        (void);
+		void	          loadGreenChannel              (void);
+		void            analyze                       (void);
+		void            analyzeHoles                  (void);
+		void            mergePixelOverlay             (std::fstream& output);
+		void            markHoleBBs                   (void);
+		std::ostream&   printRollImageProperties      (std::ostream& out = std::cout);
+		int             getHardMarginLeftWidth        (void);
+		int             getHardMarginRightWidth       (void);
+		ulong           getHardMarginLeftIndex        (void);
+		ulong           getHardMarginRightIndex       (void);
+		ulong           getLeaderIndex                (void);
+		ulong           getPreLeaderIndex             (void);
+		ulong           getPreleaderIndex             (void);
+		ulong           getFirstMusicHoleStart        (void);
+		ulong           getLastMusicHoleEnd           (void);
+		ulong           getSoftMarginLeftWidth        (ulong rowindex);
+		ulong           getSoftMarginRightWidth       (ulong rowindex);
+		ulong           getSoftMarginLeftWidthMax     (void);
+		ulong           getSoftMarginRightWidthMax    (void);
+		double          getAverageRollWidth           (void);
+		double          getAverageMusicalHoleWidth    (void);
+		ulong           getLeftMarginWidth            (ulong rowindex);
+		ulong           getRightMarginWidth           (ulong rowindex);
+		double          getAverageSoftMarginTotal     (void);
+		void            generateDriftCorrection       (double gain);
+		void            analyzeTrackerBarSpacing      (void);
+		void            analyzeTrackerBarPositions    (void);
+		void            analyzeHorizontalHolePosition (void);
+		void            markTrackerPositions          (void);
+		void            analyzeMidiKeyMapping         (void);
+		void            drawMajorAxes                 (void);
+		double          getDustScore                  (void);
+		double          getDustScoreBass              (void);
+		double          getDustScoreTreble            (void);
+		void            sortBadHolesByArea            (void);
 
 		// pixelType: a bitmask which contains enumerated types for the
 		// functions of pixels (the PIX_* defines above):
@@ -107,6 +124,15 @@ class RollImage : public TiffFile, public RollOptions {
 		// larger holes which are not anti-dust
 		std::vector<HoleInfo*> holes;
 
+		// badHoles: Holes which were initially marked as music holes, but
+		// removed for some reason.  See also antidust.  Currently memory
+		// management of these holes is done in holes, but maybe move them
+		// here in the future and manage the memory here as well.
+		std::vector<HoleInfo*> badHoles;
+
+		// antidust: List of holes on roll which are too small to be musical.
+		std::vector<HoleInfo*> antidust;
+
 		// trackerArray -- holes sorted by tracker position
 		std::vector<std::vector<HoleInfo*>> trackerArray;
 
@@ -118,14 +144,15 @@ class RollImage : public TiffFile, public RollOptions {
 		// midiEventCount -- 0 = no events, >0 = events (currently hole counts)
 		std::vector<int> midiEventCount;
 
-		// antidust: List of holes on roll which are too small to be musical.
-		std::vector<HoleInfo*> antidust;
 
 		// bassTears -- tear info for the left side of the roll
 		std::vector<TearInfo*> bassTears;
 
 		// trebleTears -- tear info for the right side of the roll
 		std::vector<TearInfo*> trebleTears;
+
+		// averageRollWidth -- the average width of a roll, 0 if uninit.
+		double averageRollWidth = 0.0;
 
 
 	protected:
@@ -134,6 +161,7 @@ class RollImage : public TiffFile, public RollOptions {
 		void       analyzeLeaders              (void);
 		void       getRawMargins               (void);
 		void       waterfallDownMargins        (void);
+		void       waterfallUpMargins          (void);
 		ulong      findLeftLeaderBoundary      (std::vector<int>& margin, double avg,
 		                                        ulong cols, ulong searchlength);
 		ulong      findRightLeaderBoundary     (std::vector<int>& margin, double avg,
@@ -166,7 +194,31 @@ class RollImage : public TiffFile, public RollOptions {
 		                                        std::vector<double>& rfast);
 		void       getTearInfo                 (TearInfo& ti, PreTearInfo& pti,
 		                                        std::vector<double>& slow,
-		                                        std::vector<double>& fast, int side);
+		                                        std::vector<double>& fast,
+		                                        int side,
+		                                        std::vector<double>& oslow,
+		                                        std::vector<double>& ofast);
+		void       invalidateEdgeHoles         (void);
+		void       fillHoleSimple              (ulong r, ulong c, int target, int type);
+		void       clearHole                   (HoleInfo& hi, int type);
+		void       calculateHoleDescriptors    (void);
+		void       calculateHolePerimeter      (HoleInfo& hole);
+		int        findNextPerimeterPoint      (std::pair<ulong, ulong>& point, 
+		                                        int dir);
+		double     calculateCentralMoment      (HoleInfo& hole, int p, int q);
+		double     calculateNormalCentralMoment(HoleInfo& hole, int p, int q);
+		double     calculateMajorAxis          (HoleInfo& hole);
+		void       invalidateSkewedHoles       (void);
+		bool       isGoodOppositeEdge          (PreTearInfo& pti, 
+		                                        std::vector<double>& slow,
+		                                        std::vector<double>& fast);
+		void       drawMajorAxis               (HoleInfo& hi);
+		void       addAntidustToBadHoles       (ulong areaThreshold);
+		bool       goodColumn                  (ulong col, ulong toprow, ulong botrow,
+		                                        ulong ptype, ulong threshold);
+		void       fillColumn                  (ulong col, ulong toprow, ulong botrow,
+		                                        ulong target, ulong threshold, ulong replacement,
+		                                        std::vector<int>& margin);
 
 	private:
 		bool       m_analyzedBasicMargins      = false;
@@ -180,6 +232,10 @@ class RollImage : public TiffFile, public RollOptions {
 		ulong      lastMusicRow                = 0;
 		double     m_lastHolePosition          = 0.0;
 		double     m_firstHolePosition         = 0.0;
+		double     m_dustscore                 = -1.0;
+		double     m_dustscorebass             = -1.0;
+		double     m_dustscoretreble           = -1.0;
+
 		std::vector<double> m_normalizedPosition;
 
 };
