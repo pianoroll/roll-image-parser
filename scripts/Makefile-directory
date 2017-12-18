@@ -1,0 +1,34 @@
+
+
+BINDIR=../bin
+
+all: jpg thumbnail histograms analysis
+
+# medium sized image showing entire roll (max 64000 lines long):
+jpg:
+	$(BINDIR)/makejpg 
+
+# Small image to display on webpage:
+thumbnails: thumbnail
+thumbnail:
+	$(BINDIR)/makethumbnail
+
+# Histograms of the 256 intensity levels for each color channel:
+histogram: histograms
+histograms:
+	$(BINDIR)/makehistograms
+
+analysis:
+	$(BINDIR)/makeanalysis
+
+# Not done in the main pipeline anymore:
+
+png: bicolor
+bicolor:
+	$(BINDIR)/makebicolor
+
+channels:
+	$(BINDIR)/makechannels
+
+smalljpg:
+	$(BINDIR)/makesmalljpg 

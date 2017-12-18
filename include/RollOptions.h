@@ -35,6 +35,10 @@ class RollOptions {
 		void     setMajorAxisCutoff        (double value);
 		double   getCircularityThreshold   (void);
 		void     setCircularityThreshold   (double value);
+		int      getMaxHoleCount           (void);
+		void     setMaxHoleCount           (int value);
+		int      getMaxTearFill            (void);
+		void     setMaxTearFill            (int value);
 
 	private:
 		// m_minTrackerSpacingToPaperEdge: minimum distance from paper
@@ -57,6 +61,12 @@ class RollOptions {
 		// m_circularityThreshold: Threshold between cicular holes and
 		// elongated holes (used for detecting bad holes).
 		double m_circularityThreshold;
+
+		// m_maxHoleCount: The maxmimum number of holes expected on roll.
+		int m_maxHoleCount;
+
+		// m_maxTearFill: The max number of pixels to fill a tear with.
+		int m_maxTearFill;
 };
 
 

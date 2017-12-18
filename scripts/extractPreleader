@@ -1,0 +1,52 @@
+#!/usr/bin/perl
+# vim: ts=3
+
+use strict;
+
+my $file = shift @ARGV;
+
+if (!-r $file) {
+	my $tfile = `pwd`;
+	chomp $tfile;
+	if ($tfile =~ /\/([^\/]+)-analysis/) {
+		$file = "../$1.tiff";
+	}
+}
+
+my @contents = <>;
+
+# @PRELEADER_ROW:		749px
+#@IMAGE_WIDTH:		4096px
+
+my $width = 0;
+my $height = 0;
+for (my $i=0; $i<@contents; $i++) {
+	if ($contents[$i] =~ /^\@PRELEADER_ROW:\s*(\d+)(px)?/) {
+		$height = $1;
+	}
+	if ($contents[$i] =~ /^\@IMAGE_WIDTH:\s*(\d+)(px)?/) {
+		$width = $1;
+	}
+	if ($contents[$i] =~ /^\@\@BEGIN:\s*TEARS/) {
+		last;
+	}
+}
+
+$width   =~ s/px//;
+$height  =~ s/px//;
+
+
+die "Width is zero" if $width == 0;
+die "Height is zero" if $height == 0;
+die "Too wide" if $width > 5000;
+die "Too high" if $height > 5000;
+
+my $command = "convert $file";
+$command .= " -crop ${width}x$height+0+0";
+$command .= " -resize 1024";
+$command .= " preleader.jpg";
+print "$command\n";
+`$command`;
+
+
+

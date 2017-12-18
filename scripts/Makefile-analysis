@@ -1,0 +1,30 @@
+
+
+
+BINDIR=../../bin
+
+all: driftplot report extract
+
+generate: report
+report:
+	$(BINDIR)/generateReport analysis.txt > index.html
+
+extract: leader preleader holes tears
+
+holes: 
+	$(BINDIR)/extractBadHoles /tmp/z.tiff analysis.txt
+
+tear: tears
+tears:
+	$(BINDIR)/extractTears /tmp/z.tiff analysis.txt
+
+drift: driftplot
+driftplot:
+	$(BINDIR)/createdriftplot
+
+preleader:
+	$(BINDIR)/extractPreleader /tmp/z.tiff analysis.txt
+
+leader:
+	$(BINDIR)/extractLeader /tmp/z.tiff analysis.txt
+

@@ -1,0 +1,21 @@
+#!/usr/bin/perl
+
+use strict;
+
+my @contents = <>;
+my $status = 0;
+
+foreach my $line (@contents) {
+	if ($line =~ /^\@\@BEGIN:\s*DRIFT/) {
+		$status = 1;
+	}
+	if ($line =~ /^\@\@END:\s*DRIFT/) {
+		$status = 0;
+	}
+	next if $status == 0;
+	chomp $line;
+	$line =~ s/^\s+//;
+	my @data = split(/\t/, $line);
+	print "$data[1]\t$data[2]\n";
+}
+

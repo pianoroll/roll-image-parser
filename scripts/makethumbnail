@@ -1,0 +1,21 @@
+#!/usr/bin/perl
+# vim: ts=3
+
+use strict;
+
+my @files = @ARGV;
+
+if (@files == 0) {
+	@files = glob "*.tiff";
+	print "Processing all TIFF images in directory\n";
+}
+
+foreach my $file (@files) {
+	my $basename = $file;
+	$basename =~ s/\.[^.]+$//;
+	next if $basename =~ /-\d$/;
+	next if -r "$basename-thumbnail.jpg";
+	print "Creating file $basename-thumbnail.jpg ...\n";
+	 `convert $basename.jpg -resize 1024x1024 -rotate 90 $basename-thumbnail.jpg`;
+}
+

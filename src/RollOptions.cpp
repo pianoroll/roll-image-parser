@@ -44,11 +44,13 @@ RollOptions::~RollOptions() {
 //
 
 void RollOptions::reset(void) {
-	m_minTrackerSpacingToPaperEdge = 1.75;
+	m_minTrackerSpacingToPaperEdge = 1.50;
 	m_maxHoleWidth                 = 1.25;
-	m_aspectRatioThreshold         = 1.12;
+	m_aspectRatioThreshold         = 1.25;
 	m_majorAxisThreshold           = 13.0;
 	m_circularityThreshold         =  0.4;
+	m_maxHoleCount                 = 150000;
+	m_maxTearFill                  = 300000;
 };
 
 
@@ -163,6 +165,48 @@ void RollOptions::setCircularityThreshold(double value) {
 }
 
 
+
+//////////////////////////////
+//
+// RollOptions::getMaxHoleCount --
+//
+
+int RollOptions::getMaxHoleCount(void) {
+	return m_maxHoleCount;
+}
+
+
+
+//////////////////////////////
+//
+// RollOptions::setMaxHoleCount --
+//
+
+void RollOptions::setMaxHoleCount(int value) {
+	m_maxHoleCount = value;
+}
+
+
+
+//////////////////////////////
+//
+// RollOptions::getMaxTearFill --
+//
+
+int RollOptions::getMaxTearFill(void) { 
+	return m_maxTearFill;
+}
+
+
+
+//////////////////////////////
+//
+// RollOptions::setMaxTearFill --
+//
+
+void RollOptions::setMaxTearFill(int value) { 
+	m_maxTearFill = value;
+}
 
 
 } // end prp namespace

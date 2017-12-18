@@ -1,0 +1,23 @@
+#!/usr/bin/perl
+# vim: ts=3
+
+use strict;
+
+my $command = "/user/c/craig/Library/Web/piano-roll-project/full-scans/bin/channelhistograms";
+
+my @files = @ARGV;
+
+if (@files == 0) {
+	@files = glob "*.tiff";
+	print "Processing all TIFF images in directory\n";
+}
+
+foreach my $file (@files) {
+	my $basename = $file;
+	$basename =~ s/\.[^.]+$//;
+	next if $basename =~ /-\d$/;
+	next if -r "$basename-histograms.txt";
+	print "Creating file $basename-histograms.txt ...\n";
+	`$command $file > $basename-histograms.txt`;
+}
+

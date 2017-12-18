@@ -27,28 +27,30 @@ namespace prp  {
 
 
 // Pixel functions:
-#define PIX_PAPER       0    /* pixel represents paper                           */
-#define PIX_NONPAPER    1    /* pixel represents uncategorized non-paper         */
-#define PIX_MARGIN      2    /* pixel represents soft margins                    */
-#define PIX_LEADER      3    /* pixel represents non-paper in leader region      */
-#define PIX_PRELEADER   4    /* pixel represents non-paper in pre-leader region  */
-#define PIX_POSTLEADER  5    /* pixel represents non-paper in post-leader region */
-#define PIX_HARDMARGIN  6    /* pixel represents hard-margin                     */
-#define PIX_TEAR        7    /* pixel represents uncategorized non-paper         */
-#define PIX_ANTIDUST    8    /* pixel represents non-musical hole in paper       */
-#define PIX_HOLE        9    /* pixel represents music hole in roll              */
-#define PIX_BADHOLE    10    /* pixel represents non-music hole in roll          */
-#define PIX_HOLEBB     11    /* pixel represents bounding box around music hole  */
-#define PIX_TRACKER    12    /* pixel represents bounding box around music hole  */
-#define PIX_POSTMUSIC  13    /* pixel represents after last hole in roll         */
-#define PIX_DEBUG      14    /* debugging pixel type white                       */
-#define PIX_DEBUG1     15    /* debugging pixel type 1 red                       */
-#define PIX_DEBUG2     16    /* debugging pixel type 2 orange                    */
-#define PIX_DEBUG3     17    /* debugging pixel type 3 yellow                    */
-#define PIX_DEBUG4     18    /* debugging pixel type 4 green                     */
-#define PIX_DEBUG5     19    /* debugging pixel type 5 light blue                */
-#define PIX_DEBUG6     20    /* debugging pixel type 6 dark blue                 */
-#define PIX_DEBUG7     21    /* debugging pixel type 7 purple                    */
+#define PIX_PAPER              0    /* pixel represents paper                           */
+#define PIX_NONPAPER           1    /* pixel represents uncategorized non-paper         */
+#define PIX_MARGIN             2    /* pixel represents soft margins                    */
+#define PIX_LEADER             3    /* pixel represents non-paper in leader region      */
+#define PIX_PRELEADER          4    /* pixel represents non-paper in pre-leader region  */
+#define PIX_POSTLEADER         5    /* pixel represents non-paper in post-leader region */
+#define PIX_HARDMARGIN         6    /* pixel represents hard-margin                     */
+#define PIX_TEAR               7    /* pixel represents uncategorized non-paper         */
+#define PIX_ANTIDUST           8    /* pixel represents non-musical hole in paper       */
+#define PIX_HOLE               9    /* pixel represents music hole in roll              */
+#define PIX_BADHOLE           10    /* pixel represents non-music hole in roll          */
+#define PIX_HOLEBB            11    /* pixel represents bounding box around music hole  */
+#define PIX_TRACKER           12    /* pixel is center of a tracker hole                */
+#define PIX_TRACKER_BASS      13    /* pixel is center of bass tracker hole             */
+#define PIX_TRACKER_TREBLE    14    /* pixel is center of treble tracker hole           */
+#define PIX_POSTMUSIC         15    /* pixel represents after last hole in roll         */
+#define PIX_DEBUG             16    /* debugging pixel type white                       */
+#define PIX_DEBUG1            17    /* debugging pixel type 1 red                       */
+#define PIX_DEBUG2            18    /* debugging pixel type 2 orange                    */
+#define PIX_DEBUG3            19    /* debugging pixel type 3 yellow                    */
+#define PIX_DEBUG4            20    /* debugging pixel type 4 green                     */
+#define PIX_DEBUG5            21    /* debugging pixel type 5 light blue                */
+#define PIX_DEBUG6            22    /* debugging pixel type 6 dark blue                 */
+#define PIX_DEBUG7            23    /* debugging pixel type 7 purple                    */
 
 
 typedef unsigned char pixtype;
@@ -66,17 +68,17 @@ class RollImage : public TiffFile, public RollOptions {
 		std::ostream&   printRollImageProperties      (std::ostream& out = std::cout);
 		int             getHardMarginLeftWidth        (void);
 		int             getHardMarginRightWidth       (void);
-		ulong           getHardMarginLeftIndex        (void);
-		ulong           getHardMarginRightIndex       (void);
+		int             getHardMarginLeftIndex        (void);
+		int             getHardMarginRightIndex       (void);
 		ulong           getLeaderIndex                (void);
 		ulong           getPreLeaderIndex             (void);
 		ulong           getPreleaderIndex             (void);
 		ulong           getFirstMusicHoleStart        (void);
 		ulong           getLastMusicHoleEnd           (void);
-		ulong           getSoftMarginLeftWidth        (ulong rowindex);
-		ulong           getSoftMarginRightWidth       (ulong rowindex);
-		ulong           getSoftMarginLeftWidthMax     (void);
-		ulong           getSoftMarginRightWidthMax    (void);
+		int             getSoftMarginLeftWidth        (ulong rowindex);
+		int             getSoftMarginRightWidth       (ulong rowindex);
+		int             getSoftMarginLeftWidthMax     (void);
+		int             getSoftMarginRightWidthMax    (void);
 		double          getAverageRollWidth           (void);
 		double          getAverageMusicalHoleWidth    (void);
 		ulong           getLeftMarginWidth            (ulong rowindex);
@@ -93,6 +95,7 @@ class RollImage : public TiffFile, public RollOptions {
 		double          getDustScoreBass              (void);
 		double          getDustScoreTreble            (void);
 		void            sortBadHolesByArea            (void);
+		void            sortTearsByArea               (void);
 
 		// pixelType: a bitmask which contains enumerated types for the
 		// functions of pixels (the PIX_* defines above):
@@ -144,7 +147,6 @@ class RollImage : public TiffFile, public RollOptions {
 		// midiEventCount -- 0 = no events, >0 = events (currently hole counts)
 		std::vector<int> midiEventCount;
 
-
 		// bassTears -- tear info for the left side of the roll
 		std::vector<TearInfo*> bassTears;
 
@@ -162,6 +164,8 @@ class RollImage : public TiffFile, public RollOptions {
 		void       getRawMargins               (void);
 		void       waterfallDownMargins        (void);
 		void       waterfallUpMargins          (void);
+		void       waterfallLeftMargins        (void);
+		void       waterfallRightMargins       (void);
 		ulong      findLeftLeaderBoundary      (std::vector<int>& margin, double avg,
 		                                        ulong cols, ulong searchlength);
 		ulong      findRightLeaderBoundary     (std::vector<int>& margin, double avg,
@@ -176,9 +180,8 @@ class RollImage : public TiffFile, public RollOptions {
 		void       setPreleaderIndex           (ulong value);
 		void       setLeaderIndex              (ulong value);
 		void       analyzeHardMargins          (ulong leaderBoundary);
-		void       fillHoleInfo                (HoleInfo& hi, ulong r, ulong c);
-		void       fillTearInfo                (TearInfo& ti, ulong r, ulong c,
-		                                        ulong& counter);
+		void       fillHoleInfo                (HoleInfo& hi, ulong r, ulong c, int& counter);
+		void       fillTearInfo                (TearInfo& ti, ulong r, ulong c, int& counter);
 		void       extractHole                 (ulong row, ulong col);
 		void       markPosteriorLeader         (void);
 		void       markHoleBB                  (HoleInfo& hi);
@@ -199,10 +202,10 @@ class RollImage : public TiffFile, public RollOptions {
 		                                        std::vector<double>& oslow,
 		                                        std::vector<double>& ofast);
 		void       invalidateEdgeHoles         (void);
-		void       fillHoleSimple              (ulong r, ulong c, int target, int type);
+		void       fillHoleSimple              (ulong r, ulong c, int target, int type, int& counter);
 		void       clearHole                   (HoleInfo& hi, int type);
 		void       calculateHoleDescriptors    (void);
-		void       calculateHolePerimeter      (HoleInfo& hole);
+		bool       calculateHolePerimeter      (HoleInfo& hole);
 		int        findNextPerimeterPoint      (std::pair<ulong, ulong>& point, 
 		                                        int dir);
 		double     calculateCentralMoment      (HoleInfo& hole, int p, int q);
@@ -219,6 +222,7 @@ class RollImage : public TiffFile, public RollOptions {
 		void       fillColumn                  (ulong col, ulong toprow, ulong botrow,
 		                                        ulong target, ulong threshold, ulong replacement,
 		                                        std::vector<int>& margin);
+		int        getTrackerHoleCount         (void);
 
 	private:
 		bool       m_analyzedBasicMargins      = false;

@@ -1,0 +1,1170 @@
+#!/usr/bin/perl
+# vim: ts=3
+
+use strict;
+
+my @contents = <>;
+
+my $filebase = "";
+my $tfile = `pwd`;
+chomp $tfile;
+if ($tfile =~ /\/([^\/]+)-analysis/) {
+	$filebase = "$1.tiff";
+}
+
+my $btearstart = 0;
+my $ttearstart = 0;
+my $holestart = 0;
+my $Preleader = 0;
+my $dpi = 300.25;
+
+printHeader();
+
+print <<"EOT";
+<!--
+<html>
+<head>
+<title> Defect report</title>
+</head>
+<body style="width:1000px;">
+-->
+
+<style>
+
+table.ppp td:first-child::after {
+	content: ":";
+}
+
+td.nocolon::after {
+	content: "" !important;
+}
+
+td.nocolon {
+	font-weight: normal !important;
+}
+
+table.ppp td:first-child {
+	font-weight: bold;
+}
+
+</style>
+
+<script src="../../js/gnuplot_svg.js"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+	gnuplot_svg.Init();
+});
+</script>
+
+<div id="realcontent" class="main-content"> 
+
+<h1> Report for $filebase </h1>
+
+EOT
+
+
+my %rollinfo;
+
+for (my $i=0; $i<@contents; $i++) {
+	if ($contents[$i] =~ /^\@([^:]+):\s*(.*?)(px)?\s*$/) {
+		my $key = $1;
+		my $value = $2;
+		$rollinfo{$key} = $value;
+	}
+
+	if ($contents[$i] =~ /\@PRELEADER_ROW:\s*(\d+)px/) {
+		$Preleader = $1;
+	} elsif ($contents[$i] =~ /^\@\@BEGIN:\s*BADHOLES/) {
+		$holestart = $i;
+	} elsif ($contents[$i] =~ /^\@\@BEGIN:\s*BASS_TEARS/) {
+		$btearstart = $i;
+	} elsif ($contents[$i] =~ /^\@\@BEGIN:\s*TREBLE_TEARS/) {
+		$ttearstart = $i;
+	}
+}
+
+
+my $sep = $rollinfo{'HOLE_SEPARATION'};
+my $testvalue = 300.0 / $sep;
+my $difference = abs($testvalue - int($testvalue));
+my $difference2 = abs(2.0*$testvalue - int(2.0*$testvalue));
+if (($difference < 0.07) || ($difference > 0.93)) {
+	$rollinfo{'HOLES_PER_INCH'} = int($testvalue + 0.5);
+} elsif (($difference2 < 0.05) || ($difference > 0.95)) {
+	$rollinfo{'HOLES_PER_INCH'} = int(2.0*$testvalue + 0.5)/2.0;
+} else {
+	print "TESTVALUE = $testvalue\n";
+	die "ABS VALUE = ", abs($testvalue - int($testvalue)), "\n";
+}
+
+my $ldpi = 300.25;
+my $wdpi = $rollinfo{'HOLE_SEPARATION'} * $rollinfo{'HOLES_PER_INCH'};
+my %inchinfo;
+$inchinfo{'ROLL_WIDTH'} = int($rollinfo{'ROLL_WIDTH'}/$wdpi*1000 + 0.5)/1000;
+$inchinfo{'HARD_MARGIN_BASS'} = int($rollinfo{'HARD_MARGIN_BASS'}/$wdpi*100 + 0.5)/100;
+$inchinfo{'HARD_MARGIN_TREBLE'} = int($rollinfo{'HARD_MARGIN_TREBLE'}/$wdpi*100 + 0.5)/100;
+$inchinfo{'AVG_SOFT_MARGIN_SUM'} = int($rollinfo{'AVG_SOFT_MARGIN_SUM'}/$wdpi*1000+ 0.5)/1000;
+$inchinfo{'AVG_HOLE_WIDTH'} = int($rollinfo{'AVG_HOLE_WIDTH'}/$wdpi*10000+ 0.5)/10000;
+$inchinfo{'PRELEADER_ROW'} = int($rollinfo{'PRELEADER_ROW'}/$ldpi*100 + 0.5)/100;
+$inchinfo{'LEADER_ROW'} = int($rollinfo{'LEADER_ROW'}/$ldpi*100 + 0.5)/100;
+$inchinfo{'HOLE_SEPARATION'} = int($rollinfo{'HOLE_SEPARATION'}/$ldpi*1000 + 0.5)/1000;
+$inchinfo{'IMAGE_WIDTH'} = int($rollinfo{'IMAGE_WIDTH'}/$ldpi*100 + 0.5)/100;
+$inchinfo{'END_MARGIN'} = int($rollinfo{'END_MARGIN'}/$ldpi*100 + 0.5)/100;
+
+my %mminfo;
+$mminfo{'ROLL_WIDTH'} = int($rollinfo{'ROLL_WIDTH'}/$wdpi*10*25.4 + 0.5)/10;
+$mminfo{'AVG_SOFT_MARGIN_SUM'} = int($rollinfo{'AVG_SOFT_MARGIN_SUM'}/$wdpi*10*25.4 + 0.5)/10;
+$mminfo{'AVG_HOLE_WIDTH'} = int($rollinfo{'AVG_HOLE_WIDTH'}/$wdpi*100*25.4+ 0.5)/100;
+$mminfo{'PRELEADER_ROW'} = int($rollinfo{'PRELEADER_ROW'}/$ldpi*10*25.4 + 0.5)/10;
+$mminfo{'LEADER_ROW'} = int($rollinfo{'LEADER_ROW'}/$ldpi*100*25.4 + 0.5)/100;
+$mminfo{'HOLE_SEPARATION'} = int($rollinfo{'HOLE_SEPARATION'}/$ldpi*1000*25.4 + 0.5)/1000;
+$mminfo{'HARD_MARGIN_BASS'} = int($rollinfo{'HARD_MARGIN_BASS'}/$wdpi*25.4*10 + 0.5)/10;
+$mminfo{'HARD_MARGIN_TREBLE'} = int($rollinfo{'HARD_MARGIN_TREBLE'}/$wdpi*25.4*10 + 0.5)/10;
+$mminfo{'END_MARGIN'} = int($rollinfo{'END_MARGIN'}/$wdpi*25.4*10 + 0.5)/10;
+
+my %feetinfo;
+$feetinfo{'IMAGE_LENGTH'} = int($rollinfo{'IMAGE_LENGTH'}/$ldpi/12*100 + 0.5)/100;
+$feetinfo{'FIRST_HOLE'} = int($rollinfo{'FIRST_HOLE'}/$ldpi/12*100 + 0.5)/100;
+$feetinfo{'LAST_HOLE'} = int($rollinfo{'LAST_HOLE'}/$ldpi/12*100 + 0.5)/100;
+$feetinfo{'MUSICAL_LENGTH'} = int($rollinfo{'MUSICAL_LENGTH'}/$ldpi/12*100 + 0.5)/100;
+
+my %cminfo;
+$cminfo{'IMAGE_WIDTH'} = int($rollinfo{'IMAGE_WIDTH'}/$ldpi*100*2.54 + 0.5)/100;
+$cminfo{'LDPI'} = int($ldpi / 2.54 * 10)/10;
+$cminfo{'WDPI'} = int($wdpi / 2.54 * 10)/10;
+$cminfo{'END_MARGIN'} = int($rollinfo{'END_MARGIN'}/$wdpi*2.54*10 + 0.5)/10;
+$cminfo{'PRELEADER_ROW'} = int($rollinfo{'PRELEADER_ROW'}/$wdpi*2.54*10 + 0.5)/10;
+
+my %meterinfo;
+$meterinfo{'IMAGE_LENGTH'} = int($rollinfo{'IMAGE_LENGTH'}/$ldpi*2.54/100*100 + 0.5)/100;
+$meterinfo{'FIRST_HOLE'} = int($rollinfo{'FIRST_HOLE'}/$ldpi*2.54/100*100 + 0.5)/100;
+$meterinfo{'LAST_HOLE'} = int($rollinfo{'LAST_HOLE'}/$ldpi*2.54/100*100 + 0.5)/100;
+$meterinfo{'MUSICAL_LENGTH'} = int($rollinfo{'MUSICAL_LENGTH'}/$ldpi*2.54/100*100 + 0.5)/100;
+
+
+my $badholetext = "non-musical holes";
+if ($rollinfo{'BAD_HOLE_COUNT'} > 0) {
+	$badholetext = "<a href=\"#badholes\">$badholetext</a>";
+}
+
+
+print <<"EOT";
+<a name="properties"> </a>
+<h2> Automatically extracted roll properties: </h2>
+
+<table class="ppp qqq">
+
+	<tr>
+		<td>Image width</td>
+		<td>
+			$rollinfo{'IMAGE_WIDTH'} pixels
+			($inchinfo{'IMAGE_WIDTH'} in.,
+			$cminfo{'IMAGE_WIDTH'} cm)
+		</td>
+	</tr>
+
+	<tr>
+		<td>Image length</td>
+		<td>
+			$rollinfo{'IMAGE_LENGTH'} pixels
+			($feetinfo{'IMAGE_LENGTH'} feet,
+			$meterinfo{'IMAGE_LENGTH'} meters)
+		</td>
+	</tr>
+
+	<tr>
+		<td>Length DPI (measured)</td>
+		<td>
+			$ldpi pixels/inch ($cminfo{'LDPI'} pixels/cm)
+		</td>
+	</tr>
+
+	<tr>
+		<td>Width DPI (estimated)</td>
+		<td>
+			$wdpi pixels/inch ($cminfo{'WDPI'} pixels/cm)
+		</td>
+	</tr>
+
+	<tr>
+		<td>Roll width</td>
+		<td>
+			$rollinfo{'ROLL_WIDTH'} pixels 
+			($inchinfo{'ROLL_WIDTH'} in.,
+			 $mminfo{'ROLL_WIDTH'} mm)
+		</td>
+	</tr>
+
+	<tr>
+		<td>Bass margin</td>
+		<td>
+			$rollinfo{'HARD_MARGIN_BASS'} pixels 
+			($inchinfo{'HARD_MARGIN_BASS'} in.,
+			$mminfo{'HARD_MARGIN_BASS'} mm)
+		</td>
+	</tr>
+
+	<tr>
+		<td>Treble margin</td>
+		<td>
+			$rollinfo{'HARD_MARGIN_TREBLE'} pixels 
+			($inchinfo{'HARD_MARGIN_TREBLE'} in.,
+			$mminfo{'HARD_MARGIN_TREBLE'} mm)
+		</td>
+	</tr>
+
+	<tr>
+		<td>Drift</td>
+		<td>
+			$rollinfo{'AVG_SOFT_MARGIN_SUM'} pixels
+			($inchinfo{'AVG_SOFT_MARGIN_SUM'} in.,
+			$mminfo{'AVG_SOFT_MARGIN_SUM'} mm)
+		</td>
+	</tr>
+
+	<tr>
+		<td>Tracker spacing</td>
+		<td>
+			$rollinfo{'HOLE_SEPARATION'} pixels
+			($inchinfo{'HOLE_SEPARATION'} in.,
+			$mminfo{'HOLE_SEPARATION'} mm)
+		</td>
+	</tr>
+
+	<tr>
+		<td>Start row of roll</td>
+		<td>
+			$rollinfo{'PRELEADER_ROW'} pixels
+			($inchinfo{'PRELEADER_ROW'} in.,
+			$cminfo{'PRELEADER_ROW'} cm)
+		</td>
+	</tr>
+
+	<tr>
+		<td>End row of leader start</td>
+		<td>
+			$rollinfo{'LEADER_ROW'} pixels
+			($inchinfo{'LEADER_ROW'} in.,
+			$mminfo{'LEADER_ROW'} mm)
+		</td>
+	</tr>
+
+	<tr>
+		<td>Row of first music hole</td>
+		<td>
+			$rollinfo{'FIRST_HOLE'} pixels
+			($feetinfo{'FIRST_HOLE'} ft.,
+			$meterinfo{'FIRST_HOLE'} meters)
+		</td>
+	</tr>
+
+	<tr>
+		<td>Row of last music hole</td>
+		<td>
+			$rollinfo{'LAST_HOLE'} pixels
+			($feetinfo{'LAST_HOLE'} ft.,
+			$meterinfo{'LAST_HOLE'} meters)
+		</td>
+	</tr>
+
+	<tr>
+		<td>Music length</td>
+		<td>
+			$rollinfo{'MUSICAL_LENGTH'} pixels
+			($feetinfo{'MUSICAL_LENGTH'} ft.,
+			$meterinfo{'MUSICAL_LENGTH'} meters)
+		</td>
+	</tr>
+
+	<tr>
+		<td>Last musical hole to last row</td>
+		<td>
+			$rollinfo{'END_MARGIN'} pixels
+			($inchinfo{'END_MARGIN'} in.,
+			$cminfo{'END_MARGIN'} cm)
+		</td>
+	</tr>
+
+	<tr>
+		<td>Tracker holes</td>
+		<td>
+			$rollinfo{'TRACKER_HOLES'} 
+		</td>
+	</tr>
+
+	<tr>
+		<td>Holes per inch</td>
+		<td>
+			$rollinfo{'HOLES_PER_INCH'} holes/inch
+		</td>
+	</tr>
+
+	<tr>
+		<td>Average music hole width</td>
+		<td>
+			$rollinfo{'AVG_HOLE_WIDTH'} pixels
+			($inchinfo{'AVG_HOLE_WIDTH'} in.
+			$mminfo{'AVG_HOLE_WIDTH'} mm)
+		</td>
+	</tr>
+
+	<tr>
+		<td>Musical holes</td>
+		<td>
+			$rollinfo{'MUSICAL_HOLES'}
+		</td>
+	</tr>
+
+	<tr>
+		<td>Major $badholetext</td>
+		<td>
+			$rollinfo{'BAD_HOLE_COUNT'}
+		</td>
+	</tr>
+
+	<tr>
+		<td>Minor non-musical holes</td>
+		<td>
+			$rollinfo{'ANTIDUST_COUNT'}
+		</td>
+	</tr>
+
+	<tr>
+		<td>Number of edge tears</td>
+		<td>
+			$rollinfo{'EDGE_TEAR_COUNT'}
+		</td>
+	</tr>
+
+	<tr>
+		<td>Dust score</td>
+		<td>
+			$rollinfo{'DUST_SCORE'}
+		</td>
+	</tr>
+
+</table>
+EOT
+
+my $tsize = -s "markup.jpg";
+$tsize /= 1024;
+$tsize /= 1024;
+$tsize = int($tsize * 10.0 + 0.5) / 10.0;
+
+print <<"EOT";
+<a href="overview"> </a>
+<h2> Markup overview </h2>
+
+Click on the following thumbnail to view a reduced-size image of the annotated
+roll.  The size of the annotated overview is $tsize MB.
+
+<p>
+<a href="markup.jpg"><img src="thumbnail-markup.jpg"></a>
+
+EOT
+
+my @files = glob "analysis-*.jpg";
+@files = sort bynumber @files;
+
+for (my $i=0; $i<@files; $i++) {
+	my $file = @files[$i];
+	my $tfile = $file;
+	$tfile =~ s/analysis/thumbnail/;
+	if (!-r $tfile) {
+		`convert $file -resize 82x200 $tfile`;
+	}
+}
+
+my $xsize = -s "analysis-4.jpg";
+$xsize /= 1024;
+$xsize /= 1024;
+$xsize = int($xsize * 1.0 + 0.5) / 1.0;
+
+print <<"EOT";
+<a href="detail"> </a>
+<h2> Detailed markup</h2>
+
+Click on any of the following thumbnails to view a 10000 line segment of the
+roll with annotations added (images not scaled, but lossy compression added,
+each file is approximately $xsize MB).
+<p>
+
+EOT
+
+# print "FILES ", join(" ", @files), "\n";
+
+sub bynumber {
+	$a =~ /-(\d+)/;
+	my $A = $1;
+	$b =~ /-(\d+)/;
+	my $B = $1;
+	return $A <=> $B;
+}
+
+for (my $i=0; $i<@files; $i++) {
+	my $file = @files[$i];
+	my $tfile = $file;
+	$tfile =~ s/analysis/thumbnail/;
+	print "<a href=\"$file\"><img style=\"padding-left:1px; padding-bottom:10px; vertical-align:top !important\" src=\"$tfile\"></a>";
+}
+
+
+
+if (-r "drift.svg") {
+
+#open DRIFT, "drift.svg";
+# my @drift = <DRIFT>;
+print <<"EOT";
+<h2> Drift </h2>
+<p> 
+
+The following plot shows the drift of the roll from left to right as it is scanned. 
+The drift range is $rollinfo{'AVG_SOFT_MARGIN_SUM'} pixels ($inchinfo{'AVG_SOFT_MARGIN_SUM'} in.,
+$mminfo{'AVG_SOFT_MARGIN_SUM'} mm).  Click on the plot to activate display of coordinates of cursor.
+
+<p> 
+<embed src="drift.svg" type="image/svg+xml" width=1024 height=280>
+EOT
+# print @drift;
+
+}
+
+print <<"EOT";
+<a name="preleader"> </a>
+<h2> Pre-leader </h2>
+
+Here is the region of the scan before the start of the roll.  It should only contain the velcro strap which 
+pulls the start of the roll.
+<p>
+<img src="preleader.jpg">
+EOT
+
+
+print <<"EOT";
+<a name="leader"> </a>
+<h2> Leader </h2>
+
+<p>
+<img src="leader.jpg">
+EOT
+
+
+print <<"EOT";
+<a name="tears"> </a>
+<a name="basstears"> </a>
+EOT
+
+if ($rollinfo{'BASS_TEAR_COUNT'} > 0)  {
+	print "<h2> Tears on bass side of roll (sorted by area) </h2>\n";
+	if ($btearstart > 0) {
+		while ($btearstart < @contents) {
+			$btearstart = processTear($btearstart+1);
+		}
+	}
+}
+
+
+print "<a name=\"trebletears\"> </a>\n";
+
+if ($rollinfo{'TREBLE_TEAR_COUNT'} > 0)  {
+	print "<h2> Tears on treble side of roll (sorted by area) </h2>\n";
+
+	if ($ttearstart > 0) {
+		while ($ttearstart < @contents) {
+			$ttearstart = processTear($ttearstart+1);
+		}
+	}
+}
+
+
+
+print "<a name=\"badholes\"> </a>\n";
+
+if ($rollinfo{'BAD_HOLE_COUNT'} > 0) {
+	print "<h2> Suspicious holes (sorted by area) </h2>\n";
+
+print <<"EOT";
+<p>
+Pink highlighted holes have an irregular shape and are all likely to be non-musical holes.
+Green highlighted holes have a bad aspect ratio (they are wider than taller), but some may
+legitimate holes.
+</p>
+EOT
+
+	if ($holestart > 0) {
+		while ($holestart < @contents) {
+			$holestart = processHole($holestart+1);
+		}
+	}
+}
+
+
+#print <<"EOT";
+#</body>
+#EOT
+
+printFooter();
+
+
+exit(0);
+
+
+###########################################################################
+
+
+##############################
+#
+# processHole
+#
+# @@BEGIN: HOLE
+# @ID:		bad001
+# @ORIGIN_ROW:	317792px
+# @ORIGIN_COL:	3569px
+# @WIDTH_ROW:	91px
+# @WIDTH_COL:	30px
+# @CENTROID_ROW:	317843px
+# @CENTROID_ROW:	30px
+# @AREA:		1253px
+# @PERIMETER:	234.252px
+# @CIRCULARITY:	0.29
+# @MAJOR_AXIS:	-12deg
+# @@END: HOLE
+# 
+
+sub processHole {
+	my ($h) = @_;
+	my %p;
+
+	while (($h < @contents) && ($contents[$h] !~ /^\@\@END:\s*HOLE/)) {
+		if ($contents[$h] =~ /^\@([^:]+):\s*(.*?)(px)?\s*$/) {
+			my $key = $1;
+			my $value = $2;
+			$p{$key} = $value;
+		}
+		$h++;
+	}
+
+	my $filebase = $p{"ID"};
+	return $h+1 if $filebase =~ /^\s*$/;
+
+	my $feet = ($p{'ORIGIN_ROW'} - $Preleader) / $dpi / 12.0;
+	$feet = int($feet * 100.0 + 0.5)/100.0;
+
+	my $areap = $p{'AREA'};
+	my $area = "$areap pixels, ";
+	my $value = $areap / 300.25 / 301.4 * 25.4 * 25.4;
+	my $value = int($value * 10.0 + 0.5)/10.0;
+	$area .= "$value mm<sup>2</sup>";
+
+	my $number = int($p{'ORIGIN_ROW'}/10000.0);
+	my $linkimg = "analysis-$number.jpg";
+
+
+	print <<"EOT";
+<hr noshade>
+<a name="$filebase"> </a>
+<table>
+<tr>
+<td>
+	<img src="$filebase.png">
+</td>
+<td>
+	<table class="ppp">
+
+	<tr>
+		<td>Position on roll</td> 
+		<td>$feet feet</td> 
+	</tr>
+
+	<tr>
+		<td>Bounding Box</td> 
+		<td>$p{'ORIGIN_COL'} $p{'ORIGIN_ROW'} $p{'WIDTH_COL'} $p{'WIDTH_ROW'} pixels</td>
+	</tr>
+
+	<tr>
+		<td>Area</td> 
+		<td>$area </td>
+	</tr>
+
+	<tr>
+		<td>Hole name</td>
+		<td> $filebase </td>
+	</tr>
+
+	<tr>
+		<td class="nocolon" colspan="2"><a target="_blank" href="$linkimg">View section of annotated roll containing this hole</a>
+	</td>
+
+	</table>
+
+</td>
+</tr>
+</table>
+
+EOT
+
+	return $h+1;
+}
+
+
+
+##############################
+#
+# processTear
+#
+#@@BEGIN: BASS_TEARS
+#@@BEGIN: TEAR
+#@ID:		basstear001
+#@ORIGIN_ROW:	105560px
+#@ORIGIN_COL:	294px
+#@WIDTH_ROW:	21px
+#@WIDTH_COL:	25px
+#@AREA:		314px
+#@@END: TEAR
+#@@END: BASS_TEARS
+#@@END TEARS
+#
+
+sub processTear {
+	my ($h) = @_;
+	my %p;
+
+	while (($h < @contents) && ($contents[$h] !~ /^\@\@END:\s*TEAR/)) {
+		if ($contents[$h] =~ /^\@([^:]+):\s*(.*?)(px)?\s*$/) {
+			my $key = $1;
+			my $value = $2;
+			$p{$key} = $value;
+		}
+		$h++;
+	}
+
+	my $filebase = $p{"ID"};
+	return $h+1 if $filebase =~ /^\s*$/;
+
+	my $feet = ($p{'ORIGIN_ROW'} - $Preleader) / $dpi / 12.0;
+	$feet = int($feet * 100.0 + 0.5)/100.0;
+
+	my $areap = $p{'AREA'};
+	my $area = "$areap pixels, ";
+	my $value = $areap / 300.25 / 301.4 * 25.4 * 25.4;
+	my $value = int($value * 10.0 + 0.5)/10.0;
+	$area .= "$value mm<sup>2</sup>";
+
+	my $number = int($p{'ORIGIN_ROW'}/10000.0);
+	my $linkimg = "analysis-$number.jpg";
+
+
+	print <<"EOT";
+<hr noshade>
+<a name="$filebase"> </a>
+<table>
+<tr>
+<td>
+	<img src="$filebase.png">
+</td>
+<td>
+	<table class="ppp">
+
+	<tr>
+		<td>Position on roll</td> 
+		<td>$feet feet</td> 
+	</tr>
+
+	<tr>
+		<td>Bounding Box</td> 
+		<td>$p{'ORIGIN_COL'} $p{'ORIGIN_ROW'} $p{'WIDTH_COL'} $p{'WIDTH_ROW'} pixels</td>
+	</tr>
+
+	<tr>
+		<td>Area</td> 
+		<td>$area </td>
+	</tr>
+
+	<tr>
+		<td class="nocolon" colspan="2"><a href="$linkimg">View section of annotated roll containing this tear</a>
+	</td>
+
+	</table>
+
+</td>
+</tr>
+</table>
+
+EOT
+
+	return $h+1;
+}
+
+
+sub printHeader {
+
+print <<"EOT";
+
+<!DOCTYPE html>
+<html>
+	<head>
+	<!-- vim: set ts=3 : -->
+	<meta charset='UTF-8'>
+	<meta http-equiv="X-UA-Compatible" content="chrome=1">
+	<meta name="description" content="Piano roll project resources">
+	<link rel="SHORTCUT ICON" href="/images/favicon.png"/>
+	<link rel="canonical" 
+		href="http://pianoroll.sapp.org/full-rolls/">
+	<!-- meta http-equiv="X-UA-Compatible" content="IE=edge" -->
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+	<link href='https://fonts.googleapis.com/css?family=Chivo:900' rel='stylesheet' type='text/css'>
+	<link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+	<link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+	<script src="../../scripts/bootstrap-slider.js"></script>
+	<link rel="stylesheet" href="../..//styles/slider.css">
+	<link rel="stylesheet" href="../../styles/bootstrap.css">
+	<link rel="stylesheet" type="text/css" href="../../styles/stylesheet.css">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.0.2/handlebars.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/qtip2/2.2.1/jquery.qtip.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/qtip2/2.2.1/imagesloaded.pkg.min.js"></script>
+	<script src="../../scripts/external-links.js"></script>
+	<link type="text/css" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/qtip2/2.2.1/jquery.qtip.css"/>
+	<script>
+//
+// Programmer:    Craig Stuart Sapp <craig\@ccrma.stanford.edu>
+// Creation Date: Thu Oct 22 19:41:48 PDT 2015
+// Last Modified: Thu Oct 22 19:41:51 PDT 2015
+// Filename:      scripts/templates.html
+// Syntax:        JavaScript 1.8.5/ECMAScript 5.1
+// vim:           ts=3 hlsearch
+//
+// Description:   Handlebars templates and helper functions.
+//
+
+var renderContent     = null;
+var renderSample     = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+	renderContent = Handlebars.compile(
+		document.querySelector('#content-template').innerHTML);
+	renderSample = Handlebars.compile(
+		document.querySelector('#sample-template').innerHTML);
+});
+
+</script>
+
+
+
+<!--
+//////////////////////////////
+//
+// content-template -- Display the content.
+//
+-->
+
+
+<script id="content-template" type="text/x-handlebars-template">
+
+<style>
+
+body {
+	counter-reset: sample;
+}
+
+h4:before {
+	counter-increment: sample;
+	content: counter(sample) ". ";
+}
+
+.sample summary {
+	margin-bottom: 0.5rem;
+	margin-bottom: 1.5rem;
+	padding-left: 20px;
+	text-indent: -20px;
+
+}
+
+dl.roll-info {
+   border: none;
+}
+
+dl.roll-info  dt {
+   float: left;
+   clear: left;
+   width: 135px;
+	margin-top: 0;
+	margin-bottom: 0.45rem;
+   text-align: right;
+   font-weight: bold;
+   color: #997715;
+   margin-right: 0.5em;
+	padding-right: 0.5em;
+}
+
+dl.roll-info  dt:after {
+   content: ":";
+}
+
+dl.roll-info  dd {
+	margin-bottom: 0.45rem;
+   padding-left: 135px;
+	display: block;
+}
+
+</style>
+
+<img style="float:right; width:300px;" src="label-300dpi.jpg">
+
+<dl class="roll-info">
+
+{{#if LABEL}}
+	<dt>Label</dt>
+	<dd>
+		{{{LABEL}}}
+		{{#if CATALOG}}
+			{{{CATALOG}}}
+		{{/if}}
+	</dd>
+{{/if}}
+
+{{#if RECUTTER}}
+	<dt>Recutter</dt>
+	<dd>
+		{{{RECUTTER}}}
+	</dd>
+{{/if}}
+
+{{#if LOCATION}}
+	<dt>Location</dt>
+	<dd>
+		{{{LOCATION}}}
+	</dd>
+{{/if}}
+
+{{#if WORK}}
+	<dt>Work</dt>
+	<dd>
+		{{#if COMPOSER}}
+			<span class="composer">{{{COMPOSER}}}</span>:
+		{{/if}}
+		{{{WORK}}}
+	</dd>
+{{/if}}
+
+{{#if PERFORMER}}
+	<dt>Performer</dt>
+	<dd>
+		<span class="performer">{{{PERFORMER}}}</span>{{#if PERFORMER_DATES}}<small> ({{{PERFORMER_DATES}}})</small>{{/if}}{{#if EXPRESSIONIST}}, with {{{EXPRESSIONIST}}}{{/if}}{{#if RECORD_DATE}}, <span class="record-date">{{{RECORD_DATE}}}</span>
+		{{/if}}
+	</dd>
+{{/if}}
+
+{{#if ISSUE_DATE}}
+	<dt>Issue&nbsp;Date:</dt>
+	<dd>
+		{{{ISSUE_DATE}}}{{#if REISSUE_DATE}}, reissued {{{REISSUE_DATE}}}{{/if}}
+	</dd>
+{{/if}}
+
+{{#if SEARCHWORKS}}
+	<dt>Searchworks</dt>
+	<dd>
+		{{{searchworks SEARCHWORKS CALLNUM}}}
+	</dd>
+{{/if}}
+
+{{#if NOTE}}
+	<dt>Note</dt>
+	<dd>
+		{{{NOTE}}}
+	</dd>
+{{/if}}
+
+{{#if MECHANISM}}
+	<dt>Format</dt>
+	<dd>
+		{{{mechanism MECHANISM}}}
+	</dd>
+{{/if}}
+
+{{#if HOLES}}
+	<dt>Rows</dt>
+	<dd>
+		{{{HOLES}}}{{#if SPACING}}; {{SPACING}} per inch{{/if}}
+	</dd>
+{{/if}}
+
+</dl>
+
+<p>
+{{#if COMMENTARY}}
+	{{{COMMENTARY}}}
+{{/if}}
+</p>
+
+<h2 style="display:inline-block; width:100%;">Sample scans:</h2>
+
+{{samples SAMPLE}}
+
+
+</script>
+
+
+
+<script>
+
+///////////////////////////////////////////////////////////////////////////
+//
+// Helper functions for handlebars-js.
+//
+
+Handlebars.registerHelper('searchworks', function(url, callnum) {
+	var matches;
+	var text = callnum;
+	if (!callnum) {
+		text = "searchworks";
+		if (matches = url.match(/\/(\d+)/)) {
+			text = matches[1];
+		}
+	}
+	var output = '<a target="_new" href="' + url + '">' + text + '</a>';
+	return new Handlebars.SafeString(output);
+});
+
+
+
+Handlebars.registerHelper('mechanism', function(mechanism) {
+	var output = mechanism;
+	output = output.replace(/\bWM\b/g, "Welte-Mignon");
+	return new Handlebars.SafeString(output);
+});
+
+
+
+Handlebars.registerHelper('samples', function(samples) {
+	var output = '';
+	if (Array.isArray(samples)) {
+		for (var i=0; i<samples.length; i++) {	
+			output += getSampleHtml(samples[i], i+1);
+		}
+	} else {
+		output += getSampleHtml(samples, 1);
+	}
+
+	return new Handlebars.SafeString(output);
+});
+
+
+
+//////////////////////////////
+//
+// getSampleHtml --
+//
+
+function getSampleHtml(sample, number) {
+   var output = renderSample(sample);
+	return output;
+}
+
+</script>
+
+
+
+<!--
+//////////////////////////////
+//
+// sample-template -- Display the sample.
+//
+-->
+
+
+<script id="sample-template" type="text/x-handlebars-template">
+
+<a name="sample{{NUMBER}}"> </a>
+
+<details class="sample" open>
+<summary>
+<h4 style="display:inline;"> {{{DESCRIPTION}}} </h4>
+</summary>
+
+{{#if COMMENTARY}}
+	<p>
+	{{{COMMENTARY}}}
+	</p>
+{{/if}}
+
+<table><tr><td>
+
+<!--
+
+<label>Bit Depth</label>
+<select id="depth" class="form-control">
+   <option>24</option>
+   <option>8</option>
+   <option>1</option>
+   <option>none</option>
+</select>
+</td><td>
+
+<label>DPI</label>
+<select id="dpi" class="form-control">
+   <option>600</option>
+   <option>300</option>
+   <option>150</option>
+   <option>none</option>
+   <option>1200</option>
+</select>
+</td><td>
+
+<label>Threshold</label>
+<select id="threshold" class="form-control">
+   <option>N/A</option>
+   <option>20</option>
+   <option>40</option>
+   <option>60</option>
+</select>
+</td><td>
+-->
+
+<span style="font-size:16px;">Zoom:&nbsp;&nbsp;</span>
+<input
+	style="display:none;"
+	type="text"
+	id="zoom{{NUMBER}}"
+	class="span2"
+	value=""
+	data-slider-min="800"
+	data-slider-max="12000"
+	data-slider-step="10"
+	data-slider-value="800"
+	data-slider-orientation="horizontal"
+	data-slider-selection="after"
+	data-slider-tooltip="hide">
+</td><td>
+
+<!--
+<span style="font-size:16px;">Overlay opacity:</span>
+<input
+	style="display:none;"
+	type="text"
+	id="foo"
+	class="span2"
+	value=""
+	data-slider-min="0"
+	data-slider-max="1"
+	data-slider-step="0.1"
+	data-slider-value="0.7"
+	data-slider-orientation="horizontal"
+	data-slider-selection="after"
+	data-slider-tooltip="hide">
+-->
+
+</td></tr></table>
+
+<style>
+.sample-scan {
+	overflow: scroll;
+	width:800px;
+	height:800px;
+	margin-bottom:40px;
+	background-size: 800px;
+	background-repeat: no-repeat;
+	background-origin: content-box;
+	background-attachment: local;
+	background-image: url('/images/resolution/600dpi-24bit.png');
+}
+</style>
+
+<!--
+<div id="sample-scan-{{NUMBER}}" style="background-image: url('sample-{{NUMBER}}-600dpi.jpg');" class="sample-scan">
+-->
+<div id="sample-scan-{{NUMBER}}" style="background-image: none;" class="sample-scan">
+	<img id="overlay{{NUMBER}}" src="sample-{{NUMBER}}-600dpi.jpg" style="max-width:12000px; width:800px;">
+</div>
+
+{{#if COMMENTARY_POST}}
+	<p>
+	{{{COMMENTARY_POST}}}
+	</p>
+{{/if}}
+
+</details>
+
+</script>
+
+
+
+
+
+	<script src="../../scripts/main.js"></script>
+	<script src="../../scripts/aton.js"></script>
+	<script src="../../scripts/format.js"></script>
+	<!--[if lt IE 9]>
+	<script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+	<![endif]-->
+
+	<title>
+		
+			Roll scans
+		
+	</title>
+
+	<!-- Custom CSS -->
+
+	<!-- JavaScript -->
+	
+
+	<script type="text/javascript">
+	var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+	document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+	</script>
+	<script type="text/javascript">
+	try {
+	        var pageTracker = _gat._getTracker("UA-68570379-1");
+		pageTracker._trackPageview();
+	} catch(err) {}
+</script>
+
+</head>
+
+	<!-- vim: set ts=3 nowrap : -->
+	<body>
+		<div id="container">
+			<div class="inner">
+				<section class="page-header">
+</section>
+
+
+
+				
+
+<!-- breadcrumbs navigator: -->
+<span style="position: relative; left: 4px; bottom: 33px">
+   
+     &nbsp;&nbsp;&raquo;&nbsp;&nbsp;<a style="letter-spacing: -0.5px;" href="http://pianoroll.sapp.org">home</a>
+     &nbsp;&nbsp;&raquo;&nbsp;&nbsp;<a style="letter-spacing: -0.5px;" href="http://pianoroll.sapp.org/full-rolls">roll scans</a>
+   
+</span>
+
+
+EOT
+
+}
+
+
+sub printFooter {
+
+print <<"EOT";
+
+</div> <!-- realcontent -->
+<div style="height:200px;"></div>
+</section>
+<footer> </footer>
+
+</div>
+</div>
+</body>
+</html>
+
+
+EOT
+
+
+}
+

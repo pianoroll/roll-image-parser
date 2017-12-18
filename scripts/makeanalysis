@@ -1,0 +1,50 @@
+#!/usr/bin/perl
+# vim: ts=3
+
+use strict;
+
+my $command = "/user/c/craig/Library/Web/piano-roll-project/full-scans/bin/markholes";
+
+my $tempimage = "/tmp/z.tiff";
+
+my @files = @ARGV;
+
+if (@files == 0) {
+	@files = glob "*.tiff";
+	print "Processing all TIFF images in directory\n";
+}
+
+foreach my $file (@files) {
+	my $basename = $file;
+	$basename =~ s/\.[^.]+$//;
+	next if $basename =~ /-\d$/;
+	next if -d "$basename-analysis";
+	print "Creating file $basename-analysis.jpg ...\n";
+
+	my $tinfo = `tiffinfo $file`;
+	$tinfo =~ /Image Length:\s*(\d+)/;
+	my $length = $1;
+	my $percentage = int(64000 / $length * 100 + 0.5);
+	if ($percentage > 33) {
+		$percentage = 33;
+	}
+	my $result = int($length * $percentage / 100.0);
+	print "RESIZING by $percentage\% from $length to $result\n";
+	`cp $file $tempimage`;
+	`mkdir -p $basename-analysis`;
+	`$command $file $tempimage > $basename-analysis/analysis.txt`;
+   `convert $tempimage -resize $percentage% -flip -quality 80\% $basename-analysis/markup.jpg`;
+   `convert $tempimage -crop 4096x10000 $basename-analysis/analysis.jpg`;
+	`(cd $basename-analysis && ln -s ../../bin/Makefile-analysis Makefile)`;
+	`(cd $basename-analysis && make)`;
+
+	# create overview image
+	`convert $tempimage -resize 1000x1000 -rotate -90 -flip $basename-analysis/thumbnail-markup.jpg`;
+
+	`rm $tempimage`;
+
+
+}
+
+
+

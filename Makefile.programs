@@ -46,7 +46,7 @@ endif
 INCDIR    = include
 LIBDIR    = lib
 LIBFILE   = pianoroll
-TARGDIR   = bin
+TARGDIR   = ../
 TOOLDIR   = tools
 
 PREFLAGS  = -Wall -I$(INCDIR)

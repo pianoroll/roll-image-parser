@@ -75,14 +75,14 @@ std::ostream& HoleInfo::printAton(std::ostream& out) {
 	if (!id.empty()) {
 		out << "@ID:\t\t" << id << std::endl;
 	}
-	out << "@ORIGIN_ROW:\t"   << origin.first   << "px"  << std::endl;
-	out << "@ORIGIN_COL:\t"   << origin.second  << "px"  << std::endl;
-	out << "@WIDTH_ROW:\t"    << width.first    << "px"  << std::endl;
-	out << "@WIDTH_COL:\t"    << width.second   << "px"  << std::endl;
-	out << "@CENTROID_ROW:\t" << centroid.first << "px"  << std::endl;
-	out << "@CENTROID_ROW:\t" << width.second   << "px"  << std::endl;
-	out << "@AREA:\t\t"       << area           << "px"  << std::endl;
-	out << "@PERIMETER:\t"    << perimeter      << "px"  << std::endl;
+	out << "@ORIGIN_ROW:\t"   << origin.first     << "px"  << std::endl;
+	out << "@ORIGIN_COL:\t"   << origin.second    << "px"  << std::endl;
+	out << "@WIDTH_ROW:\t"    << width.first      << "px"  << std::endl;
+	out << "@WIDTH_COL:\t"    << width.second     << "px"  << std::endl;
+	out << "@CENTROID_ROW:\t" << centroid.first   << "px"  << std::endl;
+	out << "@CENTROID_COL:\t" << centroid.second  << "px"  << std::endl;
+	out << "@AREA:\t\t"       << area             << "px"  << std::endl;
+	out << "@PERIMETER:\t"    << perimeter        << "px"  << std::endl;
 	out << "@CIRCULARITY:\t"  << int(circularity*100.0+0.5)/100.0 << std::endl;
 	// if (!isMusicHole) {
 		out << "@MAJOR_AXIS:\t"   << int(majoraxis + 0.5) << "deg" << std::endl;

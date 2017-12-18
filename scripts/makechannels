@@ -1,0 +1,23 @@
+#!/usr/bin/perl
+# vim: ts=3
+
+use strict;
+
+my @files = @ARGV;
+
+if (@files == 0) {
+	@files = glob "*.tiff";
+	print "Processing all TIFF images in directory\n";
+}
+
+foreach my $file (@files) {
+	my $basename = $file;
+	$basename =~ s/\.[^.]+$//;
+	next if $basename =~ /-\d$/;
+	next if -r "$basename-1.tiff";
+	print "Creating file $basename-[012].tiff ...\n";
+	 `convert $file -channel RGB -separate -compress lzw $basename-%d.tiff`;
+	`rm $basename-0.tiff`;  # Throw away the red channel
+	`rm $basename-2.tiff`;  # Throw away the blue channel
+}
+

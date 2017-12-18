@@ -1,0 +1,36 @@
+#!/usr/bin/perl
+# vim: ts=3
+
+use strict;
+
+my $dupit = "/user/c/craig/Library/Web/piano-roll-project/full-scans/bin/frameduplicates/frameduplicates";
+
+my @files = @ARGV;
+
+if (@files == 0) {
+	@files = glob "*.tiff";
+	print "Processing all TIFF images in directory\n";
+}
+
+foreach my $file (@files) {
+	my $basename = $file;
+	$basename =~ s/\.[^.]+$//;
+	next if $basename =~ /-\d$/;
+	next if -r "$basename.jpg";
+	print "Creating file $basename.jpg ...\n";
+
+	my $tinfo = `tiffinfo $file`;
+	$tinfo =~ /Image Length:\s*(\d+)/;
+	my $length = $1;
+	my $percentage = int(64000 / $length * 100 + 0.5);
+	if ($percentage > 33) {
+		$percentage = 33;
+	}
+	my $result = int($length * $percentage / 100.0);
+	print "RESIZING by $percentage\% from $length to $result\n";
+	`cp $file z.tiff`;
+	`$dupit $file z.tiff`;
+   `convert z.tiff -resize $percentage% -flip -quality 80\% $basename.jpg`;
+	`rm z.tiff`;
+}
+

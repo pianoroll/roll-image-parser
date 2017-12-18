@@ -1,0 +1,122 @@
+#!/usr/bin/perl
+# vim: ts=3
+
+use strict;
+
+my $file = shift @ARGV;
+
+if (!-r $file) {
+	my $tfile = `pwd`;
+	chomp $tfile;
+	if ($tfile =~ /\/([^\/]+)-analysis/) {
+		$file = "../$1.tiff";
+	}
+}
+
+my @contents = <>;
+
+my $tearstart = 0;
+for (my $i=0; $i<@contents; $i++) {
+	if ($contents[$i] =~ /^\@\@BEGIN:\s*TEARS/) {
+		$tearstart = $i;
+		last;
+	}
+}
+
+
+if ($tearstart > 0) {
+	while ($tearstart < @contents) {
+		print "PROCESSING A TEAR ...\n";
+print "PROCESSING FROM LINE $contents[$tearstart]\n";
+		$tearstart = processTear($tearstart+1);
+	}
+}
+
+
+##############################
+#
+# processTear
+#
+# @@BEGIN: TEAR
+# @ID:		bad001
+# @ORIGIN_ROW:	317792px
+# @ORIGIN_COL:	3569px
+# @WIDTH_ROW:	91px
+# @WIDTH_COL:	30px
+# @CENTROID_ROW:	317843px
+# @CENTROID_ROW:	30px
+# @AREA:		1253px
+# @PERIMETER:	234.252px
+# @CIRCULARITY:	0.29
+# @MAJOR_AXIS:	-12deg
+# @@END: TEAR
+# 
+
+sub processTear {
+	my ($h) = @_;
+	my %parameters;
+
+	while (($h < @contents) && ($contents[$h] !~ /^\@\@END:\s*TEAR/)) {
+		if ($contents[$h] =~ /^\@([^:]+):\s*(.*)(px)?\s*$/) {
+			my $key = $1;
+			my $value = $2;
+			$parameters{$key} = $value;
+		}
+		$h++;
+	}
+
+	return $h if $h >= @contents;
+
+	my $filebase = $parameters{"ID"};
+	return $h+1 if $filebase =~ /^\s*$/;
+
+	my $width   = $parameters{"WIDTH_COL"};
+	my $height  = $parameters{"WIDTH_ROW"};
+	my $hoffset = $parameters{"ORIGIN_COL"};
+	my $voffset = $parameters{"ORIGIN_ROW"};
+	$width   =~ s/px//;
+	$height  =~ s/px//;
+	$hoffset =~ s/px//;
+	$voffset =~ s/px//;
+
+	if ($width > 2000) {
+		print "TEAR TOO WIDE: $width\n";
+		print "\tFOR ID $parameters{'ID'}\n";
+		return $h;
+	}
+
+	if ($height > 2000) {
+		print "TEAR TOO HIGH $height\n";
+		print "\tFOR ID $parameters{'ID'}\n";
+		return $h;
+	}
+
+	my $padding  = 150;
+	my $xwidth   = $width + 2 * $padding;
+	my $xheight  = $height + 2 * $padding;
+	my $xhoffset = $hoffset - $padding;
+	my $xvoffset = $voffset - $padding;
+
+	my $rpadding = 10;
+	my $rwidth   = $width + 2 * $rpadding;
+	my $rheight  = $height + 2 * $rpadding;
+	my $rhoffset = $hoffset - $rpadding;
+	my $rvoffset = $voffset - $rpadding;
+
+	my $x2 = $rhoffset + $rwidth;
+	my $y2 = $rvoffset + $rheight;
+
+
+	my $command = "convert $file";
+	$command .= " -fill none -stroke red";
+	$command .= " -draw \"rectangle $rhoffset,$rvoffset $x2,$y2\"";
+	$command .= " -crop ${xwidth}x$xheight+$xhoffset+$xvoffset";
+	$command .= " $filebase.png";
+	print "$command\n";
+	`$command`;
+
+	return $h+1;
+}
+
+
+

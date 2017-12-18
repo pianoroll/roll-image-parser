@@ -33,9 +33,10 @@ class PreTearInfo {
 
 class TearInfo : public HoleInfo {
 	public:
-		         TearInfo     (void);
-		        ~TearInfo     ();
+		                 TearInfo     (void);
+		                ~TearInfo     ();
 
+		std::ostream&    printAton    (std::ostream& out);
 };
 
 std::ostream& operator<<(std::ostream& out, TearInfo& hi);
