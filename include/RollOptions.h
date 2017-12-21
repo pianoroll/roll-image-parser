@@ -39,6 +39,10 @@ class RollOptions {
 		void     setMaxHoleCount           (int value);
 		int      getMaxTearFill            (void);
 		void     setMaxTearFill            (int value);
+		int      getAttackLineSpacing      (void);
+		void     setAttackLineSpacing      (int value);
+		double   getHoleShiftCutoff        (void);
+		void     setHoleShiftCutoff        (double value);
 
 	private:
 		// m_minTrackerSpacingToPaperEdge: minimum distance from paper
@@ -67,6 +71,15 @@ class RollOptions {
 
 		// m_maxTearFill: The max number of pixels to fill a tear with.
 		int m_maxTearFill;
+
+		// m_attackLineSpacing: distance between dots on note attack line.
+		int m_attackLineSpacing;
+
+		// m_holeShiftCutoff: the threshold in pixel shift between the
+		// leading and trailing edge of a hole to decide if the paper
+		// is shifting while the hole is playing.
+		double m_holeShiftCutoff;
+
 };
 
 

@@ -17,6 +17,7 @@
 #include <fstream>
 #include <iostream>
 #include <utility>
+#include <string>
 
 #include "TiffFile.h"
 #include "HoleInfo.h"
@@ -37,20 +38,27 @@ namespace prp  {
 #define PIX_TEAR               7    /* pixel represents uncategorized non-paper         */
 #define PIX_ANTIDUST           8    /* pixel represents non-musical hole in paper       */
 #define PIX_HOLE               9    /* pixel represents music hole in roll              */
-#define PIX_BADHOLE           10    /* pixel represents non-music hole in roll          */
-#define PIX_HOLEBB            11    /* pixel represents bounding box around music hole  */
-#define PIX_TRACKER           12    /* pixel is center of a tracker hole                */
-#define PIX_TRACKER_BASS      13    /* pixel is center of bass tracker hole             */
-#define PIX_TRACKER_TREBLE    14    /* pixel is center of treble tracker hole           */
-#define PIX_POSTMUSIC         15    /* pixel represents after last hole in roll         */
-#define PIX_DEBUG             16    /* debugging pixel type white                       */
-#define PIX_DEBUG1            17    /* debugging pixel type 1 red                       */
-#define PIX_DEBUG2            18    /* debugging pixel type 2 orange                    */
-#define PIX_DEBUG3            19    /* debugging pixel type 3 yellow                    */
-#define PIX_DEBUG4            20    /* debugging pixel type 4 green                     */
-#define PIX_DEBUG5            21    /* debugging pixel type 5 light blue                */
-#define PIX_DEBUG6            22    /* debugging pixel type 6 dark blue                 */
-#define PIX_DEBUG7            23    /* debugging pixel type 7 purple                    */
+#define PIX_HOLE_SHIFT        10    /* music hole which shifts left/right               */
+#define PIX_BADHOLE           11    /* pixel represents non-music hole in roll          */
+#define PIX_BADHOLE_SKEWED    12    /* pixel represents hole with strange skew          */
+#define PIX_BADHOLE_ASPECT    13    /* pixel represents hole with strange aspect ratio  */
+#define PIX_HOLEBB            14    /* pixel represents bounding box around music hole  */
+#define PIX_HOLEBB_LEADING    15    /* bounding box leading edge                        */
+#define PIX_HOLEBB_TRAILING   16    /* bounding box trailing edge                       */
+#define PIX_HOLEBB_BASS       17    /* bounding box bass-face edge                      */
+#define PIX_HOLEBB_TREBLE     18    /* bounding box treble-facing                       */
+#define PIX_TRACKER           19    /* pixel is center of a tracker hole                */
+#define PIX_TRACKER_BASS      20    /* pixel is center of bass tracker hole             */
+#define PIX_TRACKER_TREBLE    21    /* pixel is center of treble tracker hole           */
+#define PIX_POSTMUSIC         22    /* pixel represents after last hole in roll         */
+#define PIX_DEBUG             23    /* debugging pixel type white                       */
+#define PIX_DEBUG1            24    /* debugging pixel type 1 red                       */
+#define PIX_DEBUG2            25    /* debugging pixel type 2 orange                    */
+#define PIX_DEBUG3            26    /* debugging pixel type 3 yellow                    */
+#define PIX_DEBUG4            27    /* debugging pixel type 4 green                     */
+#define PIX_DEBUG5            28    /* debugging pixel type 5 light blue                */
+#define PIX_DEBUG6            29    /* debugging pixel type 6 dark blue                 */
+#define PIX_DEBUG7            30    /* debugging pixel type 7 purple                    */
 
 
 typedef unsigned char pixtype;
@@ -96,6 +104,11 @@ class RollImage : public TiffFile, public RollOptions {
 		double          getDustScoreTreble            (void);
 		void            sortBadHolesByArea            (void);
 		void            sortTearsByArea               (void);
+		void            markHoleAttack                (HoleInfo& hi);
+		void            markHoleAttacks               (void);
+		void            markHoleShifts                (void);
+		std::string     getDataMD5Sum                 (void);
+		void            assignMusicHoleIds            (void);
 
 		// pixelType: a bitmask which contains enumerated types for the
 		// functions of pixels (the PIX_* defines above):
@@ -223,6 +236,9 @@ class RollImage : public TiffFile, public RollOptions {
 		                                        ulong target, ulong threshold, ulong replacement,
 		                                        std::vector<int>& margin);
 		int        getTrackerHoleCount         (void);
+		void       recalculateFirstMusicHole   (void);
+		void       removeBadLeaderHoles        (void);
+		void       addDriftInfoToHoles         (void);
 
 	private:
 		bool       m_analyzedBasicMargins      = false;

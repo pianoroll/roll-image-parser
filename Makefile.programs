@@ -46,7 +46,7 @@ endif
 INCDIR    = include
 LIBDIR    = lib
 LIBFILE   = pianoroll
-TARGDIR   = ../
+TARGDIR   = /user/c/craig/www/piano-roll-project/full-scans/bin
 TOOLDIR   = tools
 
 PREFLAGS  = -Wall -I$(INCDIR)

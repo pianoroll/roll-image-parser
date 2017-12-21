@@ -13,6 +13,8 @@
 // Compactness: area/perimeter^2
 // http://web.cs.wpi.edu/~emmanuel/courses/cs545/S14/slides/lecture08.pdf
 
+#include <cmath>
+
 #include "HoleInfo.h"
 
 namespace prp  {
@@ -61,6 +63,27 @@ void HoleInfo::clear(void) {
 	circularity     = 0.0;
 	majoraxis       = 0.0;
 	coldrift        = 0.0;
+	leadinghcor     = 0.0;
+	trailinghcor    = 0.0;
+}
+
+
+
+//////////////////////////////
+//
+// HoleInfo::isShifting -- True if moving left to right at faster than
+//    a particular rate (determined empiracally).
+//
+
+bool HoleInfo::isShifting(void) {
+	double pixelshift = leadinghcor - trailinghcor;
+	if (fabs(pixelshift)/width.first > 0.015) {  // ggg
+		return true;
+	} else if (abs(pixelshift) > 3.0) {
+		return true;
+	} else {
+		return false;
+	}
 }
 
 
@@ -84,9 +107,26 @@ std::ostream& HoleInfo::printAton(std::ostream& out) {
 	out << "@AREA:\t\t"       << area             << "px"  << std::endl;
 	out << "@PERIMETER:\t"    << perimeter        << "px"  << std::endl;
 	out << "@CIRCULARITY:\t"  << int(circularity*100.0+0.5)/100.0 << std::endl;
+
+	#define HOLE_SHIFT 3.0
+
+	if (fabs(leadinghcor - trailinghcor) < HOLE_SHIFT) {
+		double value = (leadinghcor + trailinghcor) / 2.0;
+		value = int(value * 10 + 0.5)/10.0;
+		out << "@HPIXCOR:\t"        << value   << "px" << std::endl;
+	} else {
+		double value1 = int(leadinghcor*10.0+0.5)/10.0;
+		double value2 = int(trailinghcor*10.0+0.5)/10.0;
+		out << "@HPIXCOR_LEAD:\t"  << value1   << "px" << std::endl;
+		out << "@HPIXCOR_TRAIL:\t" << value2   << "px" << std::endl;
+	}
+
 	// if (!isMusicHole) {
 		out << "@MAJOR_AXIS:\t"   << int(majoraxis + 0.5) << "deg" << std::endl;
 	// }
+	if (!reason.empty()) {
+		out << "@REASON:\t"  << reason << std::endl;
+	}
 	out << "@@END: HOLE\n";
 	return out;
 }

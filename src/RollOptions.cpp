@@ -40,17 +40,19 @@ RollOptions::~RollOptions() {
 
 //////////////////////////////
 //
-// RollOptions::reset --
+// RollOptions::reset -- Set to default parameters.
 //
 
 void RollOptions::reset(void) {
 	m_minTrackerSpacingToPaperEdge = 1.50;
-	m_maxHoleWidth                 = 1.25;
+	m_maxHoleWidth                 = 1.50; // wide for rewind hole of duoart salesman
 	m_aspectRatioThreshold         = 1.25;
 	m_majorAxisThreshold           = 13.0;
 	m_circularityThreshold         =  0.4;
-	m_maxHoleCount                 = 150000;
-	m_maxTearFill                  = 300000;
+	m_maxHoleCount                 = 100000;
+	m_maxTearFill                  = 100000;
+	m_attackLineSpacing            = 10;
+	m_holeShiftCutoff              = 3.0;
 };
 
 
@@ -207,6 +209,51 @@ int RollOptions::getMaxTearFill(void) {
 void RollOptions::setMaxTearFill(int value) { 
 	m_maxTearFill = value;
 }
+
+
+
+//////////////////////////////
+//
+// RollOptions::getAttackLineSpacing --
+//
+
+int RollOptions::getAttackLineSpacing(void) {
+	return m_attackLineSpacing;
+}
+
+
+
+//////////////////////////////
+//
+// RollOptions::setAttackLineSpacing --
+//
+
+void RollOptions::setAttackLineSpacing(int value) {
+	m_attackLineSpacing = value;
+}
+
+
+
+//////////////////////////////
+//
+// RollOptions::getHoleShiftCutoff --
+//
+
+double RollOptions::getHoleShiftCutoff(void) { 
+	return m_holeShiftCutoff;
+}
+
+
+
+//////////////////////////////
+//
+// RollOptions::setHoleShiftCutoff --
+//
+
+void RollOptions::setHoleShiftCutoff(double value) { 
+	m_holeShiftCutoff = value;
+}
+
 
 
 } // end prp namespace

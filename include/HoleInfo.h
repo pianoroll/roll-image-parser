@@ -27,22 +27,26 @@ class HoleInfo {
 		         HoleInfo     (void);
 		        ~HoleInfo     ();
 
-		std::pair<ulong, ulong>   origin;      // Row, Column of origin (top let corner)
-		std::pair<ulong, ulong>   width;       // Row, Column widths.
-		std::pair<double, double> centroid;    // Center of mass
-		std::pair<ulong, ulong>   entry;       // entry point for filling holes
-		ulong                     track;       // tracker hole index
-		ulong                     area;        // area of hole
-		double                    circularity; // circularity of hole
-		double                    perimeter;   // outer contour of hole
-		double                    majoraxis;   // angle of longest axis
-		double                    coldrift;    // column drive in pixels
-		std::string               id;          // unique identifier (if not empty)
+		std::pair<ulong, ulong>   origin;       // Row, Column of origin (top let corner)
+		std::pair<ulong, ulong>   width;        // Row, Column widths.
+		std::pair<double, double> centroid;     // Center of mass
+		std::pair<ulong, ulong>   entry;        // entry point for filling holes
+		ulong                     track;        // tracker hole index
+		ulong                     area;         // area of hole
+		double                    circularity;  // circularity of hole
+		double                    perimeter;    // outer contour of hole
+		double                    majoraxis;    // angle of longest axis
+		double                    coldrift;     // column drive in pixels
+		std::string               id;           // unique identifier (if not empty)
+		std::string               reason;       // reason for being a bad hole (if bad)
+		double                    leadinghcor;  // leading horizontal pixel correction
+		double                    trailinghcor; // trailing horizontal pixel correction
 
 		void     clear        (void);
 		bool     isMusicHole  (void) { return m_type == 1 ? 1 : 0; }
 		void     setNonHole   (void) { m_type = 0; }
 		std::ostream& printAton (std::ostream& out = std::cout);
+		bool      isShifting   (void);
 
 	private:
 		char     m_type;

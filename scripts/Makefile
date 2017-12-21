@@ -1,7 +1,6 @@
 
 
-SRC = "../../"
-
+SRC = "/user/c/craig/www/piano-roll-project/full-scans/bin";
 
 
 all:

@@ -42,6 +42,8 @@ int main(int argc, char** argv) {
 	roll.analyze();
 	roll.printRollImageProperties();
 	roll.markHoleBBs();
+	roll.markHoleShifts();
+	roll.markHoleAttacks();
 	roll.markTrackerPositions();
 	// roll.drawMajorAxes();
 	roll.mergePixelOverlay(output);

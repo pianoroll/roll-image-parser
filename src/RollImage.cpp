@@ -13,6 +13,7 @@
 
 #include "RollImage.h"
 #include "HoleInfo.h"
+#include "CheckSum.h"
 
 #include <algorithm>
 #include <cmath>
@@ -28,7 +29,7 @@ namespace prp {
 //
 
 RollImage::RollImage(void) {
-   // do nothing
+	// do nothing
 }
 
 
@@ -93,38 +94,46 @@ void RollImage::loadGreenChannel(void) {
 //
 
 void RollImage::analyze(void) {
-cerr << "GOT HERE AAA" << endl;
+	bool debug = 1;
+	if (debug) { cerr << "STEP 1: analyzeBasicMargins" << endl; }
 	analyzeBasicMargins();
-cerr << "GOT HERE BBB" << endl;
+	if (debug) { cerr << "STEP 2: analyzeLeaders" << endl; }
 	analyzeLeaders();
-cerr << "GOT HERE CCC" << endl;
+	if (debug) { cerr << "STEP 3: analyzeAdvancedMargins" << endl; }
 	analyzeAdvancedMargins();
-cerr << "GOT HERE DDD" << endl;
+	if (debug) { cerr << "STEP 4: generateDriftCorrection" << endl; }
 	generateDriftCorrection(0.01);
-cerr << "GOT HERE EEE" << endl;
+	if (debug) { cerr << "STEP 5: analyzeHoles" << endl; }
 	analyzeHoles();
-cerr << "GOT HERE FFF" << endl;
+	if (debug) { cerr << "STEP 6: analyzeTears" << endl; }
 	analyzeTears();
-cerr << "GOT HERE GGG" << endl;
+	if (debug) { cerr << "STEP 7: generateDriftCorrection" << endl; }
 	generateDriftCorrection(0.01);
-cerr << "GOT HERE HHH" << endl;
+	if (debug) { cerr << "STEP 8: calculateHoleDescriptors" << endl; }
 	calculateHoleDescriptors();
-cerr << "GOT HERE III" << endl;
+	if (debug) { cerr << "STEP 9: invalidateSkewedHoles" << endl; }
 	invalidateSkewedHoles();
-cerr << "GOT HERE JJJ" << endl;
+	if (debug) { cerr << "STEP 10: markPosteriorLeader" << endl; }
 	markPosteriorLeader();
-cerr << "GOT HERE KKK" << endl;
+	if (debug) { cerr << "STEP 11: analyzeTrackerBarSpacing" << endl; }
 	analyzeTrackerBarSpacing();
-cerr << "GOT HERE LLL" << endl;
+	if (debug) { cerr << "STEP 12: analyzeTrackerBarPositions" << endl; }
 	analyzeTrackerBarPositions();
-cerr << "GOT HERE MMM" << endl;
+	if (debug) { cerr << "STEP 13: analyzeHorizontalHolePosition" << endl; }
 	analyzeHorizontalHolePosition();
-cerr << "GOT HERE NNN" << endl;
+	if (debug) { cerr << "STEP 14: analyzeMidiKeyMapping" << endl; }
 	analyzeMidiKeyMapping();
-cerr << "GOT HERE OOO" << endl;
+	if (debug) { cerr << "STEP 15: invalidateEdgeHoles" << endl; }
 	invalidateEdgeHoles();
-cerr << "GOT HERE PPP" << endl;
+	if (debug) { cerr << "STEP 16: recalculateFirstMusicHole" << endl; }
+	recalculateFirstMusicHole();
+	if (debug) { cerr << "STEP 17: addDriftInfoToHoles" << endl; }
+	addDriftInfoToHoles();
+	if (debug) { cerr << "STEP 18: addAntidustToBadHoles" << endl; }
 	addAntidustToBadHoles(50);
+	if (debug) { cerr << "STEP 19: assignMusicHoleIds" << endl; }
+	assignMusicHoleIds();
+	if (debug) { cerr << "STEP 20: FINSHED WITH ANALYSIS!" << endl; }
 }
 
 
@@ -160,7 +169,7 @@ void RollImage::calculateHoleDescriptors(void) {
 			// bad region so don't do any more calculations.
 			continue;
 		}
-		holes[i]->circularity = 4 * M_PI * holes[i]->area / 
+		holes[i]->circularity = 4 * M_PI * holes[i]->area /
 			holes[i]->perimeter / holes[i]->perimeter;
 		holes[i]->majoraxis = calculateMajorAxis(*holes[i]);
 	}
@@ -184,7 +193,7 @@ double RollImage::calculateCentralMoment(HoleInfo& hole, int p, int q) {
 			if (pixelType[r+ro][c+co] != PIX_HOLE) {
 				continue;
 			}
-			moment += pow(c+co - center.second, p) * 
+			moment += pow(c+co - center.second, p) *
 					pow(r+ro - center.first, q);
 		}
 	}
@@ -218,7 +227,7 @@ double RollImage::calculateMajorAxis(HoleInfo& hole) {
 // RollImage::calculateNormalCentralMoment --
 //
 
-double RollImage::calculateNormalCentralMoment(HoleInfo& hole, int p, 
+double RollImage::calculateNormalCentralMoment(HoleInfo& hole, int p,
 		int q) {
 	double m00 = hole.area;
 	double norm = pow(m00, (double)(p+q+2)/2);
@@ -246,7 +255,7 @@ bool RollImage::calculateHolePerimeter(HoleInfo& hole) {
 	}
 	pair<ulong, ulong> start(r, c);
 	pair<ulong, ulong> successor; // next point after starting point
-	
+
 	pair<ulong, ulong> previous = start;
 	pair<ulong, ulong> current = previous;
 	int direction = 0;
@@ -258,7 +267,7 @@ bool RollImage::calculateHolePerimeter(HoleInfo& hole) {
 	// pixelType[successor.first][successor.second] = PIX_DEBUG2;
 
 	double sum = 0.0;
-	
+
 	int counter = 0;
 	while (!done) {
 		previous = current;
@@ -333,9 +342,17 @@ void RollImage::analyzeMidiKeyMapping(void) {
 	position.resize(trackerArray.size());
 	std::fill(position.begin(), position.end(), 0.0);
 
+
+	//double newoffset = holeOffset;
+	//if (holeOffset > holeSeparation / 2) {
+	//	newoffset = holeSeparation - holeOffset;
+	//}
+cerr << "HOLE SEPARATION: " << holeSeparation << endl;
+cerr << "HOLE OFFSET:     " << holeOffset << endl;
+
 	// assigned normalized pixel column positions to each hole column.
 	for (ulong i=0; i<position.size(); i++) {
-		position[i] = i * holeSeparation - holeOffset;
+		position[i] = i * holeSeparation + holeOffset;
 	}
 
 	// find the frist position which has holes
@@ -351,6 +368,7 @@ void RollImage::analyzeMidiKeyMapping(void) {
 
 	// find the last position which has holes
 	// ulong colend = 0;
+//ggg
 	for (ulong i=trackerArray.size()-1; i>=0; i--) {
 		if (trackerArray[i].empty()) {
 			continue;
@@ -363,24 +381,48 @@ void RollImage::analyzeMidiKeyMapping(void) {
 	// check that the hole positions are within the bounds of the paper
 	// within the tolerance of getMinTrackerEdge():
 
+	std::vector<double> pixelpos((int)(getCols() / holeSeparation + 10), 0);
+	for (ulong i=0; i<pixelpos.size(); i++) {
+		pixelpos[i] = i * holeSeparation + holeOffset;
+	}
+
 	ulong r = getFirstMusicHoleStart();
+cerr << "DRIFT CORRECTION " << driftCorrection[r] << endl;
+	double leftmin = leftMarginIndex[r];
+cerr << "LEFTMARGININDEX " << leftMarginIndex[r] << endl;
+	leftmin += driftCorrection[r];
+	leftmin += getMinTrackerEdge() * holeSeparation;
+//	leftmin += holeOffset;
+	int leftmostIndex = 0;
+	for (ulong i=0; i<pixelpos.size(); i++) {
+		if (pixelpos[i] > leftmin) {
+			leftmostIndex = i;
+			break;
+		}
+	}
 
-	double leftRollPixelEdge = leftMarginIndex[r];
-	leftRollPixelEdge += driftCorrection[r];
-	leftRollPixelEdge += getMinTrackerEdge() * holeSeparation;
+// cerr << "LEFT TRACK INDEX " << leftmostIndex
+// << "\tLEFTMIN = " << leftmin
+// << "\tPIXELPOS = " << pixelpos[leftmostIndex]
+// << endl;
 
-	double rightRollPixelEdge = rightMarginIndex[r];
-	rightRollPixelEdge += driftCorrection[r];
-	rightRollPixelEdge -= getMinTrackerEdge() * holeSeparation;
+	double rightmin = rightMarginIndex[r];
+cerr << "RIGHTMARGININDEX " << rightMarginIndex[r] << endl;
+	// rightmin -= driftCorrection[r]
+	rightmin += - getMinTrackerEdge() * holeSeparation;
+//	rightmin += holeOffset;
+	int rightmostIndex = pixelpos.size()-1;
+	for (ulong i=pixelpos.size() - 1; i>0; i--) {
+		if (pixelpos[i] < rightmin) {
+			rightmostIndex = i;
+			break;
+		}
+	}
 
-	// double lpos = leftMarginIndex[r] + driftCorrection[r];
-	// double rpos = rightMarginIndex[r] + driftCorrection[r];
-
-	double lmargin = leftRollPixelEdge;
-	double rmargin = rightRollPixelEdge;
-
-	int leftmostIndex  = int((lmargin + holeOffset) / holeSeparation + 0.5);
-	int rightmostIndex = int((rmargin + holeOffset) / holeSeparation + 0.5);
+// cerr << "RIGHT TRACK INDEX " << rightmostIndex
+// << "\tRIGHTMIN = " << rightmin
+// << "\tPIXELPOS = " << pixelpos[rightmostIndex]
+// << endl;
 
 	int holecount = rightmostIndex - leftmostIndex + 1;
 	if (holecount > 100) {
@@ -390,12 +432,13 @@ void RollImage::analyzeMidiKeyMapping(void) {
 		std::cerr << "Error: way too many holes on paper (can't handle organ rolls yet)" << endl;
 		exit(1);
 	}
-	
-	// rough guess for now on the mapping: placing the middle hole position on E4/F4 boundary
-	int F4split = (rightmostIndex - leftmostIndex) / 2 + 1 + leftmostIndex;
-cerr << "RIGHTMOST INDEX " << rightmostIndex << endl;
-cerr << "LEFTMOST INDEX " << leftmostIndex << endl;
-cerr << "F4split INDEX " << F4split << endl;
+
+	// Rough guess for now on the mapping: placing the middle hole position on E4/F4 boundary
+	int F4split = int((rightmostIndex - leftmostIndex) / 2 + leftmostIndex + 0.5); // 0.5 needed?
+
+	// cerr << "RIGHTMOST INDEX " << rightmostIndex << endl;
+	// cerr << "LEFTMOST INDEX " << leftmostIndex << endl;
+	// cerr << "F4split INDEX " << F4split << endl;
 
 	midiToHoleMapping.resize(256);
 	std::fill(midiToHoleMapping.begin(), midiToHoleMapping.end(), 0);
@@ -460,16 +503,22 @@ void RollImage::invalidateEdgeHoles(void) {
 	for (ulong i=0; i<holes.size(); i++) {
 		if (holes[i]->track == 0) {
 			clearHole(*holes[i], PIX_ANTIDUST);
+			badHoles.push_back(holes[i]);
+			holes[i]->reason = "strange";
 			continue;
 		} else if (holes[i]->track < mintrack) {
 			// out of range on bass side
 			clearHole(*holes[i], PIX_ANTIDUST);
 			holes[i]->track = 0;
+			badHoles.push_back(holes[i]);
+			holes[i]->reason = "bass margin";
 			continue;
 		} else if (holes[i]->track > maxtrack) {
 			// out of range on treble side
 			clearHole(*holes[i], PIX_ANTIDUST);
 			holes[i]->track = 0;
+			badHoles.push_back(holes[i]);
+			holes[i]->reason = "treble margin";
 			continue;
 		}
 		if (holes[i]->width.second >= maxwidth) {
@@ -478,12 +527,14 @@ void RollImage::invalidateEdgeHoles(void) {
 			holes[i]->track = 0;
 			holes[i]->setNonHole();
 			badHoles.push_back(holes[i]);
+			holes[i]->reason = "too wide";
 			continue;
 		}
 		double aspect = (double)holes[i]->width.second / (double)holes[i]->width.first;
 		if (aspect > getAspectRatioThreshold()) {
 			// Hole is wider than it is long, which should never happen for a music hole.
-			clearHole(*holes[i], PIX_DEBUG4);
+			clearHole(*holes[i], PIX_BADHOLE_ASPECT);
+			holes[i]->reason = "aspect";
 			holes[i]->track = 0;
 			holes[i]->setNonHole();
 			badHoles.push_back(holes[i]);
@@ -516,7 +567,8 @@ void RollImage::invalidateSkewedHoles(void) {
 		//		<< "\t" << holes[i]->circularity
 		//		<< "\t" << holes[i]->majoraxis
 		//		<< std::endl;
-		clearHole(*holes[i], PIX_BADHOLE);
+		clearHole(*holes[i], PIX_BADHOLE_SKEWED);
+		holes[i]->reason = "skewed";
 		badHoles.push_back(holes[i]);
 	}
 }
@@ -576,6 +628,30 @@ void RollImage::analyzeHorizontalHolePosition() {
 
 //////////////////////////////
 //
+// RollImage::assignMusicHoleIds --
+//
+
+void RollImage::assignMusicHoleIds(void) {
+	vector<vector<HoleInfo*>>& ta = trackerArray;
+
+	ulong counter;
+	ulong key;
+	for (ulong i=0; i<ta.size(); i++) {
+		counter = 1;
+		key = midiToHoleMapping[i];
+		for (ulong j=0; j<ta[i].size(); j++) {
+			if (!ta[i][j]->isMusicHole()) {
+				continue;
+			}
+			ta[i][j]->id = "K" + to_string(key) + "_N" + to_string(counter++);
+		}
+	}
+}
+
+
+
+//////////////////////////////
+//
 // RollImage::analyzeTrackerBarPositions --
 //
 
@@ -583,7 +659,7 @@ void RollImage::analyzeTrackerBarPositions(void) {
 	// cerr << "\n\nCALCULATING BAR POSITIONS: " << endl;
 	int count = (int)holeSeparation;
 	std::vector<double> score(count);
-	
+
 	for (int i=0; i<count; i++) {
 		score[i] = getTrackerShiftScore(i);
 		// cerr << i << "\t" << score[i] << "\n";
@@ -609,6 +685,9 @@ void RollImage::analyzeTrackerBarPositions(void) {
 	// cerr << "FINAL ANSWER: " << (minindex + newi) << " pixels\n";
 
 	holeOffset = minindex + newi;
+	if (holeOffset > holeSeparation / 2) {
+		holeOffset = holeSeparation - holeOffset;
+	}
 
 	// cerr << endl;
 }
@@ -666,25 +745,11 @@ void RollImage::analyzeTrackerBarSpacing(void) {
 	leftside += padding;
 	rightside -= padding;
 
-	// Blank out the edge holes for the spacing analysis, since they
-	// may be slightly offset from the rest of the tracker bar.
-	vector<int> newcorrected;
-	newcorrected.resize(correctedCentroidHistogram.size());
-	for (ulong i=0; i<newcorrected.size(); i++) {
-		if (i < leftside) {
-			newcorrected[i] = 0;
-		} else if (i > rightside) {
-			newcorrected[i] = 0;
-		} else {
-			newcorrected[i] = correctedCentroidHistogram[i];
-		}
-	}
-
 	std::vector<mycomplex> spectrum;
 	int factor = 16;
 	std::vector<mycomplex> input(4096 * factor);
 	for (ulong i=0; i<4096; i++) {
-		input.at(i) = newcorrected.at(i);
+		input.at(i) = correctedCentroidHistogram.at(i);
 	}
 	for (ulong i=4096; i<input.size(); i++) {
 		input.at(i) = 0.0;
@@ -798,7 +863,7 @@ void RollImage::analyzeTears(void) {
 			ltear.back().endindex = r;
 		}
 	}
-	
+
 	for (ulong r=startrow; r<rows; r++) {
 		if (!right[r]) {
 			continue;
@@ -823,7 +888,7 @@ void RollImage::analyzeTears(void) {
 //////////////////////////////
 //
 // RollImage::processTears --
-//	
+//
 
 void RollImage::processTears(std::vector<PreTearInfo>& ltear,
 		std::vector<PreTearInfo>& rtear, std::vector<double>& lslow,
@@ -857,11 +922,11 @@ void RollImage::processTears(std::vector<PreTearInfo>& ltear,
 // RollImage::isGoodOppositeEdge --
 //
 
-bool RollImage::isGoodOppositeEdge(PreTearInfo& pti, 
+bool RollImage::isGoodOppositeEdge(PreTearInfo& pti,
 		std::vector<double>& slow, std::vector<double>& fast) {
 	ulong startrow = pti.startindex;
 	ulong endrow   = pti.endindex;
-	
+
 	double threshold = 10.0;
 
 	double bad = 0.0;
@@ -900,7 +965,7 @@ void RollImage::getTearInfo(TearInfo& ti, PreTearInfo& pti,
 	// ulong toprow = 0;
 	// ulong botrow = 0;
 	ulong checkcol = slow[pti.endindex];
-	
+
 	if (side == 0) {
 		checkcol--;
 	} else {
@@ -993,7 +1058,7 @@ void RollImage::getTearInfo(TearInfo& ti, PreTearInfo& pti,
 					}
 				}
 			}
-			
+
 		}
 	}
 	paper1 = 0;
@@ -1056,11 +1121,11 @@ void RollImage::getTearInfo(TearInfo& ti, PreTearInfo& pti,
 					}
 				}
 			}
-			
+
 		}
 	}
 	paper1 = 0;
-	
+
 
 	// Now go upwards on the roll (to earlier time)
 
@@ -1111,11 +1176,11 @@ void RollImage::getTearInfo(TearInfo& ti, PreTearInfo& pti,
 					}
 				}
 			}
-			
+
 		}
 	}
 	paper2 = 0;
-	
+
 	for (ulong r=middlerow; r>=pti.startindex - 30; r--) {
 		if (constant) {
 			c = startcol;
@@ -1168,11 +1233,11 @@ void RollImage::getTearInfo(TearInfo& ti, PreTearInfo& pti,
 					}
 				}
 			}
-			
+
 		}
 	}
 	paper2 = 0;
-	
+
 /* Don't do water-filling procedure for now, as basic fill is good enough:
 	if ((toprow > 0) && (botrow > 0)) {
 		ulong counter0 = 0;
@@ -1194,7 +1259,7 @@ void RollImage::getTearInfo(TearInfo& ti, PreTearInfo& pti,
 	ulong r = pti.peakindex;
 	c = (slow[r] + fast[r])/2;
 
- 	int counter = 0;
+	int counter = 0;
 	ti.entry.first  = r;
 	ti.entry.second = c;
 
@@ -1223,10 +1288,6 @@ void RollImage::fillColumn(ulong col, ulong toprow, ulong botrow, ulong target, 
 	ulong maxup    = toprow - threshold;
 	ulong maxdown  = botrow + threshold;
 	ulong midpoint = abs((int)maxup-(int)maxdown)/2 + maxup;
-
-cerr << ">>> MAX UP   " << maxup    << endl;
-cerr << ">>> MAX DOWN " << maxdown  << endl;
-cerr << ">>> MIDPOINT " << midpoint << endl;
 
 	for (ulong r=midpoint; r>=maxup; r--) {
 		if (pixelType[r][col] == target) {
@@ -1356,7 +1417,7 @@ void RollImage::generateDriftCorrection(double gain) {
 
 	driftCorrection.resize(rows);
 	fill(driftCorrection.begin(), driftCorrection.end(), 0.0);
-	
+
 	for (ulong r=startrow; r<=endrow; r++) {
 		driftCorrection[r] = -((lmargin[r] - lavg) + (rmargin[r] - ravg)) / 2.0;
 	}
@@ -1475,6 +1536,7 @@ void RollImage::extractHole(ulong row, ulong col) {
 	} else {
 		// Too small to be considered a musical hole.
 		clearHole(*hi, PIX_ANTIDUST);
+		hi->reason = "small";
 		hi->track = 0;
 		antidust.push_back(hi);
 	}
@@ -1489,7 +1551,7 @@ void RollImage::extractHole(ulong row, ulong col) {
 
 void RollImage::fillHoleSimple(ulong r, ulong c, int target, int type, int& counter) {
 	counter++;
-	if (counter > 300000) {
+	if (counter > getMaxHoleCount()) {
 		cerr << "CLEARING TOO LARGE A HOLE!" << endl;
 		return;
 	}
@@ -1602,7 +1664,7 @@ void RollImage::fillHoleInfo(HoleInfo& hi, ulong r, ulong c, int& counter) {
 void RollImage::fillTearInfo(TearInfo& ti, ulong r, ulong c, int& counter) {
 	counter++;
 	if (counter > getMaxTearFill()) {
-		cerr << "ERROR HOLE TOO LARGE" << endl;
+		cerr << "ERROR TEAR TOO LARGE" << endl;
 		return;
 	}
 
@@ -1654,7 +1716,7 @@ void RollImage::fillTearInfo(TearInfo& ti, ulong r, ulong c, int& counter) {
 		fillTearInfo(ti, r-1, c-1, counter);
 	}
 	if (r > 0) {
-		fillTearInfo(ti, r-1, c-0, counter);
+		fillTearInfo(ti, r-1, c  , counter);
 		fillTearInfo(ti, r-1, c+1, counter);
 	}
 	if (c > 0) {
@@ -2089,10 +2151,16 @@ void RollImage::mergePixelOverlay(std::fstream& output) {
 					pixel[2] = 255;
 					break;
 
-				case PIX_HOLE:             // musical holes in roll (goldenrod)
-					pixel[0] = 218;
-					pixel[1] = 165;
-					pixel[2] =  32;
+				case PIX_HOLE:             // musical holes in roll (cornflowerblue)
+					pixel[0] = 100;
+					pixel[1] = 149;
+					pixel[2] = 237;
+					break;
+
+				case PIX_HOLE_SHIFT:       // musical holes in roll (lightblue)
+					pixel[0] = 173;
+					pixel[1] = 216;
+					pixel[2] = 230;
 					break;
 
 				case PIX_BADHOLE:          // non-musical hole but significant (magenta)
@@ -2101,7 +2169,43 @@ void RollImage::mergePixelOverlay(std::fstream& output) {
 					pixel[2] = 255;
 					break;
 
+				case PIX_BADHOLE_SKEWED:   // non-musical hole which is skewed (deep pink)
+					pixel[0] = 255;
+					pixel[1] =  20;
+					pixel[2] = 147;
+					break;
+
+				case PIX_BADHOLE_ASPECT:   // non-musical hole which has a bad aspect ratio (springgreen)
+					pixel[0] = 0;
+					pixel[1] = 255;
+					pixel[2] = 127;
+					break;
+
 				case PIX_HOLEBB:           // musical hole bounding box (red)
+					pixel[0] = 255;
+					pixel[1] =   0;
+					pixel[2] =   0;
+					break;
+
+				case PIX_HOLEBB_LEADING:   // musical hole bounding box (yellow)
+					pixel[0] = 255;
+					pixel[1] = 255;
+					pixel[2] =   0;
+					break;
+
+				case PIX_HOLEBB_TRAILING:  // musical hole bounding box (red)
+					pixel[0] = 255;
+					pixel[1] =   0;
+					pixel[2] =   0;
+					break;
+
+				case PIX_HOLEBB_BASS:      // musical hole bounding box (red)
+					pixel[0] = 255;
+					pixel[1] =   0;
+					pixel[2] =   0;
+					break;
+
+				case PIX_HOLEBB_TREBLE:    // musical hole bounding box (red)
 					pixel[0] = 255;
 					pixel[1] =   0;
 					pixel[2] =   0;
@@ -2198,9 +2302,9 @@ ulong RollImage::extractPreleaderIndex(ulong leaderBoundary) {
 
 	std::vector<ulong> marginsum;
 	ulong tolerance = 20;       // How much the positions adjacent to the min
-                               // can grow, yet still be called the preleader.
+	                            // can grow, yet still be called the preleader.
 	ulong startboundary = 10;   // Avoid the very start of the image
-                               // in case there are scanning artifacts.
+	                            // in case there are scanning artifacts.
 	ulong cols = getCols();
 
 	marginsum.resize(leaderBoundary);
@@ -2460,11 +2564,101 @@ ulong RollImage::getFirstMusicHoleStart(void) {
 
 //////////////////////////////
 //
+// RollImage::recalculateFirstMusicHole --
+//
+
+void RollImage::recalculateFirstMusicHole(void) {
+	ulong minrow = getRows() - 1;
+	std::vector<std::vector<HoleInfo*>>& ta = trackerArray;
+	ulong row;
+	for (ulong i=0; i<ta.size(); i++) {
+		for (ulong j=0; j<ta[i].size(); j++) {
+			if (!ta[i][j]->isMusicHole()) {
+				continue;
+			}
+			row = ta[i][j]->origin.first;
+			if (row < minrow) {
+				minrow = row;
+			}
+		}
+	}
+	if (minrow > firstMusicRow) {
+		firstMusicRow = minrow;
+		markPosteriorLeader();
+		removeBadLeaderHoles();
+	}
+}
+
+
+
+//////////////////////////////
+//
+// RollImage::removeBadLeaderHoles -- After moving the first music hole position
+//    further along in the roll, review the bad holes and remove any holes which are
+//    before the new first music hole position.
+//
+
+void RollImage::removeBadLeaderHoles(void) {
+	ulong limit = firstMusicRow;
+	std::vector<ulong> listing;
+	for (ulong i=0; i<badHoles.size(); i++) {
+		if (badHoles[i]->origin.first < limit) {
+			listing.push_back(i);
+		}
+	}
+
+	if (listing.empty()) {
+		// nothing to do
+		return;
+	}
+
+	ulong start = listing.size() - 1;
+	for (int i=(int)start; i >= 0; i--) {
+		badHoles.erase(badHoles.begin() + listing.back());
+		listing.pop_back();
+	}
+}
+
+
+
+//////////////////////////////
+//
 // RollImage::getLastMusicHoleStartEnd --
 //
 
 ulong RollImage::getLastMusicHoleEnd(void) {
 	return lastMusicRow;
+}
+
+
+
+//////////////////////////////
+//
+// RollImage::markHoleShifts --
+//
+
+void RollImage::markHoleShifts(void) {
+	int counter;
+	for (ulong i=0; i<holes.size(); i++) {
+		if (!holes[i]->isMusicHole()) {
+			continue;
+		}
+
+		if (!holes[i]->isShifting()) {
+			continue;
+		}
+
+		//if (fabs(holes[i]->leadinghcor - holes[i]->trailinghcor) < getHoleShiftCutoff()) {
+		//	continue;
+		//}
+		// Hole shifts too much to mark it with a different color from
+		// regular holes.
+		counter = 0;
+		ulong r = holes[i]->entry.first;
+		ulong c = holes[i]->entry.second;
+		int target = pixelType[r][c];
+		fillHoleSimple(r, c, target, PIX_HOLE_SHIFT, counter);
+	}
 }
 
 
@@ -2493,28 +2687,68 @@ void RollImage::markHoleBB(HoleInfo& hi) {
 // cerr << "MARKING HOLE " << hi << endl;
 	long r, c;
 
-	// Mark upper side of box:
+	// Mark upper side of box (leading edge)
 	r = hi.origin.first - 1;
 	for (c=-1; c<(long)hi.width.second+1; c++) {
-		pixelType[r][c + (long)hi.origin.second] = PIX_HOLEBB;
+		pixelType[r][c + (long)hi.origin.second] = PIX_HOLEBB_LEADING;
 	}
 
-	// Mark lower side of box:
+	// Mark lower side of box (trailing edge
 	r = hi.origin.first + hi.width.first + 1;
 	for (c=-1; c<(long)hi.width.second+1; c++) {
-		pixelType[r][c + (long)hi.origin.second] = PIX_HOLEBB;
+		pixelType[r][c + (long)hi.origin.second] = PIX_HOLEBB_TRAILING;
 	}
 
 	// Mark left side of box:
 	c = hi.origin.second - 1;
 	for (r=-1; r<(long)hi.width.first+1; r++) {
-		pixelType[r + (long)hi.origin.first][c] = PIX_HOLEBB;
+		pixelType[r + (long)hi.origin.first][c] = PIX_HOLEBB_BASS;
 	}
 
 	// Mark right side of box:
 	c = hi.origin.second + hi.width.second + 1;
 	for (r=-1; r<(long)hi.width.first+1; r++) {
-		pixelType[r + (long)hi.origin.first][c] = PIX_HOLEBB;
+		pixelType[r + (long)hi.origin.first][c] = PIX_HOLEBB_TREBLE;
+	}
+}
+
+
+
+//////////////////////////////
+//
+// RollImage::markHoleAttacks --
+//
+
+void RollImage::markHoleAttacks(void) {
+	for (ulong i=0; i<holes.size(); i++) {
+		if (holes[i]->isMusicHole()) {
+			markHoleAttack(*holes[i]);
+		}
+	}
+}
+
+
+
+//////////////////////////////
+//
+// RollImage::markHoleAttack --
+//
+
+void RollImage::markHoleAttack(HoleInfo& hi) {
+	long r, c;
+
+	// Mark upper side of box (leading edge)
+	r = hi.origin.first - 1;
+	long cols = (int)getCols();
+	// long offset = (long)hi.origin.second;
+
+	for (c=0; c<cols; c++) {
+		if (pixelType[r][c] != PIX_PAPER) {
+			continue;
+		}
+		if (c % getAttackLineSpacing() == 0) {
+			pixelType[r][c] = PIX_HOLEBB_LEADING;
+		}
 	}
 }
 
@@ -2606,7 +2840,7 @@ double RollImage::getAverageRollWidth(void) {
 	ulong startrow = getFirstMusicHoleStart();
 	ulong endrow = getLastMusicHoleEnd();
 	ulong count = endrow - startrow + 1;
-	
+
 	// int cols = getCols();
 	double sum = 0.0;
 	for (ulong r=startrow; r<=endrow; r++) {
@@ -2667,7 +2901,7 @@ double RollImage::getAverageSoftMarginTotal(void) {
 	ulong startrow = getFirstMusicHoleStart();
 	ulong endrow = getLastMusicHoleEnd();
 	ulong count = endrow - startrow + 1;
-	
+
 	double sum = 0.0;
 	for (ulong r=startrow; r<=endrow; r++) {
 		if ((int)getHardMarginLeftWidth() < (int)getLeftMarginWidth(r)) {
@@ -2709,7 +2943,7 @@ void RollImage::markTrackerPositions(void) {
 	ulong colend   = midiToHoleMapping[midiEnd];
 
 	ulong startrow = getFirstMusicHoleStart() - 100;
-	ulong endrow = getLastMusicHoleEnd() + 100;
+	ulong endrow   = getLastMusicHoleEnd() + 100;
 
 	ulong cutoff = midiToHoleMapping[65];
 
@@ -2787,7 +3021,7 @@ void RollImage::drawMajorAxis(HoleInfo& hi) {
 // RollImage::getDustScore --
 //
 
-double RollImage::getDustScore(void) { 
+double RollImage::getDustScore(void) {
 	if (m_dustscore >= 0.0) {
 		return m_dustscore;
 	}
@@ -2808,7 +3042,7 @@ double RollImage::getDustScore(void) {
 //   (ppm).
 //
 
-double RollImage::getDustScoreBass(void) { 
+double RollImage::getDustScoreBass(void) {
 	if (m_dustscorebass >= 0.0) {
 		return m_dustscorebass;
 	}
@@ -2832,7 +3066,7 @@ double RollImage::getDustScoreBass(void) {
 			}
 		}
 	}
-	
+
 	double marginarea = (endcol - startcol + 1) * (endrow - startrow + 1);
 	m_dustscorebass = (double)counter / marginarea * 1000000.0;
 	return int(m_dustscorebass + 0.5);
@@ -2845,7 +3079,7 @@ double RollImage::getDustScoreBass(void) {
 // RollImage::getDustScoreTreble --
 //
 
-double RollImage::getDustScoreTreble(void) { 
+double RollImage::getDustScoreTreble(void) {
 	if (m_dustscoretreble >= 0.0) {
 		return m_dustscoretreble;
 	}
@@ -2869,7 +3103,7 @@ double RollImage::getDustScoreTreble(void) {
 			}
 		}
 	}
-	
+
 	double marginarea = (endcol - startcol + 1) * (endrow - startrow + 1);
 	m_dustscoretreble = (double)counter / marginarea * 1000000.0;
 	return int(m_dustscoretreble + 0.5);
@@ -2888,7 +3122,7 @@ void RollImage::sortBadHolesByArea(void) {
 		return;
 	}
 
-	std::sort(badHoles.begin(), badHoles.end(), 
+	std::sort(badHoles.begin(), badHoles.end(),
 		[](HoleInfo* a, HoleInfo* b) -> bool
 			{
 				return a->area > b->area;
@@ -2905,7 +3139,7 @@ void RollImage::sortBadHolesByArea(void) {
 
 void RollImage::sortTearsByArea(void) {
 	if (bassTears.size() >= 1) {
-		std::sort(bassTears.begin(), bassTears.end(), 
+		std::sort(bassTears.begin(), bassTears.end(),
 			[](TearInfo* a, TearInfo* b) -> bool
 				{
 					return a->area > b->area;
@@ -2913,7 +3147,7 @@ void RollImage::sortTearsByArea(void) {
 			);
 	}
 	if (trebleTears.size() >= 1) {
-		std::sort(trebleTears.begin(), trebleTears.end(), 
+		std::sort(trebleTears.begin(), trebleTears.end(),
 			[](TearInfo* a, TearInfo* b) -> bool
 				{
 					return a->area > b->area;
@@ -2943,6 +3177,32 @@ int RollImage::getTrackerHoleCount(void) {
 
 //////////////////////////////
 //
+// RollImage::addDriftInfoToHoles --
+//
+
+void RollImage::addDriftInfoToHoles(void) {
+	for (ulong i=0; i<holes.size(); i++) {
+		holes[i]->leadinghcor = driftCorrection[holes[i]->origin.first];
+		holes[i]->trailinghcor = driftCorrection[holes[i]->origin.first+holes[i]->width.first];
+	}
+}
+
+
+
+//////////////////////////////
+//
+// RollImage::getDataMD5Sum --
+//
+
+std::string RollImage::getDataMD5Sum(void) {
+	CheckSum checksum;
+	return checksum.getMD5Sum(monochrome);
+}
+
+
+
+//////////////////////////////
+//
 // RollImage::printRollImageProperties --
 //    default value: out = cout
 //
@@ -2956,7 +3216,7 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 	averageRollWidth = int(averageRollWidth*100.0+0.5)/100.0;
 	double averageSoftMarginWidth = getAverageSoftMarginTotal();
 	averageSoftMarginWidth = int(averageSoftMarginWidth*100.0+0.5)/100.0;
-	
+
 	int musiclength = getLastMusicHoleEnd() - getFirstMusicHoleStart();
 
 	double avgholewidth = int(getAverageMusicalHoleWidth()*100.0+0.5)/100.0;
@@ -2973,11 +3233,11 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 	out << "@IMAGE_WIDTH:\t\t"       << getCols()                 << "px\n";
 	out << "@IMAGE_LENGTH:\t\t"      << getRows()                 << "px\n";
 	out << "@ROLL_WIDTH:\t\t"        << averageRollWidth          << "px\n";
-   out << "@HARD_MARGIN_BASS:\t"    << getHardMarginLeftWidth()  << "px\n";
-   out << "@HARD_MARGIN_TREBLE:\t"  << getHardMarginRightWidth() << "px\n";
-   out << "@MAX_BASS_DRIFT_MAX:\t"  << getSoftMarginLeftWidthMax()  << "px\n";
-   out << "@MAX_RIGHT_DRIFT_MAX:\t" << getSoftMarginRightWidthMax() << "px\n";
-   out << "@AVG_SOFT_MARGIN_SUM:\t" << averageSoftMarginWidth    << "px\n";
+	out << "@HARD_MARGIN_BASS:\t"    << getHardMarginLeftWidth()  << "px\n";
+	out << "@HARD_MARGIN_TREBLE:\t"  << getHardMarginRightWidth() << "px\n";
+	out << "@MAX_BASS_DRIFT_MAX:\t"  << getSoftMarginLeftWidthMax()  << "px\n";
+	out << "@MAX_RIGHT_DRIFT_MAX:\t" << getSoftMarginRightWidthMax() << "px\n";
+	out << "@AVG_SOFT_MARGIN_SUM:\t" << averageSoftMarginWidth    << "px\n";
 	out << "@PRELEADER_ROW:\t\t"     << getPreleaderIndex()       << "px\n";
 	out << "@LEADER_ROW:\t\t"        << getLeaderIndex()          << "px\n";
 	out << "@FIRST_HOLE:\t\t"        << getFirstMusicHoleStart()  << "px\n";
@@ -2996,72 +3256,26 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 	out << "@DUST_SCORE_TREBLE:\t"   << getDustScoreTreble()      << "ppm\n";
 	out << "@HOLE_SEPARATION:\t"     << holeSeparation            << "px\n";
 	out << "@TRACKER_HOLES:\t\t"     << trackerholes              << " (estimate)\n";
+	out << "@SOFTWARE_DATE:\t\t"     << __DATE__ << " " << __TIME__ << endl;
+	out << "@COLOR_CHANNEL:\t\t"     << "green"                   << endl;
+	out << "@CHANNEL_MD5:\t\t"       << getDataMD5Sum()           << endl;
 	//out << "@BASS_TRACK_MARGIN:\t"    << leftCol                << "px\n";
 	//out << "@TREBLE_TRACK_MARGIN:\t"  << rightCol               << "px\n";
 
-	if (bassTears.size() + trebleTears.size() > 0) {
-		sortTearsByArea();
-		out << "\n@@BEGIN: TEARS\n";
-
-		if (trebleTears.size() > 0) {
-
-			for (ulong i=0; i<trebleTears.size(); i++) {
-				string id = "trebletear";
-				if (i+1 < 100) { id += "0"; }
-				if (i+1 < 10 ) { id += "0"; }
-				id += to_string(i+1);
-				trebleTears[i]->id = id;
-			}
-
-			out << "@@BEGIN: TREBLE_TEARS\n";
-			for (ulong i=0; i<trebleTears.size(); i++) {
-				trebleTears[i]->printAton(out);
-			}
-			out << "@@END: TREBLE_TEARS\n";
-		}
-
-		if (bassTears.size() > 0) {
-
-			for (ulong i=0; i<bassTears.size(); i++) {
-				string id = "basstear";
-				if (i+1 < 100) { id += "0"; }
-				if (i+1 < 10 ) { id += "0"; }
-				id += to_string(i+1);
-				bassTears[i]->id = id;
-			}
-
-			out << "\n@@BEGIN: BASS_TEARS\n";
-			for (ulong i=0; i<bassTears.size(); i++) {
-				bassTears[i]->printAton(out);
-			}
-			out << "@@END: BASS_TEARS\n";
-		}
-
-		out << "@@END TEARS\n";
-	}
-
-	// List of bad holes //////////////////////////////////////////////
-	if (!badHoles.empty()) {
-		sortBadHolesByArea();
-
-		for (ulong i=0; i<badHoles.size(); i++) {
-			string id = "bad";
-			if (i+1 < 100) { id += "0"; }
-			if (i+1 < 10 ) { id += "0"; }
-			id += to_string(i+1);
-			badHoles[i]->id = id;
-		}
-
-		out << std::endl;
-		out << "\n@@BEGIN: BADHOLES\n";
-		for (ulong i=0; i<badHoles.size(); i++) {
-			badHoles[i]->printAton(out);
-		}
-		out << "@@END: BADHOLES\n\n";
-	}
-
-	out << "\n@@BEGIN: DRIFT\n";
-	ulong fff = getFirstMusicHoleStart();
+	// DRIFT FUNCTION /////////////////////////////////////////////////////
+	out << "\n\n";
+	out << "@@ The Drift data describes the left/right shifting of the roll along the\n";
+	out << "@@ length of the image.  Each data point is a list values:\n";
+	out << "@@    (1) The row number in the image\n";
+	out << "@@    (2) The distance in feet from the start of the roll (not the image)\n";
+	out << "@@        to the given row.\n";
+	out << "@@    (3) The correction to apply to the row to straighten the roll.\n";
+	out << "@@ A new data point is given whenever the drift changes by more than 0.1 pixels.\n";
+	out << "@@ Drift analysis starts at the first music hole on the roll.\n";
+	out << "\n";
+	out << "@@BEGIN: DRIFT\n";
+	ulong fff = getPreleaderIndex();
+	// ulong fff = getFirstMusicHoleStart();
 	double lastdrift = -1.0;
 	double drift;
 	for (ulong i=getFirstMusicHoleStart(); i<getLastMusicHoleEnd(); i++) {
@@ -3077,13 +3291,94 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 	out << "@@END: DRIFT\n";
 
 	// List of musical holes //////////////////////////////////////////////
-	out << "\n@@BEGIN: HOLES\n";
+	out << "\n\n";
+	out << "@@ The HOLES array contains a list of all musical holes (note and expression holes).\n";
+	out << "@@ They are sorted in time (or image row) from the start of the roll to the end.\n";
+	out << "@@\n";
+	out << "@@ Meaning of HOLE parameters:\n";
+	out << "@@\n";
+	out << "@@   ORIGIN_ROW:\tThe pixel row of the leading edge of the bounding box around the hole.\n";
+	out << "@@   ORIGIN_COL:\tThe pixel column of the leading edge of the bounding box around the hole, bass side.\n";
+	out << "@@   WIDTH_ROW:\t\tThe pixel length of the bounding box around the hole.\n";
+	out << "@@   WIDTH_COL:\t\tThe pixel column of the leading edge of the hole, bass side.\n";
+	out << "@@   CENTROID_ROW:\tThe center of mass row of the hole.\n";
+	out << "@@   CENTROID_COL:\tThe center of mass column of the hole.\n";
+	out << "@@   AREA:\t\tThe area of the hole (in pixels).\n";
+	out << "@@   PERIMETER:\t\tThe perimeter of the hole (in pixels).\n";
+	out << "@@   CIRCULARITY:\tThe circularity of the hole (1 = circular, 0 = very uncircular).\n";
+	out << "@@   MAJOR_AXIS:\tThe major axis of the hole in degrees (0 = vertically aligned with roll).\n";
+	out << "@@   HPIXCOR:\tHorizontal (column) pixel correction: shift to straighten hole columns on paper.\n";
+	out << "@@      If the leading and trailing edges of musical holes do not have the same correction value,\n";
+	out << "@@      then the following two parameters are given instead:\n";
+	out << "@@         HPIXCOR_LEAD:\tHorizontal pixel correction of the hole's leading edge.\n";
+	out << "@@         HPIXCOR_TRAIL:\tHorizontal pixel correction of the hole's trailing edge.\n";
+	out << "@@\n";
+	out << "\n";
+
+	out << "@@BEGIN: HOLES\n\n";
 	for (ulong i=0; i<holes.size(); i++) {
 		if (holes[i]->isMusicHole()) {
 			holes[i]->printAton(out);
+			out << std::endl;
 		}
 	}
 	out << "@@END: HOLES\n\n";
+
+
+	// List of bad holes //////////////////////////////////////////////
+	if (!badHoles.empty()) {
+		sortBadHolesByArea();
+		for (ulong i=0; i<badHoles.size(); i++) {
+			string id = "bad";
+			if (i+1 < 100) { id += "0"; }
+			if (i+1 < 10 ) { id += "0"; }
+			id += to_string(i+1);
+			badHoles[i]->id = id;
+		}
+		out << "\n\n";
+		out << "@@BEGIN: BADHOLES\n\n";
+		for (ulong i=0; i<badHoles.size(); i++) {
+			badHoles[i]->printAton(out);
+			out << "\n";
+		}
+		out << "@@END: BADHOLES\n\n";
+	}
+
+
+	// List of significant edge tears /////////////////////////////////
+	if (bassTears.size() + trebleTears.size() > 0) {
+		sortTearsByArea();
+		out << "\n@@BEGIN: TEARS\n";
+		if (trebleTears.size() > 0) {
+			for (ulong i=0; i<trebleTears.size(); i++) {
+				string id = "trebletear";
+				if (i+1 < 100) { id += "0"; }
+				if (i+1 < 10 ) { id += "0"; }
+				id += to_string(i+1);
+				trebleTears[i]->id = id;
+			}
+			out << "@@BEGIN: TREBLE_TEARS\n";
+			for (ulong i=0; i<trebleTears.size(); i++) {
+				trebleTears[i]->printAton(out);
+			}
+			out << "@@END: TREBLE_TEARS\n";
+		}
+		if (bassTears.size() > 0) {
+			for (ulong i=0; i<bassTears.size(); i++) {
+				string id = "basstear";
+				if (i+1 < 100) { id += "0"; }
+				if (i+1 < 10 ) { id += "0"; }
+				id += to_string(i+1);
+				bassTears[i]->id = id;
+			}
+			out << "\n@@BEGIN: BASS_TEARS\n";
+			for (ulong i=0; i<bassTears.size(); i++) {
+				bassTears[i]->printAton(out);
+			}
+			out << "@@END: BASS_TEARS\n";
+		}
+		out << "@@END: TEARS\n";
+	}
 
 
 	out << "\n@@END: ROLLINFO\n";
