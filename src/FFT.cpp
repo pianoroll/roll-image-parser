@@ -15,6 +15,8 @@
 
 #include <iostream>
 
+using namespace std::complex_literals;
+
 
 namespace prp {
 
@@ -112,7 +114,7 @@ void dftmerge(std::vector<mycomplex>& XF) {
    M = 2;
 	mycomplex value;
    while (M <= N) {                  // two (M/2)-DFT's into one M-DFT
-		value = -2i * pi / M;
+		value = -2i * (pi / M);
       W = cexp(value);               // order-M twiddle factor
 		V = 1;
       for (k=0; k<M/2; k++) {        // index for an (M/2)-DFT

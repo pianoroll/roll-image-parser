@@ -25,7 +25,7 @@
 namespace prp  {
 
 
-class TiffFile : public TiffHeader {
+class TiffFile : public std::fstream, public TiffHeader {
 	public:
 		            TiffFile                    (void);
 		           ~TiffFile                    ();
@@ -42,7 +42,7 @@ class TiffFile : public TiffHeader {
 		bool        goToRowColumnIndex          (ulong rowindex, ulong colindex);
 
 	private:
-		std::fstream m_input;
+		// std::fstream m_input;
 
 };
 

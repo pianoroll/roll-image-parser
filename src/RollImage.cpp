@@ -243,9 +243,10 @@ double RollImage::calculateNormalCentralMoment(HoleInfo& hole, int p,
 
 bool RollImage::calculateHolePerimeter(HoleInfo& hole) {
 	hole.perimeter = 0.0;
-	ulong r, c;
+	ulong r;
+	long c;
 	r = hole.entry.first;
-	for (c=hole.entry.second; c>=0; c--) {
+	for (c=(int)hole.entry.second; c>=0; c--) {
 		if (pixelType.at(r).at(c) == PIX_PAPER) {
 			break;
 		}
@@ -369,7 +370,7 @@ cerr << "HOLE OFFSET:     " << holeOffset << endl;
 	// find the last position which has holes
 	// ulong colend = 0;
 //ggg
-	for (ulong i=trackerArray.size()-1; i>=0; i--) {
+	for (long i=(int)trackerArray.size()-1; i>=0; i--) {
 		if (trackerArray[i].empty()) {
 			continue;
 		}
@@ -488,9 +489,9 @@ void RollImage::invalidateEdgeHoles(void) {
 	}
 
 	ulong maxmidi = 255;
-	for (ulong i=255; i>=0; i--) {
+	for (long i=255; i>=0; i--) {
 		if (midiToHoleMapping[i]) {
-			maxmidi = i;
+			maxmidi = (ulong)i;
 			break;
 		}
 	}
@@ -1559,12 +1560,6 @@ void RollImage::fillHoleSimple(ulong r, ulong c, int target, int type, int& coun
 		return;
 	}
 	if (c >= getCols()) {
-		return;
-	}
-	if (r < 0) {
-		return;
-	}
-	if (c < 0) {
 		return;
 	}
 	if (pixelType.at(r).at(c) != target) {
@@ -2932,9 +2927,9 @@ void RollImage::markTrackerPositions(void) {
 	}
 
 	ulong midiEnd = 0;
-	for (ulong i=255; i>=0; i--) {
+	for (long i=255; i>=0; i--) {
 		if (midiToHoleMapping[i]) {
-			midiEnd = i;
+			midiEnd = (ulong)i;
 			break;
 		}
 	}

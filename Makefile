@@ -22,7 +22,7 @@ OS := $(shell uname -s)
 
 ifeq ($(OS),Darwin)
 	OS = OSX
-	# Minimum OS X Version for C++11 is OS X 10.9:
+	# Minimum OS X Version for C++14 is OS X 10.9:
    ENV = MACOSX_DEPLOYMENT_TARGET=10.9
    # use the following to compile for 32-bit architecture on 64-bit comps:
    #ARCH = -m32 -arch i386
@@ -54,7 +54,8 @@ PREFLAGS  = -c -g $(CFLAGS) $(DEFINES) -I$(INCDIR)
 PREFLAGS += -O3 -Wall
 
 # using C++ 2011 standard in Humlib:
-PREFLAGS += -std=c++11 -fext-numeric-literals
+#PREFLAGS += -std=c++14 -fext-numeric-literals
+PREFLAGS += -std=c++14
 
 # Add -static flag to compile without dynamics libraries for better portability:
 POSTFLAGS =
@@ -148,7 +149,7 @@ pugixml.o: pugixml.cpp
 #                                                                         #
 # for i in src/*.cpp
 # do
-#    cc -std=c++11 -Iinclude -MM $i | sed 's/include\///g; s/src\///g'
+#    cc -std=c++14 -Iinclude -MM $i | sed 's/include\///g; s/src\///g'
 #    echo ""
 # done
 #

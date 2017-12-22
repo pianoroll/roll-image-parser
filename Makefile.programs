@@ -46,7 +46,8 @@ endif
 INCDIR    = include
 LIBDIR    = lib
 LIBFILE   = pianoroll
-TARGDIR   = /user/c/craig/www/piano-roll-project/full-scans/bin
+#TARGDIR   = /user/c/craig/www/piano-roll-project/full-scans/bin
+TARGDIR   = bin
 TOOLDIR   = tools
 
 PREFLAGS  = -Wall -I$(INCDIR)
@@ -56,7 +57,7 @@ PREFLAGS += -O3
 #PREFLAGS += -g
 
 # using C++ 2011 standard:
-PREFLAGS += -std=c++11
+PREFLAGS += -std=c++14
 
 # Add -static flag to compile without dynamics libraries for better portability:
 #PREFLAGS += -static

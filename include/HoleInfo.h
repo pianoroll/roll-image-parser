@@ -22,6 +22,10 @@
 
 namespace prp  {
 
+typedef unsigned long ulong;
+typedef unsigned short ushort;
+typedef unsigned char uchar;
+
 class HoleInfo {
 	public:
 		         HoleInfo     (void);

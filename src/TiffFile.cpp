@@ -50,8 +50,8 @@ TiffFile::~TiffFile(void) {
 //
 
 void TiffFile::close(void) {
-	m_input.close();
-	clear();
+	std::fstream::close();
+	TiffHeader::clear();
 }
 
 
@@ -62,17 +62,17 @@ void TiffFile::close(void) {
 //
 
 bool TiffFile::open(const std::string& filename) {
-	if (m_input.is_open()) {
+	if (is_open()) {
 		close();
 	}
 
-	m_input.open(filename.c_str(), std::ios::binary | std::ios::in | std::ios::out);
-	if (!m_input.is_open()) {
+	std::fstream::open(filename.c_str(), std::ios::binary | std::ios::in | std::ios::out);
+	if (!is_open()) {
 		std::cerr << "Input filename " << filename << " cannot be opened" << std::endl;
 		return false;
 	}
 
-	return parseHeader(m_input);
+	return parseHeader(*this);
 }
 
 
@@ -83,7 +83,7 @@ bool TiffFile::open(const std::string& filename) {
 //
 
 bool TiffFile::goToByteIndex(ulong offset) {
-	m_input.seekg(offset, m_input.beg);
+	seekg(offset, this->beg);
 	return true;
 }
 
@@ -95,7 +95,7 @@ bool TiffFile::goToByteIndex(ulong offset) {
 //
 
 ushort TiffFile::readLittleEndian2ByteUInt(void) {
-	return prp::readLittleEndian2ByteUInt(m_input);
+	return prp::readLittleEndian2ByteUInt(*this);
 }
 
 
@@ -106,7 +106,7 @@ ushort TiffFile::readLittleEndian2ByteUInt(void) {
 //
 
 uchar TiffFile::read1UByte(void) {
-	return prp::read1UByte(m_input);
+	return prp::read1UByte(*this);
 }
 
 
@@ -117,7 +117,7 @@ uchar TiffFile::read1UByte(void) {
 //
 
 std::string TiffFile::readString(ulong count) {
-	return prp::readString(m_input, count);
+	return prp::readString(*this, count);
 }
 
 
@@ -128,7 +128,7 @@ std::string TiffFile::readString(ulong count) {
 //
 
 bool TiffFile::goToPixelIndex(ulong pindex) {
-	m_input.seekg(this->getDataOffset() + pindex * 3);
+	seekg(this->getDataOffset() + pindex * 3);
 	return true;
 }
 
@@ -141,7 +141,7 @@ bool TiffFile::goToPixelIndex(ulong pindex) {
 
 bool TiffFile::goToRowColumnIndex(ulong rowindex, ulong colindex) {
 	ulong offset = rowindex * 3 * this->getCols() + colindex * 3;
-	m_input.seekg(this->getDataOffset() + offset);
+	seekg(this->getDataOffset() + offset);
 	return true;
 }
 

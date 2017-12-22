@@ -77,9 +77,9 @@ void HoleInfo::clear(void) {
 
 bool HoleInfo::isShifting(void) {
 	double pixelshift = leadinghcor - trailinghcor;
-	if (fabs(pixelshift)/width.first > 0.015) {  // ggg
+	if (std::fabs(pixelshift)/width.first > 0.015) {  // ggg
 		return true;
-	} else if (abs(pixelshift) > 3.0) {
+	} else if (std::fabs(pixelshift) > 3.0) {
 		return true;
 	} else {
 		return false;
@@ -110,7 +110,7 @@ std::ostream& HoleInfo::printAton(std::ostream& out) {
 
 	#define HOLE_SHIFT 3.0
 
-	if (fabs(leadinghcor - trailinghcor) < HOLE_SHIFT) {
+	if (std::fabs(leadinghcor - trailinghcor) < HOLE_SHIFT) {
 		double value = (leadinghcor + trailinghcor) / 2.0;
 		value = int(value * 10 + 0.5)/10.0;
 		out << "@HPIXCOR:\t"        << value   << "px" << std::endl;
