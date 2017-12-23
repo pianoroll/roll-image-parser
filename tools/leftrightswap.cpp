@@ -85,7 +85,7 @@ void flipRow(fstream& output, TiffFile& image) {
 	outdata.resize(cols*3);
 	indata = image.readString(cols*3);
 
-	if (indata.size() != cols * 3) {
+	if ((int)indata.size() != cols * 3) {
 		cerr << "Strange problem happened when flipping row." << endl;
 		exit(1);
 	}

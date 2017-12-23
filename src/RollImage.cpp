@@ -1417,7 +1417,7 @@ void RollImage::generateDriftCorrection(double gain) {
 	double ravg = getAverage(rmargin, startrow, length);
 
 	driftCorrection.resize(rows);
-	fill(driftCorrection.begin(), driftCorrection.end(), 0.0);
+	std::fill(driftCorrection.begin(), driftCorrection.end(), 0.0);
 
 	for (ulong r=startrow; r<=endrow; r++) {
 		driftCorrection[r] = -((lmargin[r] - lavg) + (rmargin[r] - ravg)) / 2.0;
@@ -2303,7 +2303,7 @@ ulong RollImage::extractPreleaderIndex(ulong leaderBoundary) {
 	ulong cols = getCols();
 
 	marginsum.resize(leaderBoundary);
-	fill(marginsum.begin(), marginsum.end(), 0);
+	std::fill(marginsum.begin(), marginsum.end(), 0);
 	for (ulong i=startboundary; i<marginsum.size(); i++) {
 		marginsum[i] = leftMarginIndex[i] + cols - rightMarginIndex[i];
 	}
