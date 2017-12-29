@@ -27,6 +27,10 @@
 namespace prp  {
 
 
+// Track function:
+#define TRACK_UNKNOWN          0    /* unassigned meaning */
+#define TRACK_SNAKEBITE        1    /* Melodic accending row */
+
 // Pixel functions:
 #define PIX_PAPER              0    /* pixel represents paper                           */
 #define PIX_NONPAPER           1    /* pixel represents uncategorized non-paper         */
@@ -38,27 +42,29 @@ namespace prp  {
 #define PIX_TEAR               7    /* pixel represents uncategorized non-paper         */
 #define PIX_ANTIDUST           8    /* pixel represents non-musical hole in paper       */
 #define PIX_HOLE               9    /* pixel represents music hole in roll              */
-#define PIX_HOLE_SHIFT        10    /* music hole which shifts left/right               */
-#define PIX_BADHOLE           11    /* pixel represents non-music hole in roll          */
-#define PIX_BADHOLE_SKEWED    12    /* pixel represents hole with strange skew          */
-#define PIX_BADHOLE_ASPECT    13    /* pixel represents hole with strange aspect ratio  */
-#define PIX_HOLEBB            14    /* pixel represents bounding box around music hole  */
-#define PIX_HOLEBB_LEADING    15    /* bounding box leading edge                        */
-#define PIX_HOLEBB_TRAILING   16    /* bounding box trailing edge                       */
-#define PIX_HOLEBB_BASS       17    /* bounding box bass-face edge                      */
-#define PIX_HOLEBB_TREBLE     18    /* bounding box treble-facing                       */
-#define PIX_TRACKER           19    /* pixel is center of a tracker hole                */
-#define PIX_TRACKER_BASS      20    /* pixel is center of bass tracker hole             */
-#define PIX_TRACKER_TREBLE    21    /* pixel is center of treble tracker hole           */
-#define PIX_POSTMUSIC         22    /* pixel represents after last hole in roll         */
-#define PIX_DEBUG             23    /* debugging pixel type white                       */
-#define PIX_DEBUG1            24    /* debugging pixel type 1 red                       */
-#define PIX_DEBUG2            25    /* debugging pixel type 2 orange                    */
-#define PIX_DEBUG3            26    /* debugging pixel type 3 yellow                    */
-#define PIX_DEBUG4            27    /* debugging pixel type 4 green                     */
-#define PIX_DEBUG5            28    /* debugging pixel type 5 light blue                */
-#define PIX_DEBUG6            29    /* debugging pixel type 6 dark blue                 */
-#define PIX_DEBUG7            30    /* debugging pixel type 7 purple                    */
+#define PIX_HOLE_SNAKEBITE    10    /* pixel represents snakebite                       */
+#define PIX_HOLE_SHIFT        11    /* music hole which shifts left/right               */
+#define PIX_BADHOLE           12    /* pixel represents non-music hole in roll          */
+#define PIX_BADHOLE_SKEWED    13    /* pixel represents hole with strange skew          */
+#define PIX_BADHOLE_ASPECT    14    /* pixel represents hole with strange aspect ratio  */
+#define PIX_HOLEBB            15    /* pixel represents bounding box around music hole  */
+#define PIX_HOLEBB_LEADING_A  16    /* bounding box leading edge                        */
+#define PIX_HOLEBB_LEADING_S  17    /* bounding box leading edge                        */
+#define PIX_HOLEBB_TRAILING   18    /* bounding box trailing edge                       */
+#define PIX_HOLEBB_BASS       19    /* bounding box bass-face edge                      */
+#define PIX_HOLEBB_TREBLE     20    /* bounding box treble-facing                       */
+#define PIX_TRACKER           21    /* pixel is center of a tracker hole                */
+#define PIX_TRACKER_BASS      22    /* pixel is center of bass tracker hole             */
+#define PIX_TRACKER_TREBLE    23    /* pixel is center of treble tracker hole           */
+#define PIX_POSTMUSIC         24    /* pixel represents after last hole in roll         */
+#define PIX_DEBUG             25    /* debugging pixel type white                       */
+#define PIX_DEBUG1            26    /* debugging pixel type 1 red                       */
+#define PIX_DEBUG2            27    /* debugging pixel type 2 orange                    */
+#define PIX_DEBUG3            28    /* debugging pixel type 3 yellow                    */
+#define PIX_DEBUG4            29    /* debugging pixel type 4 green                     */
+#define PIX_DEBUG5            30    /* debugging pixel type 5 light blue                */
+#define PIX_DEBUG6            31    /* debugging pixel type 6 dark blue                 */
+#define PIX_DEBUG7            32    /* debugging pixel type 7 purple                    */
 
 
 typedef unsigned char pixtype;
@@ -96,7 +102,7 @@ class RollImage : public TiffFile, public RollOptions {
 		void            analyzeTrackerBarSpacing      (void);
 		void            analyzeTrackerBarPositions    (void);
 		void            analyzeHorizontalHolePosition (void);
-		void            markTrackerPositions          (void);
+		void            markTrackerPositions          (bool showAll = false);
 		void            analyzeMidiKeyMapping         (void);
 		void            drawMajorAxes                 (void);
 		double          getDustScore                  (void);
@@ -109,6 +115,7 @@ class RollImage : public TiffFile, public RollOptions {
 		void            markHoleShifts                (void);
 		std::string     getDataMD5Sum                 (void);
 		void            assignMusicHoleIds            (void);
+		void            markSnakeBites                (void);
 
 		// pixelType: a bitmask which contains enumerated types for the
 		// functions of pixels (the PIX_* defines above):
@@ -156,6 +163,10 @@ class RollImage : public TiffFile, public RollOptions {
 		// (in image, not roll).  Zero means no mapping (not allowed to reference
 		// position 0 in trackerArray).
 		std::vector<int> midiToHoleMapping;
+
+		// trackMeaning -- the function of the hole, mostly for expression
+		// and rewind hole.
+		std::vector<int> trackMeaning;
 	
 		// midiEventCount -- 0 = no events, >0 = events (currently hole counts)
 		std::vector<int> midiEventCount;
@@ -200,15 +211,16 @@ class RollImage : public TiffFile, public RollOptions {
 		void       markHoleBB                  (HoleInfo& hi);
 		double     getTrackerShiftScore        (double shift);
 		void       analyzeTears                (void);
+		void       analyzeTearsOld             (void);
 		ulong      findPeak                    (std::vector<double>& array, ulong r,
 		                                        ulong& peakindex, double& peakvalue);
-		void       processTears                (std::vector<PreTearInfo>& ltear,
+		void       processTearsOld             (std::vector<PreTearInfo>& ltear,
 		                                        std::vector<PreTearInfo>& rtear,
 		                                        std::vector<double>& lslow,
 		                                        std::vector<double>& rslow,
 		                                        std::vector<double>& lfast,
 		                                        std::vector<double>& rfast);
-		void       getTearInfo                 (TearInfo& ti, PreTearInfo& pti,
+		void       getTearInfoOld              (TearInfo& ti, PreTearInfo& pti,
 		                                        std::vector<double>& slow,
 		                                        std::vector<double>& fast,
 		                                        int side,
@@ -239,6 +251,16 @@ class RollImage : public TiffFile, public RollOptions {
 		void       recalculateFirstMusicHole   (void);
 		void       removeBadLeaderHoles        (void);
 		void       addDriftInfoToHoles         (void);
+		void       groupHoles                  (void);
+		void       groupHoles                  (ulong index);
+		void       describeTears               (void);
+		ulong      processTearLeft             (ulong startrow, ulong startcol);
+		ulong      processTearRight            (ulong startrow, ulong startcol);
+		void       removeTearLeft              (ulong minrow, ulong maxrow, ulong mincol, ulong maxcol);
+		void       removeTearRight             (ulong minrow, ulong maxrow, ulong mincol, ulong maxcol);
+		void       invalidateOffTrackerHoles   (void);
+		void       invalidateHolesOffTracker   (std::vector<HoleInfo*>& hi, ulong index);
+		void       analyzeSnakeBites           (void);
 
 	private:
 		bool       m_analyzedBasicMargins      = false;
@@ -255,6 +277,7 @@ class RollImage : public TiffFile, public RollOptions {
 		double     m_dustscore                 = -1.0;
 		double     m_dustscorebass             = -1.0;
 		double     m_dustscoretreble           = -1.0;
+		double     m_averageHoleWidth          = -1.0;
 
 		std::vector<double> m_normalizedPosition;
 

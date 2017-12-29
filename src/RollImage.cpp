@@ -125,17 +125,201 @@ void RollImage::analyze(void) {
 	analyzeMidiKeyMapping();
 	if (debug) { cerr << "STEP 15: invalidateEdgeHoles" << endl; }
 	invalidateEdgeHoles();
-	if (debug) { cerr << "STEP 16: recalculateFirstMusicHole" << endl; }
+	if (debug) { cerr << "STEP 16: invalidateOffTrackerHoles" << endl; }
+	invalidateOffTrackerHoles();
+	if (debug) { cerr << "STEP 17: recalculateFirstMusicHole" << endl; }
 	recalculateFirstMusicHole();
-	if (debug) { cerr << "STEP 17: addDriftInfoToHoles" << endl; }
+	if (debug) { cerr << "STEP 18: addDriftInfoToHoles" << endl; }
 	addDriftInfoToHoles();
-	if (debug) { cerr << "STEP 18: addAntidustToBadHoles" << endl; }
+	if (debug) { cerr << "STEP 19: addAntidustToBadHoles" << endl; }
 	addAntidustToBadHoles(50);
-	if (debug) { cerr << "STEP 19: assignMusicHoleIds" << endl; }
+	if (debug) { cerr << "STEP 20: assignMusicHoleIds" << endl; }
 	assignMusicHoleIds();
-	if (debug) { cerr << "STEP 20: FINSHED WITH ANALYSIS!" << endl; }
+	if (debug) { cerr << "STEP 21: groupHoles" << endl; }
+	groupHoles();
+	if (debug) { cerr << "STEP 22: analyzeSnakeBites" << endl; }
+	analyzeSnakeBites();
+	if (debug) { cerr << "STEP 23: FINSHED WITH ANALYSIS!" << endl; }
 }
 
+
+
+//////////////////////////////
+//
+// RollImage::analyzeSnakeBites -- Needs to be improved since it is sensitive
+//   to noise (search for up to two pairs of small holes next to each other
+//   in the margins on both sides).  Currently looking for the smallest
+//   tracker hole rows and giving up if there are not exactly four of them.
+//
+
+void RollImage::analyzeSnakeBites(void) {
+	std::vector<double> avgwidth(trackerArray.size(), 0.0);
+	ulong count;
+
+	for (ulong i=0; i<trackerArray.size(); i++) {
+		count = 0;
+		for (ulong j=0; j<trackerArray[i].size(); j++) {
+			if (!trackerArray[i][j]->isMusicHole()) {
+				continue;
+			}
+			avgwidth[i] += trackerArray[i][j]->width.second;
+			count++;
+		}
+		if (count > 1) {
+			avgwidth[i] /= (double)count;
+		}
+	}
+
+	std::pair<double, int> a;
+	std::vector<std::pair<double, int>> sortlist;
+	for (ulong i=0; i<avgwidth.size(); i++) {
+		if (avgwidth[i] == 0) {
+			continue;
+		}
+		a.first = avgwidth[i];
+		a.second = i;
+		sortlist.push_back(a);
+	}
+
+	std::sort(sortlist.begin(), sortlist.end(),
+		[](std::pair<double, int>& a, std::pair<double, int>& b) -> bool
+			{
+				return a.first < b.first;
+			}
+		);
+
+	int split = 0;
+	for (ulong i=0; i<sortlist.size()-1; i++) {
+		double factor = sortlist[i].first / sortlist[i+1].first;
+		cerr << "FACTOR " << i << " = " << factor << endl;
+		if (factor <= 0.75) {
+			split = i;
+			break;
+		}
+	}
+
+	if (split == 0) {
+		// no melodic accents
+		return;
+	}
+
+	if (split != 3) {
+		// requiring four tracks (could be two, but exclude for now).
+		return;
+	}
+
+	// makesure the holes are in pairs
+	std::vector<int> pairing(4, 0);
+	for (ulong i=0; i<4; i++) {
+		if (pairing[i]) {
+			continue;
+		}
+		for (ulong j=i+1; j<4; j++) {
+			if (pairing[j]) {
+				continue;
+			}
+			if (abs(sortlist[i].second - sortlist[j].second) == 1) {
+				pairing[i] = j+1;
+				pairing[j] = i+1;
+				break;
+			}
+		}
+	}
+
+	int zerocount = 0;
+	for (ulong i=0; i<pairing.size(); i++) {
+		if (pairing[i] == 0) {
+			zerocount++;
+		}
+	}
+	if (zerocount > 0) {
+		return;
+	}
+	
+	// All holes in first for slots of sortlist are melodic accent tracker
+	// positions.
+	for (ulong i=0; i<4; i++) {
+		ulong index = sortlist[i].second;
+		trackMeaning[index] = TRACK_SNAKEBITE;
+		for (ulong j=0; j<trackerArray[index].size(); j++) {
+			trackerArray[index][j]->snakebite = true;
+		}
+	}
+}
+
+
+
+//////////////////////////////
+//
+// RollImage::invalidateOffTrackerHoles --
+//
+
+void RollImage::invalidateOffTrackerHoles(void) {
+	for (ulong i=0; i<trackerArray.size(); i++) {
+		if (trackerArray[i].empty()) {
+			continue;
+		}
+		invalidateHolesOffTracker(trackerArray[i], i);
+	}
+}
+
+
+
+//////////////////////////////
+//
+// RollImage::invalidateHolesOffTracker --
+// Check right edge at top of image:
+//   https://ccrma.stanford.edu/~craig/piano-roll-project/pianorolls/acceptance_test-20171219/greenwelte-test_roll_11/druid-cx178xw6230-analysis/analysis-8.jpg
+//
+
+void RollImage::invalidateHolesOffTracker(std::vector<HoleInfo*>& hi, ulong index) {
+return; // disabling for now
+	double maxoffset = 0.25;  // 25% of the way to the next track
+	double trackpos = index * holeSeparation + holeOffset;
+	for (ulong i=0; i<hi.size(); i++) {
+		double newtrackpos = trackpos - driftCorrection[hi[i]->origin.first];
+		double offset = fabs(newtrackpos - hi[i]->centroid.second);
+		if (offset > maxoffset) {
+			cerr << "BAD HOLE " << offset << endl;
+			hi[i]->reason = "uncentered";
+			hi[i]->setNonHole();
+		}
+	}
+}
+
+
+
+//////////////////////////////
+//
+// RollImage::groupHoles -- Mark whether or not holes are the 
+//   start of a note attack or not.
+//
+
+void RollImage::groupHoles(void) {
+	for (ulong i=0; i<trackerArray.size(); i++) {
+		groupHoles(i);
+	}
+}
+
+
+void RollImage::groupHoles(ulong index) {
+	vector<HoleInfo*>& hi = trackerArray[index];
+	double scalefactor = 1.37;
+	double length = getAverageMusicalHoleWidth() * scalefactor;
+	if (hi.empty()) {
+		return;
+	}
+
+	hi[0]->attack = true;
+	for (ulong i=1; i<hi.size(); i++) {
+		hi[i]->prevOff = hi[i]->origin.first - (hi[i-1]->origin.first + hi[i-1]->width.first);
+		if (hi[i]->prevOff <= length) {
+			hi[i]->attack = false;
+		} else {
+			hi[i]->attack = true;
+		}
+	}
+}
 
 
 //////////////////////////////
@@ -343,38 +527,25 @@ void RollImage::analyzeMidiKeyMapping(void) {
 	position.resize(trackerArray.size());
 	std::fill(position.begin(), position.end(), 0.0);
 
-
-	//double newoffset = holeOffset;
-	//if (holeOffset > holeSeparation / 2) {
-	//	newoffset = holeSeparation - holeOffset;
-	//}
-cerr << "HOLE SEPARATION: " << holeSeparation << endl;
-cerr << "HOLE OFFSET:     " << holeOffset << endl;
-
 	// assigned normalized pixel column positions to each hole column.
 	for (ulong i=0; i<position.size(); i++) {
 		position[i] = i * holeSeparation + holeOffset;
 	}
 
-	// find the frist position which has holes
-	// ulong colstart = 0;
+	// find the first position that has holes
 	for (ulong i=0; i<trackerArray.size(); i++) {
 		if (trackerArray[i].empty()) {
 			continue;
 		}
-		// colstart = i;
 		m_firstHolePosition = position[i];
 		break;
 	}
 
 	// find the last position which has holes
-	// ulong colend = 0;
-//ggg
 	for (long i=(int)trackerArray.size()-1; i>=0; i--) {
 		if (trackerArray[i].empty()) {
 			continue;
 		}
-		// colend = i;
 		m_lastHolePosition = position[i];
 		break;
 	}
@@ -382,48 +553,29 @@ cerr << "HOLE OFFSET:     " << holeOffset << endl;
 	// check that the hole positions are within the bounds of the paper
 	// within the tolerance of getMinTrackerEdge():
 
-	std::vector<double> pixelpos((int)(getCols() / holeSeparation + 10), 0);
-	for (ulong i=0; i<pixelpos.size(); i++) {
-		pixelpos[i] = i * holeSeparation + holeOffset;
-	}
-
 	ulong r = getFirstMusicHoleStart();
-cerr << "DRIFT CORRECTION " << driftCorrection[r] << endl;
 	double leftmin = leftMarginIndex[r];
-cerr << "LEFTMARGININDEX " << leftMarginIndex[r] << endl;
-	leftmin += driftCorrection[r];
+//	leftmin += driftCorrection[r]; // don't add drift correction?
 	leftmin += getMinTrackerEdge() * holeSeparation;
-//	leftmin += holeOffset;
 	int leftmostIndex = 0;
-	for (ulong i=0; i<pixelpos.size(); i++) {
-		if (pixelpos[i] > leftmin) {
+	for (ulong i=0; i<position.size(); i++) {
+		if (position[i] > leftmin) {
 			leftmostIndex = i;
 			break;
 		}
 	}
 
-// cerr << "LEFT TRACK INDEX " << leftmostIndex
-// << "\tLEFTMIN = " << leftmin
-// << "\tPIXELPOS = " << pixelpos[leftmostIndex]
-// << endl;
-
 	double rightmin = rightMarginIndex[r];
-cerr << "RIGHTMARGININDEX " << rightMarginIndex[r] << endl;
-	// rightmin -= driftCorrection[r]
-	rightmin += - getMinTrackerEdge() * holeSeparation;
-//	rightmin += holeOffset;
-	int rightmostIndex = pixelpos.size()-1;
-	for (ulong i=pixelpos.size() - 1; i>0; i--) {
-		if (pixelpos[i] < rightmin) {
+//	rightmin += driftCorrection[r];  // don't add drift correction?
+	rightmin += -getMinTrackerEdge() * holeSeparation;
+	int rightmostIndex = position.size()-1;
+	for (ulong i=position.size() - 1; i>0; i--) {
+		if (position[i] < rightmin) {
 			rightmostIndex = i;
 			break;
 		}
 	}
 
-// cerr << "RIGHT TRACK INDEX " << rightmostIndex
-// << "\tRIGHTMIN = " << rightmin
-// << "\tPIXELPOS = " << pixelpos[rightmostIndex]
-// << endl;
 
 	int holecount = rightmostIndex - leftmostIndex + 1;
 	if (holecount > 100) {
@@ -434,14 +586,11 @@ cerr << "RIGHTMARGININDEX " << rightMarginIndex[r] << endl;
 		exit(1);
 	}
 
+
 	// Rough guess for now on the mapping: placing the middle hole position on E4/F4 boundary
 	int F4split = int((rightmostIndex - leftmostIndex) / 2 + leftmostIndex + 0.5); // 0.5 needed?
 
-	// cerr << "RIGHTMOST INDEX " << rightmostIndex << endl;
-	// cerr << "LEFTMOST INDEX " << leftmostIndex << endl;
-	// cerr << "F4split INDEX " << F4split << endl;
-
-	midiToHoleMapping.resize(256);
+	midiToHoleMapping.resize(128);
 	std::fill(midiToHoleMapping.begin(), midiToHoleMapping.end(), 0);
 
 	int adjustment = 64 - F4split;
@@ -455,11 +604,6 @@ cerr << "RIGHTMARGININDEX " << rightMarginIndex[r] << endl;
 		// re-map up a major second
 		for (ulong i=127; i>2; i--) {
 			midiToHoleMapping[i] = midiToHoleMapping[i-2];
-
-if (midiToHoleMapping[i]) {
-cerr << "MIDI NOTE " << i << " MAPS TO TRACKER " << midiToHoleMapping[i] << endl;
-}
-
 		}
 	}
 
@@ -481,15 +625,15 @@ cerr << "MIDI NOTE " << i << " MAPS TO TRACKER " << midiToHoleMapping[i] << endl
 void RollImage::invalidateEdgeHoles(void) {
 
 	ulong minmidi = 0;
-	for (ulong i=0; i<255; i++) {
+	for (ulong i=0; i<midiToHoleMapping.size(); i++) {
 		if (midiToHoleMapping[i]) {
 			minmidi = i;
 			break;
 		}
 	}
 
-	ulong maxmidi = 255;
-	for (long i=255; i>=0; i--) {
+	ulong maxmidi = midiToHoleMapping.size() - 1;
+	for (long i=maxmidi; i>=0; i--) {
 		if (midiToHoleMapping[i]) {
 			maxmidi = (ulong)i;
 			break;
@@ -599,6 +743,8 @@ void RollImage::clearHole(HoleInfo& hi, int type) {
 //      positions.
 //
 
+// ggg problem area
+
 void RollImage::analyzeHorizontalHolePosition() {
 	int tcount = (getCols()+holeOffset) / holeSeparation;
 	trackerArray.resize(0);
@@ -606,11 +752,14 @@ void RollImage::analyzeHorizontalHolePosition() {
 	for (ulong i=0; i<holes.size(); i++) {
 		double position = holes[i]->centroid.second;
 		double correction = driftCorrection[int(holes[i]->centroid.first+0.5)];
-		double cpos = position + correction;
-		int index = int((cpos + holeOffset) / holeSeparation + 0.5);
+		double cpos = position + correction - holeOffset;
+		int index = int(cpos / holeSeparation + 0.5);
 		trackerArray.at(index).push_back(holes.at(i));
 		holes[i]->track = index;
 	}
+
+	trackMeaning.resize(trackerArray.size());
+	std::fill(trackMeaning.begin(), trackMeaning.end(), TRACK_UNKNOWN);
 
 	/*
 	for (ulong i=0; i<trackerArray.size(); i++) {
@@ -798,10 +947,504 @@ void RollImage::analyzeTrackerBarSpacing(void) {
 
 //////////////////////////////
 //
+// RollImage::describeTears -- Removing long thin tears which are not tears.
+//
+
+void RollImage::describeTears(void) {
+	ulong rows = getRows();
+	ulong cols = getCols();
+
+	// remove small left-side tears:
+	for (ulong r=0; r<rows; r++) {
+		for (ulong c=0; c<cols/2; c++) {
+			if (pixelType[r][c] != PIX_TEAR) {
+				continue;
+			}
+			r = processTearLeft(r, c);
+		}
+	}
+
+	// remove small right-side tears:
+	for (ulong r=0; r<rows; r++) {
+		for (ulong c=cols/2; c<cols; c++) {
+			if (pixelType[r][c] != PIX_TEAR) {
+				continue;
+			}
+			r = processTearRight(r, c);
+		}
+	}
+
+}
+
+
+
+//////////////////////////////
+//
+// RollImage::processTearLeft --
+//
+
+ulong RollImage::processTearLeft(ulong startrow, ulong startcol) {
+	ulong rows = getRows();
+	ulong cols = getCols();
+	bool hastear;
+	ulong widththreshold = 5;
+	ulong mintearwidth = 30;
+	ulong area = 1;
+	ulong minc = startcol;
+	ulong maxc = startcol;
+	ulong minr = startrow;
+	ulong maxr = startrow;
+
+	for (ulong r=startrow; r<rows; r++) {
+		hastear = false;
+		for (ulong c=0; c<cols/2; c++) {
+			if (pixelType[r][c] != PIX_TEAR) {
+				continue;
+			}
+			hastear = true;
+			area++;
+			if (c < minc) { minc = c; }
+			if (c > maxc) { maxc = c; }
+		}
+		if (!hastear) {
+			break;
+		}
+		maxr = r;
+	}
+	if (maxc - minc + 1 <= widththreshold) {
+		removeTearLeft(minr, maxr, minc, maxc);
+	} else if (maxc - minc + 1 >= mintearwidth) {
+// ggg
+		TearInfo* ti = new TearInfo;
+		ti->origin.first = minr;
+		ti->origin.second = minc;
+		ti->width.first = maxr - minr + 1;
+		ti->width.second = maxc - minc + 1;
+		ti->area = area;
+		bassTears.push_back(ti);
+	}
+
+	return maxr;
+}
+
+
+
+//////////////////////////////
+//
+// RollImage::processTearRight --
+//
+
+ulong RollImage::processTearRight(ulong startrow, ulong startcol) {
+	ulong rows = getRows();
+	ulong cols = getCols();
+	ulong area = 1;
+	ulong minc = startcol;
+	ulong maxc = startcol;
+	ulong minr = startrow;
+	ulong maxr = startrow;
+	bool hastear;
+	ulong widththreshold = 5;
+	ulong mintearwidth = 30;
+
+	for (ulong r=startrow; r<rows; r++) {
+		hastear = false;
+		for (ulong c=cols/2; c<cols; c++) {
+			if (pixelType[r][c] != PIX_TEAR) {
+				continue;
+			}
+			hastear = true;
+			area++;
+			if (c < minc) { minc = c; }
+			if (c > maxc) { maxc = c; }
+		}
+		if (!hastear) {
+			break;
+		}
+		maxr = r;
+	}
+	if (maxc - minc + 1 <= widththreshold) {
+		removeTearRight(minr, maxr, minc, maxc);
+	} else if (maxc - minc + 1 >= mintearwidth) {
+		TearInfo* ti = new TearInfo;
+		ti->origin.first = minr;
+		ti->origin.second = minc;
+		ti->width.first = maxr - minr + 1;
+		ti->width.second = maxc - minc + 1;
+		ti->area = area;
+		trebleTears.push_back(ti);
+	}
+
+	return maxr;
+}
+
+
+
+//////////////////////////////
+//
+// RollImage::removeTearLeft --
+//
+
+void RollImage::removeTearLeft(ulong minrow, ulong maxrow, ulong mincol, ulong maxcol) {
+	ulong r;
+	ulong c;
+	for (r=minrow; r<=maxrow; r++) {
+		for (c=mincol; c<=maxcol; c++) {
+			if (pixelType[r][c] != PIX_TEAR) {
+				continue;
+			}
+			pixelType[r][c] = PIX_MARGIN;
+			if (leftMarginIndex[r] < (int)c) {
+				leftMarginIndex[r] = c;
+			}
+		}
+	}
+}
+
+
+
+//////////////////////////////
+//
+// RollImage::removeTearRight --
+//
+
+void RollImage::removeTearRight(ulong minrow, ulong maxrow, ulong mincol, ulong maxcol) {
+	ulong r;
+	ulong c;
+	for (r=minrow; r<=maxrow; r++) {
+		for (c=mincol; c<=maxcol; c++) {
+			if (pixelType[r][c] != PIX_TEAR) {
+				continue;
+			}
+			pixelType[r][c] = PIX_MARGIN;
+			if (leftMarginIndex[r] > (int)c) {
+				leftMarginIndex[r] = c;
+			}
+		}
+	}
+}
+
+
+
+//////////////////////////////
+//
 // RollImage::analyzeTears -- Find tears in the edges of the rolls.
 //
 
 void RollImage::analyzeTears(void) {
+
+	ulong rows = getRows();
+	std::vector<double> fastLeft(rows);
+	std::vector<double> fastRight(rows);
+	std::vector<double> mediumLeft(rows);
+	std::vector<double> mediumRight(rows);
+	std::vector<double> slowLeft(rows);
+	std::vector<double> slowRight(rows);
+
+	for (ulong r=0; r<rows; r++) {
+		fastLeft[r]    = leftMarginIndex[r];
+		mediumLeft[r]  = leftMarginIndex[r];
+		slowLeft[r]    = leftMarginIndex[r];
+		fastRight[r]   = rightMarginIndex[r];
+		mediumRight[r] = rightMarginIndex[r];
+		slowRight[r]   = rightMarginIndex[r];
+	}
+
+	exponentialSmoothing(fastLeft,    0.100);
+	exponentialSmoothing(fastRight,   0.100);
+	exponentialSmoothing(mediumLeft,  0.050);
+	exponentialSmoothing(mediumRight, 0.050);
+	exponentialSmoothing(slowLeft,    0.001);
+	exponentialSmoothing(slowRight,   0.001);
+
+
+	ulong startr = getFirstMusicHoleStart();
+	ulong c;
+	ulong cols = getCols();
+	int wfactor = -12;
+	int rfactor = 10;
+
+	// for cleaning up edges of gradual tears (and distinguish from 
+	//left/right shifting):
+	vector<bool> goodregion(rows, false);
+	for (ulong r=0; r<rows; r++) {
+		double fwidth = fastRight[r] - fastLeft[r];
+		double swidth = slowRight[r] - slowLeft[r];
+		if (fwidth >= swidth + wfactor) {
+			continue;
+		}
+		goodregion[r] = true;
+	}
+	for (ulong r=1; r<rows; r++) {
+		if ((goodregion[r] == false) && (goodregion[r-1] == true)) {
+			for (int s=0; s<rfactor; s++) {
+				if (r+s >= rows) {
+					r = r+s;
+					break;
+				} else {
+					goodregion.at(r+s) = true;
+				}
+			}
+			r = r+rfactor-1;
+		}
+	}
+	for (ulong r=rows-1; r>1; r--) {
+		if ((goodregion[r] == false) && (goodregion[r+1] == true)) {
+			for (int s=0; s<rfactor; s++) {
+				if (r-s <= 0) {
+					r = 0;
+					break;
+				} else {
+					goodregion[r-s] = true;
+				}
+			}
+			r = r-rfactor+1;
+		}
+	}
+
+	int xvalue = 15;
+
+	// Initial marking of tears:
+	for (ulong r=startr; r<rows; r++) {
+		if (!goodregion[r]) {
+			continue;
+		}
+		if (mediumLeft[r] < slowLeft[r] + xvalue) {
+			continue;
+		}
+		if (leftMarginIndex[r] > slowLeft[r]) {
+			leftMarginIndex[r] = slowLeft[r];
+		}
+		for (c=slowLeft[r]; c<cols/2; c++) {
+			if (pixelType[r][c] == PIX_MARGIN) {
+// cerr << "GOT HERE 6B" << endl;
+				pixelType[r][c] = PIX_TEAR;
+			}
+		}
+	}
+	// do the same thing on the right side.
+	for (ulong r=startr; r<rows; r++) {
+		if (!goodregion[r]) {
+			continue;
+		}
+		if (mediumRight[r] > slowRight[r] + xvalue) {
+			continue;
+		}
+		if (rightMarginIndex[r] < slowRight[r]) {
+// cerr << "GOT HERE 5B" << endl;
+			rightMarginIndex[r] = slowRight[r];
+		}
+		for (c=cols/2; c < slowRight[r]; c++) {
+			if (pixelType[r][c] == PIX_MARGIN) {
+				pixelType[r][c] = PIX_TEAR;
+			}
+		}
+	}
+
+
+	// recaulate curves
+	for (ulong r=0; r<rows; r++) {
+		fastLeft[r]  = leftMarginIndex[r];
+		mediumLeft[r]  = leftMarginIndex[r];
+		slowLeft[r]  = leftMarginIndex[r];
+		fastRight[r] = rightMarginIndex[r];
+		mediumRight[r] = rightMarginIndex[r];
+		slowRight[r] = rightMarginIndex[r];
+	}
+	exponentialSmoothing(fastLeft,    0.100);
+	exponentialSmoothing(fastRight,   0.100);
+	exponentialSmoothing(mediumLeft,  0.050);
+	exponentialSmoothing(mediumRight, 0.050);
+	exponentialSmoothing(slowLeft,    0.001);
+	exponentialSmoothing(slowRight,   0.001);
+
+
+	// do another fill to get closer to true edges without tears
+	for (ulong r=startr; r<rows; r++) {
+		if (!goodregion[r]) {
+			continue;
+		}
+		if (mediumLeft[r] < slowLeft[r] + xvalue) {
+			continue;
+		}
+		if (leftMarginIndex[r] > slowLeft[r]) {
+				leftMarginIndex[r] = slowLeft[r];
+		}
+		for (c=slowLeft[r]; c<cols/2; c++) {
+			if (pixelType[r][c] == PIX_MARGIN) {
+// cerr << "GOT HERE 4B" << endl;
+				pixelType[r][c] = PIX_TEAR;
+			}
+		}
+	}
+	// do the same thing on the right side.
+	for (ulong r=startr; r<rows; r++) {
+		if (!goodregion[r]) {
+			continue;
+		}
+		if (mediumRight[r] > slowRight[r] + xvalue) {
+			continue;
+		}
+		if (rightMarginIndex[r] < slowRight[r]) {
+				rightMarginIndex[r] = slowRight[r];
+		}
+		for (c=cols/2; c < slowRight[r]; c++) {
+			if (pixelType[r][c] == PIX_MARGIN) {
+// cerr << "GOT HERE 3B" << endl;
+				pixelType[r][c] = PIX_TEAR;
+			}
+		}
+	}
+
+
+	// recaulate curves again
+	for (ulong r=0; r<rows; r++) {
+		fastLeft[r]  = leftMarginIndex[r];
+		mediumLeft[r]  = leftMarginIndex[r];
+		slowLeft[r]  = leftMarginIndex[r];
+		fastRight[r] = rightMarginIndex[r];
+		mediumRight[r] = rightMarginIndex[r];
+		slowRight[r] = rightMarginIndex[r];
+	}
+	exponentialSmoothing(fastLeft,    0.100);
+	exponentialSmoothing(fastRight,   0.100);
+	exponentialSmoothing(mediumLeft,  0.050);
+	exponentialSmoothing(mediumRight, 0.050);
+	exponentialSmoothing(slowLeft,    0.001);
+	exponentialSmoothing(slowRight,   0.001);
+
+
+	// fill between the margin and the slow edges
+	for (ulong r=startr; r<rows; r++) {
+		if (!goodregion[r]) {
+			continue;
+		}
+		if (slowLeft[r] >= leftMarginIndex[r]) {
+			continue;
+		}
+		int start = leftMarginIndex[r];
+		for (c=start; c>=slowLeft[r]; c--) {
+			if (pixelType[r][c] != PIX_PAPER) {
+// cerr << "GOT HERE 2B" << endl;
+				pixelType[r][c] = PIX_TEAR;
+				leftMarginIndex[r] = c;
+			}
+		}
+	}
+	// Same on other side
+	for (ulong r=startr; r<rows; r++) {
+		if (!goodregion[r]) {
+			continue;
+		}
+		if (slowRight[r] <= rightMarginIndex[r]) {
+			continue;
+		}
+		int start = rightMarginIndex[r];
+		for (c=start; c<=slowRight[r]; c++) {
+			if (pixelType[r][c] != PIX_PAPER) {
+// cerr << "GOT HERE 1B" << endl;
+				pixelType[r][c] = PIX_TEAR;
+				rightMarginIndex[r] = c;
+			}
+		}
+	}
+
+	describeTears();
+
+/*
+	// push margins off of paper if they got on (due to tears)
+	for (ulong r=startr; r<rows; r++) {
+		if (pixelType[r][leftMarginIndex[r]] == PIX_PAPER) {
+			c = leftMarginIndex[r];
+			while ((c > 1) && (pixelType[r][c] == PIX_PAPER)) {
+				c--;
+			}
+			leftMarginIndex[r] = c;
+		}
+	}
+	for (ulong r=startr; r<rows; r++) {
+		if (pixelType[r][rightMarginIndex[r]] == PIX_PAPER) {
+			c = rightMarginIndex[r];
+			while ((c < cols-1) && (pixelType[r][c] == PIX_PAPER)) {
+				c++;
+			}
+			rightMarginIndex[r] = c;
+		}
+	}
+
+	// Get rid of some noise and dust cases in raw margins
+	for (ulong r=startr+1; r<rows-1; r++) {
+		if ((leftMarginIndex[r] < leftMarginIndex[r-1]) &&
+				(leftMarginIndex[r] < leftMarginIndex[r+1])) {
+			leftMarginIndex[r] = int(leftMarginIndex[r-1] + leftMarginIndex[r+1] + 0.5)/2.0;
+		}
+	}
+	for (ulong r=startr+1; r<rows-1; r++) {
+		if ((rightMarginIndex[r] > rightMarginIndex[r-1]) &&
+				(rightMarginIndex[r] > rightMarginIndex[r+1])) {
+			rightMarginIndex[r] = int(rightMarginIndex[r-1] + rightMarginIndex[r+1] + 0.5)/2.0;
+		}
+	}
+*/
+
+	for (ulong r=0; r<rows; r++) {
+		if (goodregion[r]) {
+			pixelType[r][100] = PIX_DEBUG1;
+			pixelType[r][101] = PIX_DEBUG1;
+			pixelType[r][102] = PIX_DEBUG1;
+		}
+	}
+
+	return;
+
+	// recaulate curves yet again
+	for (ulong r=0; r<rows; r++) {
+		fastLeft[r]  = leftMarginIndex[r];
+		mediumLeft[r]  = leftMarginIndex[r];
+		slowLeft[r]  = leftMarginIndex[r];
+		fastRight[r] = rightMarginIndex[r];
+		mediumRight[r] = rightMarginIndex[r];
+		slowRight[r] = rightMarginIndex[r];
+	}
+	exponentialSmoothing(fastLeft,    0.100);
+	exponentialSmoothing(fastRight,   0.100);
+	exponentialSmoothing(mediumLeft,  0.050);
+	exponentialSmoothing(mediumRight, 0.050);
+	exponentialSmoothing(slowLeft,    0.001);
+	exponentialSmoothing(slowRight,   0.001);
+
+	// show analysis data on image:
+	for (ulong r=0; r<rows; r++) {
+		pixelType[r][fastLeft[r]] = PIX_DEBUG2;
+		pixelType[r][fastRight[r]] = PIX_DEBUG2;
+		pixelType[r][mediumLeft[r]] = PIX_DEBUG3;
+		pixelType[r][mediumRight[r]] = PIX_DEBUG3;
+		pixelType[r][slowLeft[r]] = PIX_DEBUG4;
+		pixelType[r][slowRight[r]] = PIX_DEBUG4;
+
+		double fvalue = ((fastRight[r] - fastLeft[r]) - 3200) * 3;
+		double mvalue = ((mediumRight[r] - mediumLeft[r]) - 3200) * 3;
+		double svalue = ((slowRight[r] - slowLeft[r]) - 3200) * 3;
+
+		if (fvalue < 0) { fvalue = 0; }
+		if (mvalue < 0) { mvalue = 0; }
+		if (svalue < 0) { svalue = 0; }
+
+		pixelType.at(r).at(fvalue) = PIX_DEBUG2;
+		pixelType.at(r).at(mvalue) = PIX_DEBUG3;
+		pixelType.at(r).at(svalue) = PIX_DEBUG4;
+		int valuel = leftMarginIndex[r];
+		int valuer = rightMarginIndex[r];
+		if (valuel < 0) { cerr << "LEFT IS " << valuel; valuel = 0; }
+		if (valuer < 0) { cerr << "RIGHT IS " << valuer; valuer = 0; }
+		
+		pixelType[r][valuel] = PIX_DEBUG1;
+		pixelType[r][valuer] = PIX_DEBUG1;
+	}
+}
+
+
+
+void RollImage::analyzeTearsOld(void) {
 
 	ulong rows = getRows();
 	std::vector<double> fastLeft(rows);
@@ -880,7 +1523,7 @@ void RollImage::analyzeTears(void) {
 		}
 	}
 
-	processTears(ltear, rtear, slowLeft, slowRight, fastLeft, fastRight);
+	processTearsOld(ltear, rtear, slowLeft, slowRight, fastLeft, fastRight);
 
 }
 
@@ -888,17 +1531,17 @@ void RollImage::analyzeTears(void) {
 
 //////////////////////////////
 //
-// RollImage::processTears --
+// RollImage::processTearsOld --
 //
 
-void RollImage::processTears(std::vector<PreTearInfo>& ltear,
+void RollImage::processTearsOld(std::vector<PreTearInfo>& ltear,
 		std::vector<PreTearInfo>& rtear, std::vector<double>& lslow,
 		std::vector<double>& rslow, std::vector<double>& lfast,
 		std::vector<double>& rfast) {
 	TearInfo *ti;
 	for (ulong i=0; i<ltear.size(); i++) {
 		ti = new TearInfo;
-		getTearInfo(*ti, ltear.at(i), lslow, lfast, 0, rslow, rfast);
+		getTearInfoOld(*ti, ltear.at(i), lslow, lfast, 0, rslow, rfast);
 		if (ti->area == 0) {
 			delete ti;
 			continue;
@@ -907,7 +1550,7 @@ void RollImage::processTears(std::vector<PreTearInfo>& ltear,
 	}
 	for (ulong i=0; i<rtear.size(); i++) {
 		ti = new TearInfo;
-		getTearInfo(*ti, rtear.at(i), rslow, rfast, 1, lslow, lfast);
+		getTearInfoOld(*ti, rtear.at(i), rslow, rfast, 1, lslow, lfast);
 		if (ti->area == 0) {
 			delete ti;
 			continue;
@@ -953,10 +1596,10 @@ bool RollImage::isGoodOppositeEdge(PreTearInfo& pti,
 
 //////////////////////////////
 //
-// RollImage::getTearInfo --
+// RollImage::getTearInfoOld --
 //
 
-void RollImage::getTearInfo(TearInfo& ti, PreTearInfo& pti,
+void RollImage::getTearInfoOld(TearInfo& ti, PreTearInfo& pti,
 		std::vector<double>& slow, std::vector<double>& fast, int side,
 		std::vector<double>& oslow, std::vector<double>& ofast) {
 
@@ -1811,23 +2454,23 @@ void RollImage::getRawMargins(void) {
 
 void RollImage::waterfallDownMargins(void) {
 	ulong rows = getRows();
-	ulong cols = getCols();
+	int cols = (int)getCols();
 
 	for (ulong r=0; r<rows-1; r++) {
 		std::vector<uchar>& row1 = pixelType[r];
 		std::vector<uchar>& row2 = pixelType[r+1];
-		for (ulong c=0; c<cols; c++) {
+		for (int c=0; c<cols; c++) {
 			if (row1[c] != PIX_MARGIN) {
 				continue;
 			}
 			if (row2[c] != PIX_PAPER) {
 				row2[c] = PIX_MARGIN;
 				if (c < cols/2) {
-					if (c > (ulong)leftMarginIndex[r+1]) {
+					if (c > leftMarginIndex[r+1]) {
 						leftMarginIndex[r+1] = c;
 					}
 				} else {
-					if (c < (ulong)rightMarginIndex[r+1]) {
+					if (c < rightMarginIndex[r+1]) {
 						rightMarginIndex[r+1] = c;
 					}
 				}
@@ -2152,6 +2795,12 @@ void RollImage::mergePixelOverlay(std::fstream& output) {
 					pixel[2] = 237;
 					break;
 
+				case PIX_HOLE_SNAKEBITE:   // snake bites (red)
+					pixel[0] = 255;
+					pixel[1] =   0;
+					pixel[2] =   0;
+					break;
+
 				case PIX_HOLE_SHIFT:       // musical holes in roll (lightblue)
 					pixel[0] = 173;
 					pixel[1] = 216;
@@ -2182,9 +2831,15 @@ void RollImage::mergePixelOverlay(std::fstream& output) {
 					pixel[2] =   0;
 					break;
 
-				case PIX_HOLEBB_LEADING:   // musical hole bounding box (yellow)
+				case PIX_HOLEBB_LEADING_A:   // musical hole attack edge (yellow)
 					pixel[0] = 255;
 					pixel[1] = 255;
+					pixel[2] =   0;
+					break;
+
+				case PIX_HOLEBB_LEADING_S:   // musical hole leading edge, sustain  (orange)
+					pixel[0] = 255;
+					pixel[1] = 165;
 					pixel[2] =   0;
 					break;
 
@@ -2194,9 +2849,9 @@ void RollImage::mergePixelOverlay(std::fstream& output) {
 					pixel[2] =   0;
 					break;
 
-				case PIX_HOLEBB_BASS:      // musical hole bounding box (red)
+				case PIX_HOLEBB_BASS:      // musical hole bounding box (orange)
 					pixel[0] = 255;
-					pixel[1] =   0;
+					pixel[1] = 165;
 					pixel[2] =   0;
 					break;
 
@@ -2660,6 +3315,32 @@ void RollImage::markHoleShifts(void) {
 
 //////////////////////////////
 //
+// RollImage::markSnakeBites --
+//
+
+void RollImage::markSnakeBites(void) {
+	int counter;
+	for (ulong i=0; i<holes.size(); i++) {
+		if (!holes[i]->isMusicHole()) {
+			continue;
+		}
+
+		if (!holes[i]->snakebite) {
+			continue;
+		}
+
+		counter = 0;
+		ulong r = holes[i]->entry.first;
+		ulong c = holes[i]->entry.second;
+		int target = pixelType[r][c];
+		fillHoleSimple(r, c, target, PIX_HOLE_SNAKEBITE, counter);
+	}
+}
+
+
+
+//////////////////////////////
+//
 // RollImage::markHoleBBs --
 //
 
@@ -2684,8 +3365,14 @@ void RollImage::markHoleBB(HoleInfo& hi) {
 
 	// Mark upper side of box (leading edge)
 	r = hi.origin.first - 1;
-	for (c=-1; c<(long)hi.width.second+1; c++) {
-		pixelType[r][c + (long)hi.origin.second] = PIX_HOLEBB_LEADING;
+	if (hi.attack) {
+		for (c=-1; c<(long)hi.width.second+1; c++) {
+			pixelType[r][c + (long)hi.origin.second] = PIX_HOLEBB_LEADING_A;
+		}
+	} else {
+		for (c=-1; c<(long)hi.width.second+1; c++) {
+			pixelType[r][c + (long)hi.origin.second] = PIX_HOLEBB_LEADING_S;
+		}
 	}
 
 	// Mark lower side of box (trailing edge
@@ -2717,7 +3404,9 @@ void RollImage::markHoleBB(HoleInfo& hi) {
 void RollImage::markHoleAttacks(void) {
 	for (ulong i=0; i<holes.size(); i++) {
 		if (holes[i]->isMusicHole()) {
-			markHoleAttack(*holes[i]);
+			if (holes[i]->attack) {
+				markHoleAttack(*holes[i]);
+			}
 		}
 	}
 }
@@ -2742,7 +3431,7 @@ void RollImage::markHoleAttack(HoleInfo& hi) {
 			continue;
 		}
 		if (c % getAttackLineSpacing() == 0) {
-			pixelType[r][c] = PIX_HOLEBB_LEADING;
+			pixelType[r][c] = PIX_HOLEBB_LEADING_A;
 		}
 	}
 }
@@ -2876,15 +3565,20 @@ ulong RollImage::getRightMarginWidth(ulong rowindex) {
 //
 
 double RollImage::getAverageMusicalHoleWidth(void) {
+	if (m_averageHoleWidth != -1.0) {
+		return m_averageHoleWidth;
+	}
 	if (holes.size() == 0) {
-		return 0;
+		return 0.0;
 	}
 	double sum = 0.0;
 	for (ulong i=0; i<holes.size(); i++) {
 		sum += holes[i]->width.second;
 	}
-	return sum / holes.size();
+	m_averageHoleWidth = sum / holes.size();
+	return m_averageHoleWidth;
 }
+
 
 
 //////////////////////////////
@@ -2916,50 +3610,85 @@ double RollImage::getAverageSoftMarginTotal(void) {
 // RollImage::markTrackerPositions --
 //
 
-void RollImage::markTrackerPositions(void) {
+void RollImage::markTrackerPositions(bool showAll) {
 
-	ulong midiStart = 255;
-	for (ulong i=0; i<256; i++) {
+	int midiStart = midiToHoleMapping.size() - 1;
+	for (int i=0; i<(int)midiToHoleMapping.size(); i++) {
 		if (midiToHoleMapping[i]) {
 			midiStart = i;
 			break;
 		}
 	}
 
-	ulong midiEnd = 0;
-	for (long i=255; i>=0; i--) {
+	int midiEnd = 0;
+	for (int i=midiToHoleMapping.size()-1; i>=0; i--) {
 		if (midiToHoleMapping[i]) {
 			midiEnd = (ulong)i;
 			break;
 		}
 	}
 
-	ulong colstart = midiToHoleMapping[midiStart];
-	ulong colend   = midiToHoleMapping[midiEnd];
+	int realcolstart = midiToHoleMapping[midiStart];
+	int realcolend   = midiToHoleMapping[midiEnd];
+
+	int colstart = 0;
+	int colend = midiToHoleMapping.size() - 1;
+
+	if (!showAll) {
+		colstart = realcolstart;
+		colend   = realcolend;
+	}
 
 	ulong startrow = getFirstMusicHoleStart() - 100;
-	ulong endrow   = getLastMusicHoleEnd() + 100;
+	ulong endrow   = getLastMusicHoleEnd()    + 100;
 
-	ulong cutoff = midiToHoleMapping[65];
+	int cutoff = midiToHoleMapping[65];
 
-	ulong c;
+	int c;
+	int color;
+	int cols = getCols();
 	for (ulong r=startrow; r<=endrow; r++) {
-		for (ulong i=colstart; i<=colend; i++) {
-		std::vector<int> midiToHoleMapping;
+		for (int i=colstart; i<=colend; i++) {
+			// Reverse drift correction to find horizontal position in image:
 			c = int(m_normalizedPosition[i] - driftCorrection[r] + 0.5);
-			if (!trackerArray[i].empty()) {
-				if (i < cutoff) {
-					pixelType[r][c] = PIX_TRACKER_BASS;
+			if (c <= holeOffset) {
+				continue;
+			}
+			if (c >= cols) {
+				continue;
+			}
+			if (i < cutoff) {
+				color = PIX_TRACKER_BASS;
+			} else {
+				color = PIX_TRACKER_TREBLE;
+			}
+			if (i == realcolstart) {
+				color = PIX_DEBUG7;
+			}
+			if (i == realcolend) {
+				color = PIX_DEBUG7;
+			}
+			if ((i < realcolstart) || (i > realcolend)) {
+				color = PIX_DEBUG2;
+				if (i == realcolstart) {
+					color = PIX_DEBUG7;
+				}
+				if (i == realcolend) {
+					color = PIX_DEBUG7;
+				}
+				if (r % 50 == 0) {
+					// dotted line to indiate off-paper track position
+					pixelType[r][c] = color;
+				}
+			} else if (!trackerArray[i].empty()) {
+				if (trackMeaning[i] == TRACK_SNAKEBITE) {
+					pixelType[r][c] = PIX_HOLE_SNAKEBITE;
 				} else {
-					pixelType[r][c] = PIX_TRACKER_TREBLE;
+					pixelType[r][c] = color;
 				}
 			} else if (r % 20 < 10) {
 				// dashed line to indiate no activity in track
-				if (i < cutoff) {
-					pixelType[r][c] = PIX_TRACKER_BASS;
-				} else {
-					pixelType[r][c] = PIX_TRACKER_TREBLE;
-				}
+				pixelType[r][c] = color;
 			}
 		}
 	}

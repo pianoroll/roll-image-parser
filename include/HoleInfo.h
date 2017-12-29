@@ -45,12 +45,15 @@ class HoleInfo {
 		std::string               reason;       // reason for being a bad hole (if bad)
 		double                    leadinghcor;  // leading horizontal pixel correction
 		double                    trailinghcor; // trailing horizontal pixel correction
+		double                    prevOff;      // distance from onset to offset of previous hole in track
+		bool                      attack;       // true if note attack false otherwise
+		bool                      snakebite;    // true if part of melody highlighting
 
-		void     clear        (void);
-		bool     isMusicHole  (void) { return m_type == 1 ? 1 : 0; }
-		void     setNonHole   (void) { m_type = 0; }
-		std::ostream& printAton (std::ostream& out = std::cout);
-		bool      isShifting   (void);
+		void     clear            (void);
+		bool     isMusicHole      (void) { return m_type == 1 ? 1 : 0; }
+		void     setNonHole       (void) { m_type = 0; }
+		std::ostream& printAton   (std::ostream& out = std::cout);
+		bool      isShifting      (void);
 
 	private:
 		char     m_type;

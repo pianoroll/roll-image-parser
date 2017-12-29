@@ -44,7 +44,7 @@ RollOptions::~RollOptions() {
 //
 
 void RollOptions::reset(void) {
-	m_minTrackerSpacingToPaperEdge = 1.50;
+	m_minTrackerSpacingToPaperEdge = 0.50;
 	m_maxHoleWidth                 = 1.50; // wide for rewind hole of duoart salesman
 	m_aspectRatioThreshold         = 1.25;
 	m_majorAxisThreshold           = 13.0;

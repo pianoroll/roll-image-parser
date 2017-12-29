@@ -65,6 +65,9 @@ void HoleInfo::clear(void) {
 	coldrift        = 0.0;
 	leadinghcor     = 0.0;
 	trailinghcor    = 0.0;
+	prevOff         = -1.0;
+	attack          = true; // assume all are attacks initially
+	snakebite       = false;
 }
 
 
@@ -126,6 +129,9 @@ std::ostream& HoleInfo::printAton(std::ostream& out) {
 	// }
 	if (!reason.empty()) {
 		out << "@REASON:\t"  << reason << std::endl;
+	}
+	if (snakebite) {
+		out << "@SNAKEBITE:\ttrue\n";
 	}
 	out << "@@END: HOLE\n";
 	return out;
