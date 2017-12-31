@@ -13,6 +13,7 @@
 
 #include "RollImage.h"
 #include "HoleInfo.h"
+#include "ShiftInfo.h"
 #include "CheckSum.h"
 
 #include <algorithm>
@@ -58,6 +59,11 @@ RollImage::~RollImage(void) {
 		delete trebleTears[i];
 	}
 	trebleTears.resize(0);
+
+	for (ulong i=0; i<shifts.size(); i++) {
+		delete shifts[i];
+	}
+	shifts.resize(0);
 
 	close();
 }
@@ -107,39 +113,41 @@ void RollImage::analyze(void) {
 	analyzeHoles();
 	if (debug) { cerr << "STEP 6: analyzeTears" << endl; }
 	analyzeTears();
-	if (debug) { cerr << "STEP 7: generateDriftCorrection" << endl; }
+	if (debug) { cerr << "STEP 7: analyzeShifts" << endl; }
+	analyzeShifts();
+	if (debug) { cerr << "STEP 8: generateDriftCorrection" << endl; }
 	generateDriftCorrection(0.01);
-	if (debug) { cerr << "STEP 8: calculateHoleDescriptors" << endl; }
+	if (debug) { cerr << "STEP 9: calculateHoleDescriptors" << endl; }
 	calculateHoleDescriptors();
-	if (debug) { cerr << "STEP 9: invalidateSkewedHoles" << endl; }
+	if (debug) { cerr << "STEP 10: invalidateSkewedHoles" << endl; }
 	invalidateSkewedHoles();
-	if (debug) { cerr << "STEP 10: markPosteriorLeader" << endl; }
+	if (debug) { cerr << "STEP 11: markPosteriorLeader" << endl; }
 	markPosteriorLeader();
-	if (debug) { cerr << "STEP 11: analyzeTrackerBarSpacing" << endl; }
+	if (debug) { cerr << "STEP 12: analyzeTrackerBarSpacing" << endl; }
 	analyzeTrackerBarSpacing();
-	if (debug) { cerr << "STEP 12: analyzeTrackerBarPositions" << endl; }
+	if (debug) { cerr << "STEP 13: analyzeTrackerBarPositions" << endl; }
 	analyzeTrackerBarPositions();
-	if (debug) { cerr << "STEP 13: analyzeHorizontalHolePosition" << endl; }
+	if (debug) { cerr << "STEP 14: analyzeHorizontalHolePosition" << endl; }
 	analyzeHorizontalHolePosition();
-	if (debug) { cerr << "STEP 14: analyzeMidiKeyMapping" << endl; }
+	if (debug) { cerr << "STEP 15: analyzeMidiKeyMapping" << endl; }
 	analyzeMidiKeyMapping();
-	if (debug) { cerr << "STEP 15: invalidateEdgeHoles" << endl; }
+	if (debug) { cerr << "STEP 16: invalidateEdgeHoles" << endl; }
 	invalidateEdgeHoles();
-	if (debug) { cerr << "STEP 16: invalidateOffTrackerHoles" << endl; }
+	if (debug) { cerr << "STEP 17: invalidateOffTrackerHoles" << endl; }
 	invalidateOffTrackerHoles();
-	if (debug) { cerr << "STEP 17: recalculateFirstMusicHole" << endl; }
+	if (debug) { cerr << "STEP 18: recalculateFirstMusicHole" << endl; }
 	recalculateFirstMusicHole();
-	if (debug) { cerr << "STEP 18: addDriftInfoToHoles" << endl; }
+	if (debug) { cerr << "STEP 19: addDriftInfoToHoles" << endl; }
 	addDriftInfoToHoles();
-	if (debug) { cerr << "STEP 19: addAntidustToBadHoles" << endl; }
+	if (debug) { cerr << "STEP 20: addAntidustToBadHoles" << endl; }
 	addAntidustToBadHoles(50);
-	if (debug) { cerr << "STEP 20: assignMusicHoleIds" << endl; }
+	if (debug) { cerr << "STEP 21: assignMusicHoleIds" << endl; }
 	assignMusicHoleIds();
-	if (debug) { cerr << "STEP 21: groupHoles" << endl; }
+	if (debug) { cerr << "STEP 22: groupHoles" << endl; }
 	groupHoles();
-	if (debug) { cerr << "STEP 22: analyzeSnakeBites" << endl; }
+	if (debug) { cerr << "STEP 23: analyzeSnakeBites" << endl; }
 	analyzeSnakeBites();
-	if (debug) { cerr << "STEP 23: FINSHED WITH ANALYSIS!" << endl; }
+	if (debug) { cerr << "STEP 24: FINSHED WITH ANALYSIS!" << endl; }
 }
 
 
@@ -191,7 +199,6 @@ void RollImage::analyzeSnakeBites(void) {
 	int split = 0;
 	for (ulong i=0; i<sortlist.size()-1; i++) {
 		double factor = sortlist[i].first / sortlist[i+1].first;
-		cerr << "FACTOR " << i << " = " << factor << endl;
 		if (factor <= 0.75) {
 			split = i;
 			break;
@@ -291,7 +298,7 @@ return; // disabling for now
 
 //////////////////////////////
 //
-// RollImage::groupHoles -- Mark whether or not holes are the 
+// RollImage::groupHoles -- Mark whether or not holes are the
 //   start of a note attack or not.
 //
 
@@ -576,6 +583,11 @@ void RollImage::analyzeMidiKeyMapping(void) {
 		}
 	}
 
+	if (trackerArray[rightmostIndex].empty() && trackerArray[leftmostIndex].empty()) {
+		// shrink if no holes in extreme positions of both sides
+		leftmostIndex++;
+		rightmostIndex--;
+	}
 
 	int holecount = rightmostIndex - leftmostIndex + 1;
 	if (holecount > 100) {
@@ -672,7 +684,7 @@ void RollImage::invalidateEdgeHoles(void) {
 			holes[i]->track = 0;
 			holes[i]->setNonHole();
 			badHoles.push_back(holes[i]);
-			holes[i]->reason = "too wide";
+			holes[i]->reason = "wide";
 			continue;
 		}
 		double aspect = (double)holes[i]->width.second / (double)holes[i]->width.first;
@@ -947,14 +959,13 @@ void RollImage::analyzeTrackerBarSpacing(void) {
 
 //////////////////////////////
 //
-// RollImage::describeTears -- Removing long thin tears which are not tears.
+// RollImage::describeTears --
 //
 
 void RollImage::describeTears(void) {
 	ulong rows = getRows();
 	ulong cols = getCols();
 
-	// remove small left-side tears:
 	for (ulong r=0; r<rows; r++) {
 		for (ulong c=0; c<cols/2; c++) {
 			if (pixelType[r][c] != PIX_TEAR) {
@@ -964,7 +975,6 @@ void RollImage::describeTears(void) {
 		}
 	}
 
-	// remove small right-side tears:
 	for (ulong r=0; r<rows; r++) {
 		for (ulong c=cols/2; c<cols; c++) {
 			if (pixelType[r][c] != PIX_TEAR) {
@@ -986,18 +996,18 @@ void RollImage::describeTears(void) {
 ulong RollImage::processTearLeft(ulong startrow, ulong startcol) {
 	ulong rows = getRows();
 	ulong cols = getCols();
-	bool hastear;
-	ulong widththreshold = 5;
-	ulong mintearwidth = 30;
 	ulong area = 1;
 	ulong minc = startcol;
 	ulong maxc = startcol;
 	ulong minr = startrow;
 	ulong maxr = startrow;
+	bool hastear;
+	ulong widththreshold = 10; // put into RollOptions
+	ulong mintearwidth   = 30; // put into RollOptions
 
 	for (ulong r=startrow; r<rows; r++) {
 		hastear = false;
-		for (ulong c=0; c<cols/2; c++) {
+		for (ulong c=cols/2; c>1; c--) {
 			if (pixelType[r][c] != PIX_TEAR) {
 				continue;
 			}
@@ -1011,10 +1021,14 @@ ulong RollImage::processTearLeft(ulong startrow, ulong startcol) {
 		}
 		maxr = r;
 	}
+
+	ulong minarea = 30;  // move to RollOptions
+
 	if (maxc - minc + 1 <= widththreshold) {
 		removeTearLeft(minr, maxr, minc, maxc);
+	} else if (area < minarea) {
+		// do nothing
 	} else if (maxc - minc + 1 >= mintearwidth) {
-// ggg
 		TearInfo* ti = new TearInfo;
 		ti->origin.first = minr;
 		ti->origin.second = minc;
@@ -1043,8 +1057,8 @@ ulong RollImage::processTearRight(ulong startrow, ulong startcol) {
 	ulong minr = startrow;
 	ulong maxr = startrow;
 	bool hastear;
-	ulong widththreshold = 5;
-	ulong mintearwidth = 30;
+	ulong widththreshold = 10; // put into RollOptions
+	ulong mintearwidth   = 30; // put into RollOptions
 
 	for (ulong r=startrow; r<rows; r++) {
 		hastear = false;
@@ -1062,6 +1076,7 @@ ulong RollImage::processTearRight(ulong startrow, ulong startcol) {
 		}
 		maxr = r;
 	}
+
 	if (maxc - minc + 1 <= widththreshold) {
 		removeTearRight(minr, maxr, minc, maxc);
 	} else if (maxc - minc + 1 >= mintearwidth) {
@@ -1148,7 +1163,6 @@ void RollImage::analyzeTears(void) {
 		mediumRight[r] = rightMarginIndex[r];
 		slowRight[r]   = rightMarginIndex[r];
 	}
-
 	exponentialSmoothing(fastLeft,    0.100);
 	exponentialSmoothing(fastRight,   0.100);
 	exponentialSmoothing(mediumLeft,  0.050);
@@ -1156,63 +1170,135 @@ void RollImage::analyzeTears(void) {
 	exponentialSmoothing(slowLeft,    0.001);
 	exponentialSmoothing(slowRight,   0.001);
 
-
 	ulong startr = getFirstMusicHoleStart();
-	ulong c;
-	ulong cols = getCols();
-	int wfactor = 4;
-	int rfactor = 30;
+	int rfactor = 300;  // expansion of tear search windows
+	int wfactor = 5;    // trigger deviation between slow margin and raw margin
+	int cols = getCols();
+	int c;
 
-	// for cleaning up edges of gradual tears (and distinguish from 
-	//left/right shifting):
-	std::vector<bool> stableregion(rows, false);
-	std::vector<double> fwidths(rows, 0.0);
-	std::vector<double> swidths(rows, 0.0);
+	// Generate a boolean vector where true means the the margins
+	// are stable, and false means they are unstable (probably due
+	// to a tear on one or both sides).
+
+	std::vector<bool> stableRegion(rows, true);
+	std::vector<bool> stableLeft(rows, true);
+	std::vector<bool> stableRight(rows, true);
+	std::vector<double> fwidths(rows, 0.0);  // fast (now raw) width of paper
+	std::vector<double> swidths(rows, 0.0);  // slow width of paper
+	double sum = 0.0;
+	int counter = 0;
 	for (ulong r=0; r<rows; r++) {
-		double fwidth = fastRight[r] - fastLeft[r];
+		// double fwidth = fastRight[r] - fastLeft[r];
+		double fwidth = rightMarginIndex[r] - leftMarginIndex[r];
 		double swidth = slowRight[r] - slowLeft[r];
 		swidths[r] = swidth;
 		fwidths[r] = fwidth;
 		if (fabs(swidth - fwidth) > wfactor) {
-			continue;
+			stableRegion[r] = false;
+		} else {
+			if (r > 10000) {
+				// don't look at leader
+				sum += swidth;
+				counter++;
+			}
 		}
-		stableregion[r] = true;
+		if (fabs(fastLeft[r] - slowLeft[r]) > wfactor) {
+			stableLeft[r] = false;
+		}
+		if (fabs(fastRight[r] - slowRight[r]) > wfactor) {
+			stableRight[r] = false;
+		}
 	}
+
+	double avgwidth = sum / counter;
+
+	std::vector<bool> sr(stableRegion.size(), true);
 	
-	// expand unstable regions
+	// expand unstable paper-width regions
 	for (ulong r=1; r<rows-rfactor-1; r++) {
-		if ((stableregion[r] == false) && (stableregion[r-1] == true)) {
+		if (stableRegion[r] == false) {
+			sr[r] = false;
+		}
+		if ((stableRegion[r] == false) && (stableRegion[r+1] == true)) {
 			for (int s=0; s<rfactor; s++) {
 				if (r+s >= rows) {
-					r = r+s;
 					break;
 				} else {
-					stableregion.at(r+s) = true;
+					sr.at(r+s) = false;
 				}
 			}
 			r = r+rfactor-1;
 		}
 	}
+
 	// expand the other direction
-	for (ulong r=rows-1; r>rfactor; r--) {
-		if ((stableregion[r] == false) && (stableregion[r+1] == true)) {
+	for (ulong r=rows-1; r>(ulong)rfactor; r--) {
+		if (sr[r] == false) {
+			stableRegion[r] = false;
+		}
+		if ((sr[r] == false) && (sr[r-1] == true)) {
 			for (int s=0; s<rfactor; s++) {
 				if (r-s <= 0) {
-					r = 0;
 					break;
 				} else {
-					stableregion.at(r-s) = true;
+					stableRegion.at(r-s) = false;
 				}
 			}
 			r = r-rfactor+1;
 		}
 	}
 
-	int xvalue = 15;
+	// adjust tear region to expected paper width if one side
+	// was stable and the other was not.
+	for (ulong r=startr; r<rows; r++) {
+		if (stableLeft[r] && !stableRight[r]) {
+			int startindex = slowLeft[r] + avgwidth;
+			rightMarginIndex[r] = startindex;
+			for (c=startindex; (c > 0) && (pixelType[r][c] == PIX_MARGIN); c--) {
+				pixelType[r][c] = PIX_TEAR;
+				// back-fill due to dust:
+				for (ulong rr = r-1; rr >= startr; r--) {
+					if (pixelType[rr][c] == PIX_MARGIN) {
+						pixelType[rr][c] = PIX_TEAR;
+					} else {
+						break;
+					}
+				}
+			}
+		}
 
+		if (stableRight[r] && !stableLeft[r]) {
+			int startindex = slowRight[r] - avgwidth;
+			leftMarginIndex[r] = startindex;
+			for (c=cols/2; c>=startindex; c--) {
+				if (pixelType[r][c] == PIX_MARGIN) {
+					pixelType[r][c] = PIX_TEAR;
+				}
+			}
+		}
+	}
+
+
+	// recalculate curves
+	for (ulong r=0; r<rows; r++) {
+		fastLeft[r]    = leftMarginIndex[r];
+		mediumLeft[r]  = leftMarginIndex[r];
+		slowLeft[r]    = leftMarginIndex[r];
+		fastRight[r]   = rightMarginIndex[r];
+		mediumRight[r] = rightMarginIndex[r];
+		slowRight[r]   = rightMarginIndex[r];
+	}
+	exponentialSmoothing(fastLeft,    0.100);
+	exponentialSmoothing(fastRight,   0.100);
+	exponentialSmoothing(mediumLeft,  0.050);
+	exponentialSmoothing(mediumRight, 0.050);
+	exponentialSmoothing(slowLeft,    0.001);
+	exponentialSmoothing(slowRight,   0.001);
+
+	int xvalue = 10;
 	// Initial marking of tears:
 	for (ulong r=startr; r<rows; r++) {
-		if (stableregion[r]) {
+		if (stableRegion[r]) {
 			continue;
 		}
 		if (mediumLeft[r] < slowLeft[r] + xvalue) {
@@ -1229,7 +1315,7 @@ void RollImage::analyzeTears(void) {
 	}
 	// do the same thing on the right side.
 	for (ulong r=startr; r<rows; r++) {
-		if (stableregion[r]) {
+		if (stableRegion[r]) {
 			continue;
 		}
 		if (mediumRight[r] > slowRight[r] + xvalue) {
@@ -1246,14 +1332,14 @@ void RollImage::analyzeTears(void) {
 	}
 
 
-	// recaulate curves
+	// recalculate curves
 	for (ulong r=0; r<rows; r++) {
-		fastLeft[r]  = leftMarginIndex[r];
+		fastLeft[r]    = leftMarginIndex[r];
 		mediumLeft[r]  = leftMarginIndex[r];
-		slowLeft[r]  = leftMarginIndex[r];
-		fastRight[r] = rightMarginIndex[r];
+		slowLeft[r]    = leftMarginIndex[r];
+		fastRight[r]   = rightMarginIndex[r];
 		mediumRight[r] = rightMarginIndex[r];
-		slowRight[r] = rightMarginIndex[r];
+		slowRight[r]   = rightMarginIndex[r];
 	}
 	exponentialSmoothing(fastLeft,    0.100);
 	exponentialSmoothing(fastRight,   0.100);
@@ -1264,7 +1350,7 @@ void RollImage::analyzeTears(void) {
 
 	// do another fill to get closer to true edges without tears
 	for (ulong r=startr; r<rows; r++) {
-		if (stableregion[r]) {
+		if (stableRegion[r]) {
 			continue;
 		}
 		if (mediumLeft[r] < slowLeft[r] + xvalue) {
@@ -1281,7 +1367,7 @@ void RollImage::analyzeTears(void) {
 	}
 	// do the same thing on the right side.
 	for (ulong r=startr; r<rows; r++) {
-		if (stableregion[r]) {
+		if (stableRegion[r]) {
 			continue;
 		}
 		if (mediumRight[r] > slowRight[r] + xvalue) {
@@ -1297,14 +1383,15 @@ void RollImage::analyzeTears(void) {
 		}
 	}
 
+
 	// recaulate curves again
 	for (ulong r=0; r<rows; r++) {
-		fastLeft[r]  = leftMarginIndex[r];
+		fastLeft[r]    = leftMarginIndex[r];
 		mediumLeft[r]  = leftMarginIndex[r];
-		slowLeft[r]  = leftMarginIndex[r];
-		fastRight[r] = rightMarginIndex[r];
+		slowLeft[r]    = leftMarginIndex[r];
+		fastRight[r]   = rightMarginIndex[r];
 		mediumRight[r] = rightMarginIndex[r];
-		slowRight[r] = rightMarginIndex[r];
+		slowRight[r]   = rightMarginIndex[r];
 	}
 	exponentialSmoothing(fastLeft,    0.100);
 	exponentialSmoothing(fastRight,   0.100);
@@ -1312,11 +1399,9 @@ void RollImage::analyzeTears(void) {
 	exponentialSmoothing(mediumRight, 0.050);
 	exponentialSmoothing(slowLeft,    0.001);
 	exponentialSmoothing(slowRight,   0.001);
-
-
 	// fill between the margin and the slow edges
 	for (ulong r=startr; r<rows; r++) {
-		if (stableregion[r]) {
+		if (stableRegion[r]) {
 			continue;
 		}
 		if (slowLeft[r] >= leftMarginIndex[r]) {
@@ -1332,7 +1417,7 @@ void RollImage::analyzeTears(void) {
 	}
 	// Same on other side
 	for (ulong r=startr; r<rows; r++) {
-		if (stableregion[r]) {
+		if (stableRegion[r]) {
 			continue;
 		}
 		if (slowRight[r] <= rightMarginIndex[r]) {
@@ -1346,6 +1431,7 @@ void RollImage::analyzeTears(void) {
 			}
 		}
 	}
+
 
 	describeTears();
 
@@ -1385,25 +1471,32 @@ void RollImage::analyzeTears(void) {
 	}
 */
 
-	for (ulong r=0; r<rows; r++) {
-		if (stableregion[r]) {
-			pixelType[r][100] = PIX_DEBUG1;
-			pixelType[r][101] = PIX_DEBUG1;
-			pixelType[r][102] = PIX_DEBUG1;
-		}
-	}
-
-
 	return;
+}
 
-	// recaulate curves yet again
+
+
+//////////////////////////////
+//
+// RollImage::analyzeShifts --
+//
+
+void RollImage::analyzeShifts(void) {
+	ulong rows = getRows();
+	std::vector<double> fastLeft(rows);
+	std::vector<double> fastRight(rows);
+	std::vector<double> mediumLeft(rows);
+	std::vector<double> mediumRight(rows);
+	std::vector<double> slowLeft(rows);
+	std::vector<double> slowRight(rows);
+
 	for (ulong r=0; r<rows; r++) {
-		fastLeft[r]  = leftMarginIndex[r];
+		fastLeft[r]    = leftMarginIndex[r];
 		mediumLeft[r]  = leftMarginIndex[r];
-		slowLeft[r]  = leftMarginIndex[r];
-		fastRight[r] = rightMarginIndex[r];
+		slowLeft[r]    = leftMarginIndex[r];
+		fastRight[r]   = rightMarginIndex[r];
 		mediumRight[r] = rightMarginIndex[r];
-		slowRight[r] = rightMarginIndex[r];
+		slowRight[r]   = rightMarginIndex[r];
 	}
 	exponentialSmoothing(fastLeft,    0.100);
 	exponentialSmoothing(fastRight,   0.100);
@@ -1412,506 +1505,142 @@ void RollImage::analyzeTears(void) {
 	exponentialSmoothing(slowLeft,    0.001);
 	exponentialSmoothing(slowRight,   0.001);
 
-	// show analysis data on image:
-	for (ulong r=0; r<rows; r++) {
-		pixelType[r][fastLeft[r]] = PIX_DEBUG2;
-		pixelType[r][fastRight[r]] = PIX_DEBUG2;
-		pixelType[r][mediumLeft[r]] = PIX_DEBUG3;
-		pixelType[r][mediumRight[r]] = PIX_DEBUG3;
-		pixelType[r][slowLeft[r]] = PIX_DEBUG4;
-		pixelType[r][slowRight[r]] = PIX_DEBUG4;
-
-		double fvalue = ((fastRight[r] - fastLeft[r]) - 3200) * 3;
-		double mvalue = ((mediumRight[r] - mediumLeft[r]) - 3200) * 3;
-		double svalue = ((slowRight[r] - slowLeft[r]) - 3200) * 3;
-
-		if (fvalue < 0) { fvalue = 0; }
-		if (mvalue < 0) { mvalue = 0; }
-		if (svalue < 0) { svalue = 0; }
-
-		pixelType.at(r).at(fvalue) = PIX_DEBUG2;
-		pixelType.at(r).at(mvalue) = PIX_DEBUG3;
-		pixelType.at(r).at(svalue) = PIX_DEBUG4;
-		int valuel = leftMarginIndex[r];
-		int valuer = rightMarginIndex[r];
-		if (valuel < 0) { cerr << "LEFT IS " << valuel; valuel = 0; }
-		if (valuer < 0) { cerr << "RIGHT IS " << valuer; valuer = 0; }
-		
-		pixelType[r][valuel] = PIX_DEBUG1;
-		pixelType[r][valuer] = PIX_DEBUG1;
-	}
-}
-
-
-
-void RollImage::analyzeTearsOld(void) {
-
-	ulong rows = getRows();
-	std::vector<double> fastLeft(rows);
-	std::vector<double> fastRight(rows);
-	std::vector<double> slowLeft(rows);
-	std::vector<double> slowRight(rows);
-
-	for (ulong r=0; r<rows; r++) {
-		fastLeft[r]  = leftMarginIndex[r];
-		slowLeft[r]  = leftMarginIndex[r];
-		fastRight[r] = rightMarginIndex[r];
-		slowRight[r] = rightMarginIndex[r];
-	}
-
-	exponentialSmoothing(fastLeft,  0.100);
-	exponentialSmoothing(fastRight, 0.100);
-	exponentialSmoothing(slowLeft,  0.001);
-	exponentialSmoothing(slowRight, 0.001);
-
-	ulong startrow = getLeaderIndex();
-	std::vector<double> left(rows, 0.0);
-	std::vector<double> right(rows, 0.0);
-	for (ulong r=startrow; r<rows; r++) {
-		left[r] = fastLeft[r] - slowLeft[r] - 3;
-		right[r] = slowRight[r] -fastRight[r] - 3;
-		if (left[r] < 0.0) {
-			left[r] = 0.0;
-		}
-		if (right[r] < 0.0) {
-			right[r] = 0.0;
-		}
-		// cout << left[r] << "\t" << right[r] << endl;
-	}
-	// cout << endl;
-
-
-	std::vector<PreTearInfo> ltear;
-	std::vector<PreTearInfo> rtear;
-	ltear.reserve(1000);
-	rtear.reserve(1000);
-
-	double cutoff = 3.0;
-
-	ulong peakindex;
-	double peakvalue;
-	ulong startr;
-
-	// identify left (bass) tears
-	for (ulong r=startrow; r<rows; r++) {
-		if (!left[r]) {
-			continue;
-		}
-		startr = r;
-		r = findPeak(left, startr, peakindex, peakvalue);
-		if (peakvalue >= cutoff) {
-			ltear.resize(ltear.size() + 1);
-			ltear.back().peakindex = peakindex;
-			ltear.back().peak= peakvalue;
-			ltear.back().startindex = startr;
-			ltear.back().endindex = r;
-		}
-	}
-
-	for (ulong r=startrow; r<rows; r++) {
-		if (!right[r]) {
-			continue;
-		}
-		startr = r;
-		r = findPeak(right, startr, peakindex, peakvalue);
-		if (peakvalue >= cutoff) {
-			rtear.resize(rtear.size() + 1);
-			rtear.back().peakindex = peakindex;
-			rtear.back().peak = peakvalue;
-			rtear.back().startindex = startr;
-			rtear.back().endindex = r;
-		}
-	}
-
-	processTearsOld(ltear, rtear, slowLeft, slowRight, fastLeft, fastRight);
-
-}
-
-
-
-//////////////////////////////
-//
-// RollImage::processTearsOld --
-//
-
-void RollImage::processTearsOld(std::vector<PreTearInfo>& ltear,
-		std::vector<PreTearInfo>& rtear, std::vector<double>& lslow,
-		std::vector<double>& rslow, std::vector<double>& lfast,
-		std::vector<double>& rfast) {
-	TearInfo *ti;
-	for (ulong i=0; i<ltear.size(); i++) {
-		ti = new TearInfo;
-		getTearInfoOld(*ti, ltear.at(i), lslow, lfast, 0, rslow, rfast);
-		if (ti->area == 0) {
-			delete ti;
-			continue;
-		}
-		bassTears.push_back(ti);
-	}
-	for (ulong i=0; i<rtear.size(); i++) {
-		ti = new TearInfo;
-		getTearInfoOld(*ti, rtear.at(i), rslow, rfast, 1, lslow, lfast);
-		if (ti->area == 0) {
-			delete ti;
-			continue;
-		}
-		trebleTears.push_back(ti);
-	}
-}
-
-
-
-//////////////////////////////
-//
-// RollImage::isGoodOppositeEdge --
-//
-
-bool RollImage::isGoodOppositeEdge(PreTearInfo& pti,
-		std::vector<double>& slow, std::vector<double>& fast) {
-	ulong startrow = pti.startindex;
-	ulong endrow   = pti.endindex;
-
-	double threshold = 10.0;
-
-	double bad = 0.0;
-	double good = 0.0;
-	double length = endrow - startrow + 1;
-
-	for (ulong r=startrow; r<=endrow; r++) {
-		if (fabs(fast[r] - slow[r]) <= threshold) {
-			good++;
-		} else{
-			bad++;
-		}
-	}
-
-	if (good/length > 0.90) {
-		return true;
-	} else {
-		return false;
-	}
-}
-
-
-
-//////////////////////////////
-//
-// RollImage::getTearInfoOld --
-//
-
-void RollImage::getTearInfoOld(TearInfo& ti, PreTearInfo& pti,
-		std::vector<double>& slow, std::vector<double>& fast, int side,
-		std::vector<double>& oslow, std::vector<double>& ofast) {
-
-	ulong startcol = slow[pti.startindex];
-	ulong endcol   = slow[pti.endindex];
-
-	// ulong toprow = 0;
-	// ulong botrow = 0;
-	ulong checkcol = slow[pti.endindex];
-
-	if (side == 0) {
-		checkcol--;
-	} else {
-		checkcol++;
-	}
-
-	bool goodOppositeEdge = isGoodOppositeEdge(pti, oslow, ofast);
-
-	int trim = 1;
-
-	if (goodOppositeEdge) {
-
-		double avgwidth = getAverageRollWidth();
-		if (side == 0) {
-			startcol = oslow[pti.startindex] - avgwidth + trim;
-			endcol = oslow[pti.endindex] - avgwidth + trim;
-			checkcol = endcol - 1;
-		} else {
-			startcol = oslow[pti.startindex] + avgwidth - trim;
-			endcol = oslow[pti.endindex] + avgwidth - trim;
-			checkcol = endcol + 1;
-		}
-	}
-
-	bool constant = false;
-	if (startcol == endcol) {
-		constant = true;
-	}
-	constant = true; // needed for avoiding diagonal escape of fill operation.
-
-	ulong c;
-	ulong middlerow = pti.startindex/2 + pti.endindex/2;
-	ulong paper1 = 0;
-	ulong paper2 = 0;
-
-	// draw a vertical line along the area where the hole is.
-	// Keep trying to extend the line until paper is found, but only
-	// extend up to 30 pixels after the pretear identified margin.
-
-	for (ulong r=middlerow; r<pti.endindex + 30; r++) {
-		if (constant) {
-			c = startcol;
-		} else {
-			c = slow[r];
-		}
-		if (pixelType.at(r).at(c) != PIX_PAPER) {
-			pixelType[r][c] = PIX_TEAR;
-			if (side == 0) {
-				leftMarginIndex[r] = c;
-			} else {
-				rightMarginIndex[r] = c;
-			}
-			paper1 = r;
-			// toprow = paper1;
-		} else {
-			paper1 = r - 1;
-			// toprow = paper1;
-			break;
-		}
-	}
-	ulong cols = getCols();
-
-	// If a paper pixel was not terminating the above line, then
-	// draw a line to the first paper pixel towards the paper center.
-
-	if (paper1) {
-		ulong endc;
-		ulong r = paper1;
-		if (side == 0) {
-			endc = cols;
-			for (ulong c=startcol; c<=endc; c++) {
-				if (pixelType[r][c] == PIX_PAPER) {
-					break;
-				} else {
-					pixelType[r++][c] = PIX_DEBUG2;
-					if (pixelType[r][c] != PIX_PAPER) {
-						pixelType[r][c] = PIX_DEBUG2;
-					}
-				}
-			}
-		} else {
-			endc = 0;
-			for (ulong c=startcol; c>=endc; c--) {
-				if (pixelType[r][c] == PIX_PAPER) {
-					break;
-				} else {
-					pixelType[r++][c] = PIX_TEAR;
-					if (pixelType[r][c] != PIX_PAPER) {
-						pixelType[r][c] = PIX_DEBUG2;
-					}
-				}
-			}
-
-		}
-	}
-	paper1 = 0;
-
-	// Do one more row towards the paper
-
-	for (ulong r=middlerow; r<pti.endindex + 30; r++) {
-		if (constant) {
-			c = startcol;
-		} else {
-			c = slow[r];
-		}
-		if (side == 0) {
-			c++;
-		} else {
-			c--;
-		}
-		if (pixelType[r][c] != PIX_PAPER) {
-			pixelType[r][c] = PIX_TEAR;
-			if (side == 0) {
-				leftMarginIndex[r] = c;
-			} else {
-				rightMarginIndex[r] = c;
-			}
-			paper1 = r;
-			// botrow = paper1;
-		} else {
-			paper1 = r - 1;
-			// botrow = paper1;
-			break;
-		}
-	}
-
-	// Draw a line to the paper if there is no end found above.
-
-	if (paper1) {
-		ulong endc;
-		ulong r = paper1;
-		if (side == 0) {
-			endc = cols;
-			for (ulong c=startcol; c<=endc; c++) {
-				if (pixelType[r][c] == PIX_PAPER) {
-					break;
-				} else {
-					pixelType[r++][c] = PIX_TEAR;
-					if (pixelType[r][c] != PIX_PAPER) {
-						pixelType[r][c] = PIX_DEBUG2;
-					}
-				}
-			}
-		} else {
-			endc = 0;
-			for (ulong c=startcol; c>=endc; c--) {
-				if (pixelType[r][c] == PIX_PAPER) {
-					break;
-				} else {
-					pixelType[r++][c] = PIX_TEAR;
-					if (pixelType[r][c] != PIX_PAPER) {
-						pixelType[r][c] = PIX_DEBUG2;
-					}
-				}
-			}
-
-		}
-	}
-	paper1 = 0;
-
-
-	// Now go upwards on the roll (to earlier time)
-
-	for (ulong r=middlerow; r>=pti.startindex - 30; r--) {
-		if (constant) {
-			c = startcol;
-		} else {
-			c = slow[r];
-		}
-		if (pixelType[r][c] != PIX_PAPER) {
-			pixelType[r][c] = PIX_TEAR;
-			if (side == 0) {
-				leftMarginIndex[r] = c;
-			} else {
-				rightMarginIndex[r] = c;
-			}
-			paper2 = r;
-		} else {
-			paper2 = r + 1;
-			break;
-		}
-	}
-
-	if (paper2) {
-		ulong endc;
-		ulong r = paper2;
-		if (side == 0) {
-			endc = cols;
-			for (ulong c=startcol; c<=endc; c++) {
-				if (pixelType[r][c] == PIX_PAPER) {
-					break;
-				} else {
-					pixelType[r--][c] = PIX_TEAR;
-					if (pixelType[r][c] != PIX_PAPER) {
-						pixelType[r][c] = PIX_DEBUG2;
-					}
-				}
-			}
-		} else {
-			endc = 0;
-			for (ulong c=startcol; c>=endc; c--) {
-				if (pixelType[r][c] == PIX_PAPER) {
-					break;
-				} else {
-					pixelType[r--][c] = PIX_TEAR;
-					if (pixelType[r][c] != PIX_PAPER) {
-						pixelType[r][c] = PIX_DEBUG2;
-					}
-				}
-			}
-
-		}
-	}
-	paper2 = 0;
-
-	for (ulong r=middlerow; r>=pti.startindex - 30; r--) {
-		if (constant) {
-			c = startcol;
-		} else {
-			c = slow[r];
-		}
-		if (side == 0) {
-			c++;
-		} else {
-			c--;
-		}
-		if (pixelType[r][c] != PIX_PAPER) {
-			pixelType[r][c] = PIX_TEAR;
-			if (side == 0) {
-				leftMarginIndex[r] = c;
-			} else {
-				rightMarginIndex[r] = c;
-			}
-			paper2 = r;
-		} else {
-			paper2 = r + 1;
-			break;
-		}
-	}
-
-	if (paper2) {
-		ulong endc;
-		ulong r = paper2;
-		if (side == 0) {
-			endc = cols;
-			for (ulong c=startcol; c<=endc; c++) {
-				if (pixelType[r][c] == PIX_PAPER) {
-					break;
-				} else {
-					pixelType[r--][c] = PIX_TEAR;
-					if (pixelType[r][c] != PIX_PAPER) {
-						pixelType[r][c] = PIX_DEBUG2;
-					}
-				}
-			}
-		} else {
-			endc = 0;
-			for (ulong c=startcol; c>=endc; c--) {
-				if (pixelType[r][c] == PIX_PAPER) {
-					break;
-				} else {
-					pixelType[r--][c] = PIX_TEAR;
-					if (pixelType[r][c] != PIX_PAPER) {
-						pixelType[r][c] = PIX_DEBUG2;
-					}
-				}
-			}
-
-		}
-	}
-	paper2 = 0;
-
-/* Don't do water-filling procedure for now, as basic fill is good enough:
-	if ((toprow > 0) && (botrow > 0)) {
-		ulong counter0 = 0;
-		while (counter0 < 100) {
-			counter0++;
-			if (goodColumn(checkcol, toprow, botrow, PIX_MARGIN, 30)) {
-				if (side == 0) {
-					fillColumn(checkcol--, toprow, botrow, PIX_MARGIN, 30, PIX_TEAR, leftMarginIndex);
-				} else {
-					fillColumn(checkcol++, toprow, botrow, PIX_MARGIN, 30, PIX_TEAR, rightMarginIndex);
-				}
-			} else {
-				break;
-			}
-		}
-	}
-*/
-
-	ulong r = pti.peakindex;
-	c = (slow[r] + fast[r])/2;
-
+	int wfactor = 5;    // trigger deviation between slow margin and raw margin
+
+	// Generate a boolean vector where true means the the margins
+	// are stable, and false means they are unstable (probably due
+	// to a tear on one or both sides).
+
+	std::vector<bool> stableRegion(rows, true);
+	std::vector<bool> stableRight(rows, true);
+	std::vector<double> fwidths(rows, 0.0);  // fast (now raw) width of paper
+	std::vector<double> swidths(rows, 0.0);  // slow width of paper
+	double sum = 0.0;
 	int counter = 0;
-	ti.entry.first  = r;
-	ti.entry.second = c;
+	for (ulong r=0; r<rows; r++) {
+		double fwidth = fastRight[r] - fastLeft[r];
+		// double fwidth = rightMarginIndex[r] - leftMarginIndex[r];
+		double swidth = slowRight[r] - slowLeft[r];
+		swidths[r] = swidth;
+		fwidths[r] = fwidth;
+		if (fabs(swidth - fwidth) > wfactor) {
+			stableRegion[r] = false;
+		} else {
+			if (r > 10000) {
+				// don't look at leader
+				sum += swidth;
+				counter++;
+			}
+		}
+	}
 
-	fillTearInfo(ti, r, c, counter);
+	ulong firstrow = getFirstMusicHoleStart() - 100;
+	int window = 50;
+	std::vector<double> leftDiff(rows, 0.0);
+	std::vector<double> rightDiff(rows, 0.0);
 
-	ti.width.first = ti.width.first - ti.origin.first;
-	ti.width.second = ti.width.second - ti.origin.second;
+	for (ulong r=firstrow+window; r<rows-window; r++) {
+		// shift left is negative, shift right is positive
+		leftDiff[r] = fastLeft[r+window] - fastLeft[r-window];
+		rightDiff[r] = fastRight[r+window] - fastRight[r-window];
+	}
+
+//ggg debugging information:
+
+	double sthresh = 3;
+	double sthresh2 = 3;
+
+	std::vector<double> score(rows, 0.0);
+	for (ulong r=0; r<rows; r++) {
+		if (fabs(leftDiff[r]) < sthresh) {
+			continue;
+		}
+		if (fabs(rightDiff[r]) < sthresh) {
+			continue;
+		}
+		if (fabs(leftDiff[r] - rightDiff[r]) > sthresh2) {
+			continue;
+		}
+
+		score[r] = (leftDiff[r] + rightDiff[r]) / 2.0;
+
+		if (score[r] < sthresh2) {
+			continue;
+		}
+
+		continue;
+
+		// the following can be used to graph anlysis in margins:
+
+		double value = 4 * leftDiff[r] + 80;
+		double value2 = 4 * rightDiff[r] + 160;
+
+		if (value >= 0) {
+			pixelType[r][80] = PIX_DEBUG4;
+			pixelType[r][value] = PIX_DEBUG1;
+		}
+		if (value2 >= 0) {
+			pixelType[r][160] = PIX_DEBUG4;
+			pixelType[r][value2] = PIX_DEBUG1;
+		}
+	}
+
+	for (ulong r=0; r<rows; r++) {
+		if (score[r] == 0) {
+			continue;
+		}
+		r = storeShift(score, r);
+	}
 }
+
+
+
+//////////////////////////////
+//
+// RollImage::storeShift --
+//
+
+ulong RollImage::storeShift(std::vector<double>& scores, ulong startrow) {
+	ulong r = startrow;
+	int count = 0;
+	double maxvalue = 0.0;
+	double minvalue = 0.0;
+	while ((r < scores.size()) && (scores[r] != 0.0)) {
+		if (scores[r] > maxvalue) {
+			maxvalue = scores[r];
+		}
+		if (scores[r] < minvalue) {
+			minvalue = scores[r];
+		}
+		count++;
+		r++;
+	}
+
+	int mincount = 30;
+	if (count < mincount) {
+		// don't store tiny shifts
+		return r;
+	}
+
+	if (count == 0) {
+		// strange: shouldn't happen unless very end of image
+		return r;
+	}
+
+	double value = maxvalue;
+	if (fabs(minvalue) > maxvalue) {
+		value = minvalue;
+	}
+
+	ShiftInfo* si = new ShiftInfo;
+	si->row = startrow + count/2;
+	si->score = value;
+	shifts.push_back(si);
+
+	return r;
+}
+
+
 
 
 
@@ -3696,6 +3425,44 @@ void RollImage::markTrackerPositions(bool showAll) {
 
 //////////////////////////////
 //
+// RollImage::markShifts --
+//
+
+void RollImage::markShifts(void) {
+	for (ulong i=0; i<shifts.size(); i++) {
+		markShift(i);
+	}
+}
+
+
+
+//////////////////////////////
+//
+// RollImage::markShift -- Orange = shift left, Red = shift right
+//
+
+void RollImage::markShift(int index) {
+	ShiftInfo* si = shifts[index];
+	ulong row = si->row;
+	double score = si->score;
+	int cols = getCols();
+	for (int c=0; c<cols; c++) {
+		if (score > 0) {
+			if (pixelType[row][c] == PIX_PAPER) {
+				pixelType[row][c] = PIX_DEBUG1;
+			}
+		} else {
+			if (pixelType[row][c] == PIX_PAPER) {
+				pixelType[row][c] = PIX_DEBUG2;
+			}
+		}
+	}
+}
+
+
+
+//////////////////////////////
+//
 // RollImage::drawMajorAxes --
 //
 
@@ -3854,6 +3621,30 @@ void RollImage::sortBadHolesByArea(void) {
 
 
 
+
+
+/////////////////////////////
+//
+// RollImage::sortShiftsByAmount --
+//
+
+void RollImage::sortShiftsByAmount(void) {
+	if (shifts.size() <= 1) {
+		// nothing to do
+		return;
+	}
+
+	std::sort(shifts.begin(), shifts.end(),
+		[](ShiftInfo* a, ShiftInfo* b) -> bool
+			{
+				return fabs(a->score) > fabs(b->score);
+			}
+		);
+}
+
+
+
+
 //////////////////////////////
 //
 // RollImage::sortTearsByArea -- Sort tears by area from largest to smallest.
@@ -3976,6 +3767,7 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 	out << "@DUST_SCORE:\t\t"        << getDustScore()            << "ppm\n";
 	out << "@DUST_SCORE_BASS:\t"     << getDustScoreBass()        << "ppm\n";
 	out << "@DUST_SCORE_TREBLE:\t"   << getDustScoreTreble()      << "ppm\n";
+	out << "@SHIFTS:\t\t"            << shifts.size()             << "\n";
 	out << "@HOLE_SEPARATION:\t"     << holeSeparation            << "px\n";
 	out << "@TRACKER_HOLES:\t\t"     << trackerholes              << " (estimate)\n";
 	out << "@SOFTWARE_DATE:\t\t"     << __DATE__ << " " << __TIME__ << endl;
@@ -3986,17 +3778,19 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 
 	// DRIFT FUNCTION /////////////////////////////////////////////////////
 	out << "\n\n";
+	out << "@@\n";
 	out << "@@ The Drift data describes the left/right shifting of the roll along the\n";
 	out << "@@ length of the image.  Each data point is a list values:\n";
 	out << "@@    (1) The row number in the image\n";
-	out << "@@    (2) The distance in feet from the start of the roll (not the image)\n";
-	out << "@@        to the given row.\n";
-	out << "@@    (3) The correction to apply to the row to straighten the roll.\n";
+	//out << "@@    (2) The distance in feet from the start of the roll (not the image)\n";
+	//out << "@@        to the given row.\n";
+	out << "@@    (2) The correction to apply to the row to straighten the roll.\n";
 	out << "@@ A new data point is given whenever the drift changes by more than 0.1 pixels.\n";
 	out << "@@ Drift analysis starts at the first music hole on the roll.\n";
+	out << "@@\n";
 	out << "\n";
 	out << "@@BEGIN: DRIFT\n";
-	ulong fff = getPreleaderIndex();
+	// ulong fff = getPreleaderIndex();
 	// ulong fff = getFirstMusicHoleStart();
 	double lastdrift = -1.0;
 	double drift;
@@ -4006,9 +3800,9 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 			continue;
 		}
 		lastdrift = drift;
-		out << "\t" << i
-		    << "\t" << int((i - fff)/300.25/12*10000.0+0.5)/10000.0
-		    << "\t" << drift << "\n";
+		out << "\t" << i;
+		// out << "\t" << int((i - fff)/300.25/12*10000.0+0.5)/10000.0;
+		out << "\t" << drift << "\n";
 	}
 	out << "@@END: DRIFT\n";
 
@@ -4050,6 +3844,7 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 	// List of bad holes //////////////////////////////////////////////
 	if (!badHoles.empty()) {
 		sortBadHolesByArea();
+
 		for (ulong i=0; i<badHoles.size(); i++) {
 			string id = "bad";
 			if (i+1 < 100) { id += "0"; }
@@ -4057,6 +3852,7 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 			id += to_string(i+1);
 			badHoles[i]->id = id;
 		}
+
 		out << "\n\n";
 		out << "@@BEGIN: BADHOLES\n\n";
 		for (ulong i=0; i<badHoles.size(); i++) {
@@ -4102,6 +3898,38 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 		out << "@@END: TEARS\n";
 	}
 
+	// Shifts:
+	if (!shifts.empty()) {
+		sortShiftsByAmount();
+
+		for (ulong i=0; i<shifts.size(); i++) {
+			string id = "shift";
+			if (i+1 < 100) { id += "0"; }
+			if (i+1 < 10 ) { id += "0"; }
+			id += to_string(i+1);
+			shifts[i]->id = id;
+		}
+
+		out << "\n\n";
+		out << "@@\n";
+		out << "@@ Shifts are left/right movements of the roll that are most likely\n";
+		out << "@@ caused by the operator of the scanner as they adjust the paper to\n";
+		out << "@@ recenter it.  The following list of shifts are sorted from largest\n";
+		out << "@@ to smallest, with the smallest recorded shift being 1/100 of an inch\n";
+		out << "@@ left or right, during 1/3 of an inch lengthwise on the roll.\n";
+		out << "@@\n";
+		out << "@@ Shift parameters are:\n";
+		out << "@@    ROW: the pixel row in the image from the start of the scan to about the middle of the shift.\n";
+		out << "@@    MOVEMENT: this amount of shift in pixels, with negative values being shifts to the bass (left).\n";
+		out << "@@\n";
+		out << "\n@@BEGIN: SHIFTS\n";
+		out << "\n";
+		for (ulong i=0; i<shifts.size(); i++) {
+			shifts[i]->printAton(out);
+			out << "\n";
+		}
+		out << "@@END: SHIFTS\n";
+	}
 
 	out << "\n@@END: ROLLINFO\n";
 	return out;

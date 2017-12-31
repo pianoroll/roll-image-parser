@@ -45,7 +45,8 @@ int main(int argc, char** argv) {
 	roll.markHoleShifts();
 	roll.markHoleAttacks();
 	roll.markSnakeBites();
-	roll.markTrackerPositions(true);
+	roll.markTrackerPositions(false);
+	roll.markShifts();
 	// roll.drawMajorAxes();
 	roll.mergePixelOverlay(output);
 

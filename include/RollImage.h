@@ -21,6 +21,7 @@
 
 #include "TiffFile.h"
 #include "HoleInfo.h"
+#include "ShiftInfo.h"
 #include "TearInfo.h"
 #include "RollOptions.h"
 
@@ -110,12 +111,15 @@ class RollImage : public TiffFile, public RollOptions {
 		double          getDustScoreTreble            (void);
 		void            sortBadHolesByArea            (void);
 		void            sortTearsByArea               (void);
+		void            sortShiftsByAmount            (void);
 		void            markHoleAttack                (HoleInfo& hi);
 		void            markHoleAttacks               (void);
 		void            markHoleShifts                (void);
 		std::string     getDataMD5Sum                 (void);
 		void            assignMusicHoleIds            (void);
 		void            markSnakeBites                (void);
+		void            markShifts                    (void);
+		void            markShift                     (int index);
 
 		// pixelType: a bitmask which contains enumerated types for the
 		// functions of pixels (the PIX_* defines above):
@@ -180,6 +184,10 @@ class RollImage : public TiffFile, public RollOptions {
 		// averageRollWidth -- the average width of a roll, 0 if uninit.
 		double averageRollWidth = 0.0;
 
+		// shifts -- list of shifts left or right, typically by the person
+		// operating the scanner.
+		std::vector<ShiftInfo*> shifts;
+
 
 	protected:
 		void       analyzeBasicMargins         (void);
@@ -211,21 +219,10 @@ class RollImage : public TiffFile, public RollOptions {
 		void       markHoleBB                  (HoleInfo& hi);
 		double     getTrackerShiftScore        (double shift);
 		void       analyzeTears                (void);
-		void       analyzeTearsOld             (void);
+		void       analyzeShifts               (void);
+		ulong      storeShift                  (std::vector<double>& scores, ulong startrow);
 		ulong      findPeak                    (std::vector<double>& array, ulong r,
 		                                        ulong& peakindex, double& peakvalue);
-		void       processTearsOld             (std::vector<PreTearInfo>& ltear,
-		                                        std::vector<PreTearInfo>& rtear,
-		                                        std::vector<double>& lslow,
-		                                        std::vector<double>& rslow,
-		                                        std::vector<double>& lfast,
-		                                        std::vector<double>& rfast);
-		void       getTearInfoOld              (TearInfo& ti, PreTearInfo& pti,
-		                                        std::vector<double>& slow,
-		                                        std::vector<double>& fast,
-		                                        int side,
-		                                        std::vector<double>& oslow,
-		                                        std::vector<double>& ofast);
 		void       invalidateEdgeHoles         (void);
 		void       fillHoleSimple              (ulong r, ulong c, int target, int type, int& counter);
 		void       clearHole                   (HoleInfo& hi, int type);
@@ -237,9 +234,6 @@ class RollImage : public TiffFile, public RollOptions {
 		double     calculateNormalCentralMoment(HoleInfo& hole, int p, int q);
 		double     calculateMajorAxis          (HoleInfo& hole);
 		void       invalidateSkewedHoles       (void);
-		bool       isGoodOppositeEdge          (PreTearInfo& pti, 
-		                                        std::vector<double>& slow,
-		                                        std::vector<double>& fast);
 		void       drawMajorAxis               (HoleInfo& hi);
 		void       addAntidustToBadHoles       (ulong areaThreshold);
 		bool       goodColumn                  (ulong col, ulong toprow, ulong botrow,
