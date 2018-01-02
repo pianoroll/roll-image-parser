@@ -44,13 +44,13 @@ SRCDIR        = src
 TOOLDIR       = tools
 SRCDIR_MIN    = src
 INCDIR        = include
-INCDIR_MIN    = include
+EXTERNALINC   = -Iexternal/midifile/include
 LIBDIR        = lib
 LIBFILE       = libpianoroll.a
 AR            = ar
 RANLIB        = ranlib
 
-PREFLAGS  = -c -g $(CFLAGS) $(DEFINES) -I$(INCDIR) 
+PREFLAGS  = -c -g $(CFLAGS) $(DEFINES) -I$(INCDIR) $(EXTERNALINC)
 PREFLAGS += -O3 -Wall
 
 # using C++ 2011 standard in Humlib:

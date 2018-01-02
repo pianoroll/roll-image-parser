@@ -48,6 +48,8 @@ class HoleInfo {
 		double                    prevOff;      // distance from onset to offset of previous hole in track
 		bool                      attack;       // true if note attack false otherwise
 		bool                      snakebite;    // true if part of melody highlighting
+		ulong                     offtime;      // if attack==true, then this is the offtime of the note
+		int                       midikey;      // MIDI key number for note
 
 		void     clear            (void);
 		bool     isMusicHole      (void) { return m_type == 1 ? 1 : 0; }

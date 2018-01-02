@@ -68,6 +68,8 @@ void HoleInfo::clear(void) {
 	prevOff         = -1.0;
 	attack          = true; // assume all are attacks initially
 	snakebite       = false;
+	offtime         = 0;
+	midikey         = -1;
 }
 
 
@@ -110,6 +112,12 @@ std::ostream& HoleInfo::printAton(std::ostream& out) {
 	out << "@AREA:\t\t"       << area             << "px"  << std::endl;
 	out << "@PERIMETER:\t"    << perimeter        << "px"  << std::endl;
 	out << "@CIRCULARITY:\t"  << int(circularity*100.0+0.5)/100.0 << std::endl;
+
+	if (attack) {
+		out << "@NOTE_ATTACK:\t" << origin.first << "px" << std::endl;
+		out << "@OFF_TIME:\t"    << offtime      << "px" << std::endl;
+		out << "@MIDI_KEY:\t"    << midikey              << std::endl;
+	}
 
 	#define HOLE_SHIFT 3.0
 

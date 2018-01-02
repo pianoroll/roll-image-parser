@@ -100,6 +100,8 @@ void RollImage::loadGreenChannel(void) {
 //
 
 void RollImage::analyze(void) {
+	start_time = std::chrono::system_clock::now();
+
 	bool debug = 1;
 	if (debug) { cerr << "STEP 1: analyzeBasicMargins" << endl; }
 	analyzeBasicMargins();
@@ -148,6 +150,8 @@ void RollImage::analyze(void) {
 	if (debug) { cerr << "STEP 23: analyzeSnakeBites" << endl; }
 	analyzeSnakeBites();
 	if (debug) { cerr << "STEP 24: FINSHED WITH ANALYSIS!" << endl; }
+
+	stop_time = std::chrono::system_clock::now();
 }
 
 
@@ -317,16 +321,27 @@ void RollImage::groupHoles(ulong index) {
 		return;
 	}
 
+	HoleInfo* lastattack = NULL;
 	hi[0]->attack = true;
+	hi[0]->offtime = hi[0]->origin.first + hi[0]->width.first;
+	lastattack = hi[0];
 	for (ulong i=1; i<hi.size(); i++) {
 		hi[i]->prevOff = hi[i]->origin.first - (hi[i-1]->origin.first + hi[i-1]->width.first);
 		if (hi[i]->prevOff <= length) {
 			hi[i]->attack = false;
+			if (lastattack) {
+				// extend off time of previous attack
+				lastattack->offtime = hi[i]->origin.first + hi[i]->width.first;
+			}
 		} else {
 			hi[i]->attack = true;
+			hi[i]->offtime = hi[i]->origin.first + hi[i]->width.first;
+			lastattack = hi[i];
 		}
 	}
+
 }
+
 
 
 //////////////////////////////
@@ -363,6 +378,25 @@ void RollImage::calculateHoleDescriptors(void) {
 		holes[i]->circularity = 4 * M_PI * holes[i]->area /
 			holes[i]->perimeter / holes[i]->perimeter;
 		holes[i]->majoraxis = calculateMajorAxis(*holes[i]);
+	}
+}
+
+
+
+//////////////////////////////
+//
+// RollImage::assignMidiKeyNumbersToHoles --
+//
+
+void RollImage::assignMidiKeyNumbersToHoles(void) {
+	for (ulong i=0; i<midiToTrackMapping.size(); i++) {
+		int track = midiToTrackMapping[i];
+		if (track <= 0) {
+			continue;
+		}
+		for (ulong j=0; j<trackerArray[track].size(); j++) {
+			trackerArray[track][j]->midikey = i;
+		}
 	}
 }
 
@@ -583,6 +617,13 @@ void RollImage::analyzeMidiKeyMapping(void) {
 		}
 	}
 
+	if (!trackerArray[rightmostIndex+1].empty()) {
+		rightmostIndex++;
+	}
+	if (!trackerArray[leftmostIndex-1].empty()) {
+		leftmostIndex--;
+	}
+
 	if (trackerArray[rightmostIndex].empty() && trackerArray[leftmostIndex].empty()) {
 		// shrink if no holes in extreme positions of both sides
 		leftmostIndex++;
@@ -602,12 +643,12 @@ void RollImage::analyzeMidiKeyMapping(void) {
 	// Rough guess for now on the mapping: placing the middle hole position on E4/F4 boundary
 	int F4split = int((rightmostIndex - leftmostIndex) / 2 + leftmostIndex + 0.5); // 0.5 needed?
 
-	midiToHoleMapping.resize(128);
-	std::fill(midiToHoleMapping.begin(), midiToHoleMapping.end(), 0);
+	midiToTrackMapping.resize(128);
+	std::fill(midiToTrackMapping.begin(), midiToTrackMapping.end(), 0);
 
 	int adjustment = 64 - F4split;
 	for (int i=leftmostIndex; i<=rightmostIndex; i++) {
-		midiToHoleMapping.at(i + adjustment) = i;
+		midiToTrackMapping.at(i + adjustment) = i;
 	}
 
 	int trackerholes = getTrackerHoleCount();
@@ -615,7 +656,7 @@ void RollImage::analyzeMidiKeyMapping(void) {
 	if (trackerholes == 65) {
 		// re-map up a major second
 		for (ulong i=127; i>2; i--) {
-			midiToHoleMapping[i] = midiToHoleMapping[i-2];
+			midiToTrackMapping[i] = midiToTrackMapping[i-2];
 		}
 	}
 
@@ -637,23 +678,23 @@ void RollImage::analyzeMidiKeyMapping(void) {
 void RollImage::invalidateEdgeHoles(void) {
 
 	ulong minmidi = 0;
-	for (ulong i=0; i<midiToHoleMapping.size(); i++) {
-		if (midiToHoleMapping[i]) {
+	for (ulong i=0; i<midiToTrackMapping.size(); i++) {
+		if (midiToTrackMapping[i]) {
 			minmidi = i;
 			break;
 		}
 	}
 
-	ulong maxmidi = midiToHoleMapping.size() - 1;
+	ulong maxmidi = midiToTrackMapping.size() - 1;
 	for (long i=maxmidi; i>=0; i--) {
-		if (midiToHoleMapping[i]) {
+		if (midiToTrackMapping[i]) {
 			maxmidi = (ulong)i;
 			break;
 		}
 	}
 
-	ulong mintrack = midiToHoleMapping[minmidi];
-	ulong maxtrack = midiToHoleMapping[maxmidi];
+	ulong mintrack = midiToTrackMapping[minmidi];
+	ulong maxtrack = midiToTrackMapping[maxmidi];
 
 	ulong maxwidth = int(holeSeparation * getMaxHoleTrackerWidth() + 0.5);
 
@@ -800,7 +841,7 @@ void RollImage::assignMusicHoleIds(void) {
 	ulong key;
 	for (ulong i=0; i<ta.size(); i++) {
 		counter = 1;
-		key = midiToHoleMapping[i];
+		key = midiToTrackMapping[i];
 		for (ulong j=0; j<ta[i].size(); j++) {
 			if (!ta[i][j]->isMusicHole()) {
 				continue;
@@ -2437,6 +2478,8 @@ ulong RollImage::getBoundary(std::vector<int>& status) {
 	}
 
 	std::cerr << "COULD NOT FIND LEADER BOUNDARY" << std::endl;
+	std::cerr << "SEARCH LENGTH:\t" << status.size() << std::endl;
+	std::cerr << "WINDOW SIZE:\t" << windowsize*2+1 << endl;
 	exit(1);
 	return 0;
 }
@@ -3339,27 +3382,27 @@ double RollImage::getAverageSoftMarginTotal(void) {
 
 void RollImage::markTrackerPositions(bool showAll) {
 
-	int midiStart = midiToHoleMapping.size() - 1;
-	for (int i=0; i<(int)midiToHoleMapping.size(); i++) {
-		if (midiToHoleMapping[i]) {
+	int midiStart = midiToTrackMapping.size() - 1;
+	for (int i=0; i<(int)midiToTrackMapping.size(); i++) {
+		if (midiToTrackMapping[i]) {
 			midiStart = i;
 			break;
 		}
 	}
 
 	int midiEnd = 0;
-	for (int i=midiToHoleMapping.size()-1; i>=0; i--) {
-		if (midiToHoleMapping[i]) {
+	for (int i=midiToTrackMapping.size()-1; i>=0; i--) {
+		if (midiToTrackMapping[i]) {
 			midiEnd = (ulong)i;
 			break;
 		}
 	}
 
-	int realcolstart = midiToHoleMapping[midiStart];
-	int realcolend   = midiToHoleMapping[midiEnd];
+	int realcolstart = midiToTrackMapping[midiStart];
+	int realcolend   = midiToTrackMapping[midiEnd];
 
 	int colstart = 0;
-	int colend = midiToHoleMapping.size() - 1;
+	int colend = midiToTrackMapping.size() - 1;
 
 	if (!showAll) {
 		colstart = realcolstart;
@@ -3369,7 +3412,7 @@ void RollImage::markTrackerPositions(bool showAll) {
 	ulong startrow = getFirstMusicHoleStart() - 100;
 	ulong endrow   = getLastMusicHoleEnd()    + 100;
 
-	int cutoff = midiToHoleMapping[65];
+	int cutoff = midiToTrackMapping[65];
 
 	int c;
 	int color;
@@ -3678,8 +3721,8 @@ void RollImage::sortTearsByArea(void) {
 
 int RollImage::getTrackerHoleCount(void) {
 	int counter = 0;
-	for (ulong i=0; i<midiToHoleMapping.size(); i++) {
-		if (midiToHoleMapping[i]) {
+	for (ulong i=0; i<midiToTrackMapping.size(); i++) {
+		if (midiToTrackMapping[i]) {
 			counter++;
 		}
 	}
@@ -3716,6 +3759,144 @@ std::string RollImage::getDataMD5Sum(void) {
 
 //////////////////////////////
 //
+// RollImage::generateNoteMidiFileHex -- Generate MIDI file where holes are grouped into notes.
+//
+
+void RollImage::generateNoteMidiFileHex(ostream& output) {
+	MidiFile midifile;
+	generateMidifile(midifile);
+	midifile.writeHex(output, 25);
+}
+
+
+
+//////////////////////////////
+//
+// RollImage::generateNoteMidiFileBinasc -- Generate MIDI file where holes are grouped into notes.
+//
+
+void RollImage::generateNoteMidiFileBinasc(ostream& output) {
+	MidiFile midifile;
+	generateMidifile(midifile);
+	midifile.writeBinasc(output);
+}
+
+
+//////////////////////////////
+//
+// RollImage::generateMidifile --
+//
+
+void RollImage::generateMidifile(MidiFile& midifile) {
+	
+	if (holes.empty()) {
+		return;
+	}
+
+	assignMidiKeyNumbersToHoles();
+
+	midifile.setTPQ(510);
+
+	// tempo 30 = 180
+	// tempo 35 = 210
+	// tempo 40 = 240
+	// tempo 45 = 270
+	// tempo 50 = 300
+	// tempo 55 = 330
+	// tempo 60 = 360
+	// tempo 65 = 390
+	// tempo 70 = 420
+	// tempo 75 = 450
+	// tempo 80 = 480
+	// tempo 85 = 510
+	// tempo 90 = 540
+	// tempo 95 = 570
+	// tempo 100 = 600
+	// tempo 105 = 630
+	// tempo 110 = 660
+	// tempo 115 = 690
+	// tempo 120 = 720
+	// tempo 125 = 750
+	// tempo 130 = 780
+	// tempo 135 = 810
+	// tempo 140 = 840
+
+	midifile.addTracks(4);
+	// track 1 = bass notes
+	// track 2 = treble notes
+	// track 3 = bass expression
+	// track 4 = treble expression
+
+	midifile.addController(3, 0, 3, 7, 0); // mute channel 3 notes (they are bass expression holes)
+	midifile.addController(4, 0, 4, 7, 0); // mute channel 4 notes (they are treble expression holes)
+
+	midifile.addController(1, 0, 1, 10, 32); // bass notes pan leftish
+	midifile.addController(2, 0, 2, 10, 96); // treble notes pan rightish
+
+	ulong mintime = holes[0]->origin.first;
+	ulong maxtime = 0;
+
+	int track;
+	int key;
+	int channel;
+	int velocity;
+	for (ulong i=0; i<holes.size(); i++) {
+		if (!holes[i]->attack) {
+			continue;
+		}
+		HoleInfo* hi = holes[i];
+		key = hi->midikey;
+
+		// estimate the location of the expression tracks and the 
+		// bass/treble register split (refine later):
+		if (key < 25) {
+			track    = 3;
+			channel  = 3;
+			velocity = 1;
+		} else if (key < 65) {
+			track    = 1;
+			channel  = 1;
+			velocity = 64;
+		} else if (key < 104) {
+			track    = 2;
+			channel  = 2;
+			velocity = 64;
+		} else {
+			track    = 4;
+			channel  = 4;
+			velocity = 1;
+		}
+		midifile.addNoteOn(track, hi->origin.first - mintime, channel, hi->midikey, velocity);
+		midifile.addNoteOff(track, hi->offtime - mintime, channel, hi->midikey);
+		if (hi->offtime <= 0) {
+			cerr << "ERROR OFFTIME IS ZERO: " << hi->offtime << endl;
+		}
+		if (hi->offtime < hi->origin.first) {
+			cerr << "ERROR OFF TIME IS BEFORE ON TIME " << hi->origin.first << " VERSUS " << hi->offtime << " FOR KEY " << hi->midikey << endl;
+		}
+		if (hi->offtime > maxtime) {
+			maxtime = hi->offtime;
+		}
+	}
+
+	// add tempo correction
+	double timevalue = 1.0;
+	double tempo;
+	ulong curtime = 0;
+	while (curtime < maxtime - mintime) {
+		tempo = 60 / timevalue;
+      midifile.addTempo(0, curtime, tempo);
+		curtime += 3600;
+		timevalue /= 1.0004;
+	}
+
+	midifile.sortTracks();
+}
+
+
+
+//////////////////////////////
+//
 // RollImage::printRollImageProperties --
 //    default value: out = cout
 //
@@ -3742,6 +3923,17 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 
 	int trackerholes = getTrackerHoleCount();
 
+	ulong musicnotecount = 0;
+	for (ulong i=0; i<holes.size(); i++) {
+		if (holes[i]->attack) {
+			musicnotecount++;
+		}
+	}
+
+	std::chrono::duration<double> processing_time = stop_time - start_time;
+	std::chrono::system_clock::time_point nowtime = std::chrono::system_clock::now();
+	std::time_t current_time = std::chrono::system_clock::to_time_t(nowtime);
+
 	out << "@@BEGIN: ROLLINFO\n";
 	out << "@IMAGE_WIDTH:\t\t"       << getCols()                 << "px\n";
 	out << "@IMAGE_LENGTH:\t\t"      << getRows()                 << "px\n";
@@ -3758,6 +3950,7 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 	out << "@END_MARGIN:\t\t"        << getRows() - getLastMusicHoleEnd() - 1 << "px\n";
 	out << "@MUSICAL_LENGTH:\t"      << musiclength               << "px\n";
 	out << "@MUSICAL_HOLES:\t\t"     << holes.size()              << "\n";
+	out << "@MUSICAL_NOTES:\t\t"     << musicnotecount            << "\n";
 	out << "@AVG_HOLE_WIDTH:\t"      << avgholewidth              << "px\n";
 	out << "@ANTIDUST_COUNT:\t"      << antidust.size()           << "\n";
 	out << "@BAD_HOLE_COUNT:\t"      << badHoles.size()           << "\n";
@@ -3771,6 +3964,8 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 	out << "@HOLE_SEPARATION:\t"     << holeSeparation            << "px\n";
 	out << "@TRACKER_HOLES:\t\t"     << trackerholes              << " (estimate)\n";
 	out << "@SOFTWARE_DATE:\t\t"     << __DATE__ << " " << __TIME__ << endl;
+	out << "@ANALYSIS_DATE:\t\t"     << std::ctime(&current_time) << endl;
+	out << "@ANALYSIS_TIME:\t\t"     << processing_time.count() << " seconds" << endl;
 	out << "@COLOR_CHANNEL:\t\t"     << "green"                   << endl;
 	out << "@CHANNEL_MD5:\t\t"       << getDataMD5Sum()           << endl;
 	//out << "@BASS_TRACK_MARGIN:\t"    << leftCol                << "px\n";
@@ -3930,6 +4125,16 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 		}
 		out << "@@END: SHIFTS\n";
 	}
+
+	out << "\n@@BEGIN: MIDIFILES\n\n";
+
+	out << "@MIDIFILE:\n";
+	stringstream ss;
+	generateNoteMidiFileBinasc(ss);
+	out << ss.str();
+	out << "\n@@END: MIDIFILE\n";
+
+	out << "\n@@END: MIDIFILES\n\n";
 
 	out << "\n@@END: ROLLINFO\n";
 	return out;

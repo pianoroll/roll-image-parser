@@ -43,14 +43,16 @@ endif
 # Beginning of user-modifiable configuration variables                    #
 #                                                                         #
 
-INCDIR    = include
-LIBDIR    = lib
-LIBFILE   = pianoroll
+INCDIR        = include
+EXTERNALINC   = -Iexternal/midifile/include
+EXTERNALLIB   = -Lexternal/midifile/lib -lmidifile
+LIBDIR        = lib
+LIBFILE       = pianoroll
 #TARGDIR   = /user/c/craig/www/piano-roll-project/full-scans/bin
 TARGDIR   = bin
 TOOLDIR   = tools
 
-PREFLAGS  = -Wall -I$(INCDIR)
+PREFLAGS  = -Wall -I$(INCDIR) $(EXTERNALINC)
 PREFLAGS += -O3
 
 # include debugging information:
@@ -62,7 +64,7 @@ PREFLAGS += -std=c++14
 # Add -static flag to compile without dynamics libraries for better portability:
 #PREFLAGS += -static
 
-POSTFLAGS = -L$(LIBDIR) -l$(LIBFILE)
+POSTFLAGS = -L$(LIBDIR) -l$(LIBFILE) $(EXTERNALLIB)
 
 COMPILER       = LANG=C $(ENV) g++ $(ARCH)
 # Alternatly, use clang++ v3.3:

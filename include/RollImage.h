@@ -18,12 +18,15 @@
 #include <iostream>
 #include <utility>
 #include <string>
+#include <ctime>
+#include <chrono>
 
 #include "TiffFile.h"
 #include "HoleInfo.h"
 #include "ShiftInfo.h"
 #include "TearInfo.h"
 #include "RollOptions.h"
+#include "MidiFile.h"
 
 namespace prp  {
 
@@ -120,6 +123,10 @@ class RollImage : public TiffFile, public RollOptions {
 		void            markSnakeBites                (void);
 		void            markShifts                    (void);
 		void            markShift                     (int index);
+		void            generateNoteMidiFileHex       (ostream& output);
+		void            generateNoteMidiFileBinasc    (ostream& output);
+		void            generateMidifile              (MidiFile& midifile);
+		void            assignMidiKeyNumbersToHoles   (void);
 
 		// pixelType: a bitmask which contains enumerated types for the
 		// functions of pixels (the PIX_* defines above):
@@ -163,10 +170,10 @@ class RollImage : public TiffFile, public RollOptions {
 		// trackerArray -- holes sorted by tracker position
 		std::vector<std::vector<HoleInfo*>> trackerArray;
 
-		// midiToHoleMapping -- mapping from MIDI key number to hole position 
+		// midiToTrackMapping -- mapping from MIDI key number to hole position 
 		// (in image, not roll).  Zero means no mapping (not allowed to reference
 		// position 0 in trackerArray).
-		std::vector<int> midiToHoleMapping;
+		std::vector<int> midiToTrackMapping;
 
 		// trackMeaning -- the function of the hole, mostly for expression
 		// and rewind hole.
@@ -272,6 +279,8 @@ class RollImage : public TiffFile, public RollOptions {
 		double     m_dustscorebass             = -1.0;
 		double     m_dustscoretreble           = -1.0;
 		double     m_averageHoleWidth          = -1.0;
+		std::chrono::system_clock::time_point start_time;
+		std::chrono::system_clock::time_point stop_time;
 
 		std::vector<double> m_normalizedPosition;
 
