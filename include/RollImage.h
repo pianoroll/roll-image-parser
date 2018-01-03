@@ -145,8 +145,14 @@ class RollImage : public TiffFile, public RollOptions {
 		// driftCorrection: column adjustment for each row in music area
 		std::vector<double> driftCorrection;
 
-		// correctedCentroidHistogram: count of centroids at each pixel.
+		// uncorrectedCentroidHistogram: count of centroids at each pixel, uncorrected for drift.
+		std::vector<int> uncorrectedCentroidHistogram;
+
+		// correctedCentroidHistogram: count of centroids at each pixel, corrected for drift.
 		std::vector<int> correctedCentroidHistogram;
+
+		// rawRowPositions: Location of groups of holes (from correctedCentroid Histogram):
+		std::vector<pair<double, int>> rawRowPositions;
 
 		// holeSeparation -- number of pixels between hole centers.
 		double holeSeparation = 0.0;
@@ -262,6 +268,10 @@ class RollImage : public TiffFile, public RollOptions {
 		void       invalidateOffTrackerHoles   (void);
 		void       invalidateHolesOffTracker   (std::vector<HoleInfo*>& hi, ulong index);
 		void       analyzeSnakeBites           (void);
+		void       analyzeRawRowPositions      (void);
+		ulong      storeWeightedCentroidGroup  (ulong startindex);
+		void       storeCorrectedCentroidHistogram(void);
+		void       calculateTrackerSpacings2   (void);
 
 	private:
 		bool       m_analyzedBasicMargins      = false;
@@ -281,8 +291,8 @@ class RollImage : public TiffFile, public RollOptions {
 		double     m_averageHoleWidth          = -1.0;
 		std::chrono::system_clock::time_point start_time;
 		std::chrono::system_clock::time_point stop_time;
-
 		std::vector<double> m_normalizedPosition;
+		std::vector<double> m_trackerShiftScores;
 
 };
 

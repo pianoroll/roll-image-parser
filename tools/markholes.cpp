@@ -40,17 +40,27 @@ int main(int argc, char** argv) {
 
 	roll.loadGreenChannel();
 	roll.analyze();
+	cerr << "DONE ANALYZING" << endl;
 	roll.printRollImageProperties();
+	cerr << "DONE PRINTROLLIMAGEPROPERTIES" << endl;
 	roll.markHoleBBs();
+	cerr << "DONE MARKHOLEBBS" << endl;
 	roll.markHoleShifts();
+	cerr << "DONE MARKHOLESHIFTS" << endl;
 	roll.markHoleAttacks();
+	cerr << "DONE MARKHOLEATTACKS" << endl;
 	roll.markSnakeBites();
+	cerr << "DONE MARKSNAKEBITES" << endl;
 	roll.markTrackerPositions(false);
+	cerr << "DONE MARKTRACKERPOSITIONS" << endl;
 	roll.markShifts();
+	cerr << "DONE MARKSHIFTS" << endl;
 	// roll.drawMajorAxes();
 	roll.mergePixelOverlay(output);
+	cerr << "DONE MERGEPIXELOVERLAY" << endl;
 
 	output.close();
+	cerr << "DONE CLOSE" << endl;
 	return 0;
 }
 

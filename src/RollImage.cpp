@@ -126,9 +126,12 @@ void RollImage::analyze(void) {
 	if (debug) { cerr << "STEP 11: markPosteriorLeader" << endl; }
 	markPosteriorLeader();
 	if (debug) { cerr << "STEP 12: analyzeTrackerBarSpacing" << endl; }
+	storeCorrectedCentroidHistogram();
+	analyzeRawRowPositions();
 	analyzeTrackerBarSpacing();
 	if (debug) { cerr << "STEP 13: analyzeTrackerBarPositions" << endl; }
-	analyzeTrackerBarPositions();
+	// analyzeTrackerBarPositions();
+	calculateTrackerSpacings2();
 	if (debug) { cerr << "STEP 14: analyzeHorizontalHolePosition" << endl; }
 	analyzeHorizontalHolePosition();
 	if (debug) { cerr << "STEP 15: analyzeMidiKeyMapping" << endl; }
@@ -805,6 +808,7 @@ void RollImage::analyzeHorizontalHolePosition() {
 	for (ulong i=0; i<holes.size(); i++) {
 		double position = holes[i]->centroid.second;
 		double correction = driftCorrection[int(holes[i]->centroid.first+0.5)];
+		// double cpos = position + correction + holeOffset;
 		double cpos = position + correction - holeOffset;
 		int index = int(cpos / holeSeparation + 0.5);
 		trackerArray.at(index).push_back(holes.at(i));
@@ -855,13 +859,13 @@ void RollImage::assignMusicHoleIds(void) {
 
 //////////////////////////////
 //
-// RollImage::analyzeTrackerBarPositions --
+// RollImage::analyzeTrackerBarPositions -- Now replaced with another algorithm
 //
 
 void RollImage::analyzeTrackerBarPositions(void) {
-	// cerr << "\n\nCALCULATING BAR POSITIONS: " << endl;
 	int count = (int)holeSeparation;
-	std::vector<double> score(count);
+	std::vector<double>& score = m_trackerShiftScores;
+	score.resize(count);
 
 	for (int i=0; i<count; i++) {
 		score[i] = getTrackerShiftScore(i);
@@ -924,10 +928,96 @@ double RollImage::getTrackerShiftScore(double shift) {
 
 //////////////////////////////
 //
-// RollImage::analyzeTrackerBarSpacing --
+// RollImage::analyzeRawRowPositions --
 //
 
-void RollImage::analyzeTrackerBarSpacing(void) {
+void RollImage::analyzeRawRowPositions(void) {
+	std::vector<pair<double, int>>& rrp = rawRowPositions;
+	rrp.resize(0);
+
+	std::vector<int>& cch = correctedCentroidHistogram;
+	for (uint i=0; i<cch.size(); i++) {
+		if (cch[i] == 0) {
+			continue;
+		}
+		i = storeWeightedCentroidGroup(i);
+	}
+}
+
+
+
+//////////////////////////////
+//
+// RollImage::
+//
+
+void RollImage::calculateTrackerSpacings2(void) {
+	std::vector<pair<double, int>>& rrp = rawRowPositions;
+	if (rrp.empty()) {
+		return;
+	}
+
+	double initialGuess = holeSeparation;
+	int maxi = 0;
+	for (ulong i=1; i<rrp.size(); i++) {
+		if (rrp[i].second > rrp[maxi].second) {
+			maxi = i;
+		}
+	}
+	double value = (rrp[maxi].first / initialGuess);
+	value = value - int(value);
+	if (value > 0.5) {
+		value -= 1.0;
+	}
+	value *= initialGuess;
+	holeOffset = value;
+}
+
+
+
+//////////////////////////////
+//
+// RollImage::storeWeightedCentroidGroup --
+//
+
+ulong RollImage::storeWeightedCentroidGroup(ulong startindex) {
+	std::vector<pair<double, int>>& rrp = rawRowPositions;
+	std::vector<int>& cch = correctedCentroidHistogram;
+
+	ulong holesum = 0;
+	double weightedsum = 0.0;
+
+	ulong afterindex = startindex+1;
+	for (ulong i=startindex; i<cch.size(); i++) {
+		if (cch[i] == 0) {
+			afterindex = i;
+			break;
+		}
+		afterindex = i+1;
+		weightedsum += i * cch[i];
+		holesum += cch[i];
+	}
+	if (holesum == 0) {
+		return afterindex;
+	}
+
+	std::pair<double, int> value;
+	value.first = weightedsum / (double)holesum;
+	value.second = holesum;
+	rrp.push_back(value);
+
+	return afterindex;
+}
+
+
+
+//////////////////////////////
+//
+// RollImage::storeCorrectedCentroidHistogram --
+//
+
+void RollImage::storeCorrectedCentroidHistogram(void) {
+	uncorrectedCentroidHistogram.resize(getCols(), 0);
 	correctedCentroidHistogram.resize(getCols(), 0);
 
 	for (ulong i=0; i<holes.size(); i++) {
@@ -935,11 +1025,20 @@ void RollImage::analyzeTrackerBarSpacing(void) {
 		double correction = driftCorrection[centroidr];
 		int position = holes[i]->centroid.second + correction + 0.5;
 		correctedCentroidHistogram[position]++;
+		position = holes[i]->centroid.second + 0.5;
+		uncorrectedCentroidHistogram[position]++;
 	}
-	//cerr << "Histogram:\n";
-	//for (ulong i=0; i<correctedCentroidHistogram.size(); i++) {
-	//	cerr << i << "\t" << correctedCentroidHistogram[i] << endl;
-	//}
+}
+
+
+
+//////////////////////////////
+//
+// RollImage::analyzeTrackerBarSpacing --
+//
+
+void RollImage::analyzeTrackerBarSpacing(void) {
+
 
 	ulong leftside  = getHardMarginLeftIndex();
 	ulong rightside = getHardMarginRightIndex();
@@ -3384,7 +3483,7 @@ void RollImage::markTrackerPositions(bool showAll) {
 
 	int midiStart = midiToTrackMapping.size() - 1;
 	for (int i=0; i<(int)midiToTrackMapping.size(); i++) {
-		if (midiToTrackMapping[i]) {
+		if (midiToTrackMapping.at(i)) {
 			midiStart = i;
 			break;
 		}
@@ -3392,14 +3491,14 @@ void RollImage::markTrackerPositions(bool showAll) {
 
 	int midiEnd = 0;
 	for (int i=midiToTrackMapping.size()-1; i>=0; i--) {
-		if (midiToTrackMapping[i]) {
+		if (midiToTrackMapping.at(i)) {
 			midiEnd = (ulong)i;
 			break;
 		}
 	}
 
-	int realcolstart = midiToTrackMapping[midiStart];
-	int realcolend   = midiToTrackMapping[midiEnd];
+	int realcolstart = midiToTrackMapping.at(midiStart);
+	int realcolend   = midiToTrackMapping.at(midiEnd);
 
 	int colstart = 0;
 	int colend = midiToTrackMapping.size() - 1;
@@ -3411,8 +3510,11 @@ void RollImage::markTrackerPositions(bool showAll) {
 
 	ulong startrow = getFirstMusicHoleStart() - 100;
 	ulong endrow   = getLastMusicHoleEnd()    + 100;
+	if (endrow >= getRows()) {
+		endrow = getRows() - 1;
+	}
 
-	int cutoff = midiToTrackMapping[65];
+	int cutoff = midiToTrackMapping.at(65);
 
 	int c;
 	int color;
@@ -3450,15 +3552,15 @@ void RollImage::markTrackerPositions(bool showAll) {
 					// dotted line to indiate off-paper track position
 					pixelType[r][c] = color;
 				}
-			} else if (!trackerArray[i].empty()) {
-				if (trackMeaning[i] == TRACK_SNAKEBITE) {
-					pixelType[r][c] = PIX_HOLE_SNAKEBITE;
+			} else if (!trackerArray.at(i).empty()) {
+				if (trackMeaning.at(i) == TRACK_SNAKEBITE) {
+					pixelType.at(r).at(c) = PIX_HOLE_SNAKEBITE;
 				} else {
-					pixelType[r][c] = color;
+					pixelType.at(r).at(c) = color;
 				}
 			} else if (r % 20 < 10) {
 				// dashed line to indiate no activity in track
-				pixelType[r][c] = color;
+				pixelType.at(r).at(c) = color;
 			}
 		}
 	}
@@ -3915,17 +4017,17 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 
 	double avgholewidth = int(getAverageMusicalHoleWidth()*100.0+0.5)/100.0;
 
-	double leftCol = m_firstHolePosition - driftCorrection[getFirstMusicHoleStart()];
-	leftCol = leftCol - leftMarginIndex[getFirstMusicHoleStart()];
+	double leftCol = m_firstHolePosition - driftCorrection.at(getFirstMusicHoleStart());
+	leftCol = leftCol - leftMarginIndex.at(getFirstMusicHoleStart());
 
-	double rightCol = m_lastHolePosition - driftCorrection[getFirstMusicHoleStart()];
-	rightCol = rightMarginIndex[getFirstMusicHoleStart()] - rightCol;
+	double rightCol = m_lastHolePosition - driftCorrection.at(getFirstMusicHoleStart());
+	rightCol = rightMarginIndex.at(getFirstMusicHoleStart()) - rightCol;
 
 	int trackerholes = getTrackerHoleCount();
 
 	ulong musicnotecount = 0;
 	for (ulong i=0; i<holes.size(); i++) {
-		if (holes[i]->attack) {
+		if (holes.at(i)->attack) {
 			musicnotecount++;
 		}
 	}
@@ -3962,9 +4064,10 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 	out << "@DUST_SCORE_TREBLE:\t"   << getDustScoreTreble()      << "ppm\n";
 	out << "@SHIFTS:\t\t"            << shifts.size()             << "\n";
 	out << "@HOLE_SEPARATION:\t"     << holeSeparation            << "px\n";
+	out << "@HOLE_OFFSET:\t\t"       << holeOffset                << "px\n";
 	out << "@TRACKER_HOLES:\t\t"     << trackerholes              << " (estimate)\n";
 	out << "@SOFTWARE_DATE:\t\t"     << __DATE__ << " " << __TIME__ << endl;
-	out << "@ANALYSIS_DATE:\t\t"     << std::ctime(&current_time) << endl;
+	out << "@ANALYSIS_DATE:\t\t"     << std::ctime(&current_time);
 	out << "@ANALYSIS_TIME:\t\t"     << processing_time.count() << " seconds" << endl;
 	out << "@COLOR_CHANNEL:\t\t"     << "green"                   << endl;
 	out << "@CHANNEL_MD5:\t\t"       << getDataMD5Sum()           << endl;
@@ -3990,7 +4093,7 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 	double lastdrift = -1.0;
 	double drift;
 	for (ulong i=getFirstMusicHoleStart(); i<getLastMusicHoleEnd(); i++) {
-		drift = int(driftCorrection[i]*10.0+0.5)/10.0;
+		drift = int(driftCorrection.at(i)*10.0+0.5)/10.0;
 		if (drift == lastdrift) {
 			continue;
 		}
@@ -4028,8 +4131,8 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 
 	out << "@@BEGIN: HOLES\n\n";
 	for (ulong i=0; i<holes.size(); i++) {
-		if (holes[i]->isMusicHole()) {
-			holes[i]->printAton(out);
+		if (holes.at(i)->isMusicHole()) {
+			holes.at(i)->printAton(out);
 			out << std::endl;
 		}
 	}
@@ -4045,13 +4148,13 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 			if (i+1 < 100) { id += "0"; }
 			if (i+1 < 10 ) { id += "0"; }
 			id += to_string(i+1);
-			badHoles[i]->id = id;
+			badHoles.at(i)->id = id;
 		}
 
 		out << "\n\n";
 		out << "@@BEGIN: BADHOLES\n\n";
 		for (ulong i=0; i<badHoles.size(); i++) {
-			badHoles[i]->printAton(out);
+			badHoles.at(i)->printAton(out);
 			out << "\n";
 		}
 		out << "@@END: BADHOLES\n\n";
@@ -4068,11 +4171,11 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 				if (i+1 < 100) { id += "0"; }
 				if (i+1 < 10 ) { id += "0"; }
 				id += to_string(i+1);
-				trebleTears[i]->id = id;
+				trebleTears.at(i)->id = id;
 			}
 			out << "@@BEGIN: TREBLE_TEARS\n";
 			for (ulong i=0; i<trebleTears.size(); i++) {
-				trebleTears[i]->printAton(out);
+				trebleTears.at(i)->printAton(out);
 			}
 			out << "@@END: TREBLE_TEARS\n";
 		}
@@ -4082,11 +4185,11 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 				if (i+1 < 100) { id += "0"; }
 				if (i+1 < 10 ) { id += "0"; }
 				id += to_string(i+1);
-				bassTears[i]->id = id;
+				bassTears.at(i)->id = id;
 			}
 			out << "\n@@BEGIN: BASS_TEARS\n";
 			for (ulong i=0; i<bassTears.size(); i++) {
-				bassTears[i]->printAton(out);
+				bassTears.at(i)->printAton(out);
 			}
 			out << "@@END: BASS_TEARS\n";
 		}
@@ -4102,7 +4205,7 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 			if (i+1 < 100) { id += "0"; }
 			if (i+1 < 10 ) { id += "0"; }
 			id += to_string(i+1);
-			shifts[i]->id = id;
+			shifts.at(i)->id = id;
 		}
 
 		out << "\n\n";
@@ -4120,7 +4223,7 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 		out << "\n@@BEGIN: SHIFTS\n";
 		out << "\n";
 		for (ulong i=0; i<shifts.size(); i++) {
-			shifts[i]->printAton(out);
+			shifts.at(i)->printAton(out);
 			out << "\n";
 		}
 		out << "@@END: SHIFTS\n";
@@ -4135,6 +4238,40 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 	out << "\n@@END: MIDIFILE\n";
 
 	out << "\n@@END: MIDIFILES\n\n";
+
+	out << "\n@@BEGIN: DEBUGGING\n";
+
+	out << "\n";
+	out << "@@ HOLE_HISTOGRAM: a histogram of the centers of holes, both with and without" << endl;
+	out << "@@ drift correction.  The meaning of the columns:\n";
+	out << "@@ (1) the uncorrected positions of the hole centers\n";
+	out << "@@ (2) the drift-corrected positions of the hole centers\n";
+	out << "@@ (3) the weighted-average positions of the hole centers from (2) for each tracker bar position\n";
+	out << "@@ (4) the modeled position of the tracker bar positions\n";
+	out << "\n@@HOLE_HISTOGRAM:" << endl;
+
+	std::vector<int> three(getCols(), 0);
+	for (ulong i=0; i< rawRowPositions.size(); i++) {
+		three.at(rawRowPositions.at(i).first + 0.5) += rawRowPositions.at(i).second;
+	}
+
+	std::vector<double>& position = m_normalizedPosition;
+	std::vector<int> four(getCols(), 0);
+	for (ulong i=0; i<position.size(); i++) {
+		if (position.at(i) < 0) {
+			continue;
+		}
+		four.at(position.at(i) + 0.5) += -100;
+	}
+
+	for (ulong i=0; i<correctedCentroidHistogram.size(); i++) {
+		out << "\t" << uncorrectedCentroidHistogram.at(i);
+		out << "\t" << correctedCentroidHistogram.at(i);
+		out << "\t" << three.at(i);
+		out << "\t" << four.at(i) << endl;
+	}
+
+	out << "\n@@END: DEBUGGING\n";
 
 	out << "\n@@END: ROLLINFO\n";
 	return out;
