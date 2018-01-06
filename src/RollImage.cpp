@@ -3230,36 +3230,43 @@ void RollImage::markHoleBBs(void) {
 
 void RollImage::markHoleBB(HoleInfo& hi) {
 // cerr << "MARKING HOLE " << hi << endl;
-	long r, c;
+	ulong r;
+	long c;
 
 	// Mark upper side of box (leading edge)
 	r = hi.origin.first - 1;
 	if (hi.attack) {
 		for (c=-1; c<(long)hi.width.second+1; c++) {
-			pixelType[r][c + (long)hi.origin.second] = PIX_HOLEBB_LEADING_A;
+			pixelType.at(r).at(c + (long)hi.origin.second) = PIX_HOLEBB_LEADING_A;
 		}
 	} else {
 		for (c=-1; c<(long)hi.width.second+1; c++) {
-			pixelType[r][c + (long)hi.origin.second] = PIX_HOLEBB_LEADING_S;
+			pixelType.at(r).at(c + (long)hi.origin.second) = PIX_HOLEBB_LEADING_S;
 		}
 	}
 
 	// Mark lower side of box (trailing edge
 	r = hi.origin.first + hi.width.first + 1;
-	for (c=-1; c<(long)hi.width.second+1; c++) {
-		pixelType[r][c + (long)hi.origin.second] = PIX_HOLEBB_TRAILING;
+	if (r < getRows()) {
+		for (c=-1; c<(long)hi.width.second+1; c++) {
+			pixelType.at(r).at(c + (long)hi.origin.second) = PIX_HOLEBB_TRAILING;
+		}
 	}
 
 	// Mark left side of box:
 	c = hi.origin.second - 1;
-	for (r=-1; r<(long)hi.width.first+1; r++) {
-		pixelType[r + (long)hi.origin.first][c] = PIX_HOLEBB_BASS;
+	if (c >= 0) {
+		for (r=-1; r<hi.width.first+1; r++) {
+			pixelType.at(r + (long)hi.origin.first).at(c) = PIX_HOLEBB_BASS;
+		}
 	}
 
 	// Mark right side of box:
 	c = hi.origin.second + hi.width.second + 1;
-	for (r=-1; r<(long)hi.width.first+1; r++) {
-		pixelType[r + (long)hi.origin.first][c] = PIX_HOLEBB_TREBLE;
+	if (c < (long)getCols()) {
+		for (r=-1; r<hi.width.first+1; r++) {
+			pixelType.at(r + (long)hi.origin.first).at(c) = PIX_HOLEBB_TREBLE;
+		}
 	}
 }
 
@@ -4036,96 +4043,135 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 	std::chrono::system_clock::time_point nowtime = std::chrono::system_clock::now();
 	std::time_t current_time = std::chrono::system_clock::to_time_t(nowtime);
 
+	out << "@@ This file describes features extracted from a scan of a piano roll.\n";
+	out << "@@ The contents of this file can be converted to JSON format with the\n";
+	out << "@@ ATON.js library from http://aton.sapp.org\n";
+	out << "\n";
+
 	out << "@@BEGIN: ROLLINFO\n";
-	out << "@IMAGE_WIDTH:\t\t"       << getCols()                 << "px\n";
-	out << "@IMAGE_LENGTH:\t\t"      << getRows()                 << "px\n";
-	out << "@ROLL_WIDTH:\t\t"        << averageRollWidth          << "px\n";
-	out << "@HARD_MARGIN_BASS:\t"    << getHardMarginLeftWidth()  << "px\n";
-	out << "@HARD_MARGIN_TREBLE:\t"  << getHardMarginRightWidth() << "px\n";
-	out << "@MAX_BASS_DRIFT_MAX:\t"  << getSoftMarginLeftWidthMax()  << "px\n";
-	out << "@MAX_RIGHT_DRIFT_MAX:\t" << getSoftMarginRightWidthMax() << "px\n";
-	out << "@AVG_SOFT_MARGIN_SUM:\t" << averageSoftMarginWidth    << "px\n";
-	out << "@PRELEADER_ROW:\t\t"     << getPreleaderIndex()       << "px\n";
-	out << "@LEADER_ROW:\t\t"        << getLeaderIndex()          << "px\n";
-	out << "@FIRST_HOLE:\t\t"        << getFirstMusicHoleStart()  << "px\n";
-	out << "@LAST_HOLE:\t\t"         << getLastMusicHoleEnd()     << "px\n";
-	out << "@END_MARGIN:\t\t"        << getRows() - getLastMusicHoleEnd() - 1 << "px\n";
-	out << "@MUSICAL_LENGTH:\t"      << musiclength               << "px\n";
-	out << "@MUSICAL_HOLES:\t\t"     << holes.size()              << "\n";
-	out << "@MUSICAL_NOTES:\t\t"     << musicnotecount            << "\n";
-	out << "@AVG_HOLE_WIDTH:\t"      << avgholewidth              << "px\n";
-	out << "@ANTIDUST_COUNT:\t"      << antidust.size()           << "\n";
-	out << "@BAD_HOLE_COUNT:\t"      << badHoles.size()           << "\n";
+
+	out << "\n";
+
+	out << "@@ Description of extracted parameters:\n";
+	out << "@@\n";
+	out << "@@ IMAGE_WIDTH:\t\t"       << "Width of the input image in pixels." << std::endl;
+	out << "@@ IMAGE_LENGTH:\t"        << "Length of the input image in pixels." << std::endl;
+	out << "@@ ROLL_WIDTH:\t\t"        << "Measured average width of the piano-roll in pixels." << std::endl;
+	out << "@@ HARD_MARGIN_BASS:\t"    << "Pixel width of the margin on the bass side of the roll" << endl;
+	out << "@@ \t\t\twhere the roll paper never enters." << std::endl;
+	out << "@@ HARD_MARGIN_TREBLE:\t"  << "Pixel width of the margin on the treble side of the roll" << std::endl;
+	out << "@@ \t\t\twhere the roll paper never enters." << std::endl;
+	out << "@@ MAX_BASS_DRIFT:\t"      << "Maximum range of the \"soft\" margin on the bass side: the" << std::endl;
+	out << "@@ \t\t\tmargin area where the roll edge will temporarily enter." << std::endl;
+	out << "@@ MAX_TREBLE_DRIFT:\t"    << "Maximum range of the \"soft\" margin on the treble side: the margin" << std::endl;
+	out << "@@ \t\t\tarea where the roll edge will temporarily enter." << std::endl;
+	out << "@@ AVG_SOFT_MARGIN_SUM:\t" << "Average sum of the bass and treble soft margins." << std::endl;
+	out << "@@ PRELEADER_ROW:\t"     << "Last pixel row of the portion of the image which contains" << std::endl;
+	out << "@@ \t\t\tthe velcro strap that initially pulls the roll." << std::endl;
+	out << "@@ LEADER_ROW:\t\t"        << "Last pixel row of the leader (although text on" << std::endl;
+	out << "@@ \t\t\tthe roll may continue)." << std::endl;
+	out << "@@ FIRST_HOLE:\t\t"        << "Pixel row of the first musical hole." << std::endl;
+	out << "@@ LAST_HOLE:\t\t"         << "Pixel row of the end of the last musical hole. Currently includes" << std::endl;
+	out << "@@ \t\t\trewind holes and any punches after the rewind." << std::endl;
+	out << "@@ END_MARGIN:\t\t"        << "IMAGE_LENGTH - LAST_HOLE." << std::endl;
+	out << "@@ MUSICAL_LENGTH:\t"      << "Pixel row count from the first music hole to the end of" << std::endl;
+	out << "@@ \t\t\tthe last music hole." << std::endl;
+	out << "@@ MUSICAL_HOLES:\t"       << "Estimated number of intentional holes to be read" << std::endl;
+	out << "@@ \t\t\tby the tracker bar." << std::endl;
+	out << "@@ MUSICAL_NOTES:\t"       << "Number of notes after grouping chained holes (expression tracks" << std::endl;
+	out << "@@ \t\t\tcount as notes in this census)." << std::endl;
+	out << "@@ AVG_HOLE_WIDTH:\t"      << "Average width of a musical hole in pixels (based on" << std::endl;
+	out << "@@ \t\t\tholes' bounding boxes)." << std::endl;
+	out << "@@ ANTIDUST_COUNT:\t"      << "Number of holes in the paper with an area less than" << std::endl;
+	out << "@@ \t\t\t50 pixels (the smallest music holes typically have 300 pixels)" << std::endl;
+	out << "@@ BAD_HOLE_COUNT:\t"      << "Number of suspcious holes pulled out for further observation." << std::endl;
+	out << "@@ EDGE_TEAR_COUNT:\t"     << "Number of edge tears which are deeper than 1/10 of an inch." << std::endl;
+	out << "@@ BASS_TEAR_COUNT:\t"     << "Number of tears on the bass register side of the roll." << std::endl;
+	out << "@@ TREBLE_TEAR_COUNT:\t"   << "Number of tears on the treble register side of the roll." << std::endl;
+	out << "@@ DUST_SCORE:\t\t"        << "Count of dust particles in hard margin regions in units" << std::endl;
+	out << "@@ \t\t\tof parts per million." << std::endl;
+	out << "@@ DUST_SCORE_BASS:\t"     << "Dust particle count in bass register margin." << std::endl;
+	out << "@@ DUST_SCORE_TREBLE:\t"   << "Dust particle count in bass register margin." << std::endl;
+	out << "@@ SHIFTS:\t\t"            << "Number of automatically detected operator shifts greater" << std::endl;
+	out << "@@ \t\t\tthan 1/100th of an inch over 1/3 of an inch." << std::endl;
+	out << "@@ HOLE_SEPARATION:\t"     << "Distance between muiscal hole centers (i.e., the tracker" << std::endl;
+	out << "@@ \t\t\tbar hole spacings)." << std::endl;
+	out << "@@ HOLE_OFFSET:\t\t"       << "The offset of the tracker bar spacing pattern with respect to" << std::endl;
+	out << "@@ \t\t\tthe first column of the image." << std::endl;
+	out << "@@ TRACKER_HOLES:\t"       << "The esitmated number of tracker bar holes that reads this roll." << std::endl;
+	out << "@@ SOFTWARE_DATE:\t"       << "The compiling date for the software that generates this file." << std::endl;
+	out << "@@ ANALYSIS_DATE:\t"       << "The date that the analysis was done." << std::endl;
+	out << "@@ ANALYSIS_TIME:\t"       << "The duration of the analysis phase of the software (excluding" << std::endl;
+	out << "@@ \t\t\tloading of the image data or writing the analysis overlay" << std::endl;
+	out << "@@ \t\t\tonto the image)." << std::endl;
+	out << "@@ COLOR_CHANNEL:\t"       << "The color channel used to generate this analysis data." << std::endl;
+	out << "@@ CHANNEL_MD5:\t\t"       << "The MD5 checksum of the color channel pixels used" << std::endl;
+	out << "@@ \t\t\tin this analysis." << std::endl;
+	out << "@@ MANUAL_EDITS:\t\t"      << "Set this field to \"yes\" if any manual edits are made to this file." << std::endl;
+	out << "\n";
+
+	out << "@IMAGE_WIDTH:\t\t"       << getCols()                     << "px\n";
+	out << "@IMAGE_LENGTH:\t\t"      << getRows()                     << "px\n";
+	out << "@ROLL_WIDTH:\t\t"        << averageRollWidth              << "px\n";
+	out << "@HARD_MARGIN_BASS:\t"    << getHardMarginLeftWidth()      << "px\n";
+	out << "@HARD_MARGIN_TREBLE:\t"  << getHardMarginRightWidth()     << "px\n";
+	out << "@MAX_BASS_DRIFT:\t"      << getSoftMarginLeftWidthMax()   << "px\n";
+	out << "@MAX_TREBLE_DRIFT:\t"    << getSoftMarginRightWidthMax()  << "px\n";
+	out << "@AVG_SOFT_MARGIN_SUM:\t" << averageSoftMarginWidth        << "px\n";
+	out << "@PRELEADER_ROW:\t\t"     << getPreleaderIndex()           << "px\n";
+	out << "@LEADER_ROW:\t\t"        << getLeaderIndex()              << "px\n";
+	out << "@FIRST_HOLE:\t\t"        << getFirstMusicHoleStart()      << "px\n";
+	out << "@LAST_HOLE:\t\t"         << getLastMusicHoleEnd()         << "px\n";
+	out << "@END_MARGIN:\t\t"        << getRows() - getLastMusicHoleEnd() << "px\n";
+	out << "@MUSICAL_LENGTH:\t"      << musiclength                   << "px\n";
+	out << "@MUSICAL_HOLES:\t\t"     << holes.size()                  << "\n";
+	out << "@MUSICAL_NOTES:\t\t"     << musicnotecount                << "\n";
+	out << "@AVG_HOLE_WIDTH:\t"      << avgholewidth                  << "px\n";
+	out << "@ANTIDUST_COUNT:\t"      << antidust.size()               << "\n";
+	out << "@BAD_HOLE_COUNT:\t"      << badHoles.size()               << "\n";
 	out << "@EDGE_TEAR_COUNT:\t"     << trebleTears.size() + bassTears.size() << "\n";
-	out << "@BASS_TEAR_COUNT:\t"     << bassTears.size()          << "\n";
-	out << "@TREBLE_TEAR_COUNT:\t"   << trebleTears.size()        << "\n";
-	out << "@DUST_SCORE:\t\t"        << getDustScore()            << "ppm\n";
-	out << "@DUST_SCORE_BASS:\t"     << getDustScoreBass()        << "ppm\n";
-	out << "@DUST_SCORE_TREBLE:\t"   << getDustScoreTreble()      << "ppm\n";
-	out << "@SHIFTS:\t\t"            << shifts.size()             << "\n";
-	out << "@HOLE_SEPARATION:\t"     << holeSeparation            << "px\n";
-	out << "@HOLE_OFFSET:\t\t"       << holeOffset                << "px\n";
-	out << "@TRACKER_HOLES:\t\t"     << trackerholes              << " (estimate)\n";
+	out << "@BASS_TEAR_COUNT:\t"     << bassTears.size()              << "\n";
+	out << "@TREBLE_TEAR_COUNT:\t"   << trebleTears.size()            << "\n";
+	out << "@DUST_SCORE:\t\t"        << int(getDustScore()+0.5)       << "ppm\n";
+	out << "@DUST_SCORE_BASS:\t"     << int(getDustScoreBass()+0.5)   << "ppm\n";
+	out << "@DUST_SCORE_TREBLE:\t"   << int(getDustScoreTreble()+0.5) << "ppm\n";
+	out << "@SHIFTS:\t\t"            << shifts.size()                 << "\n";
+	out << "@HOLE_SEPARATION:\t"     << holeSeparation                << "px\n";
+	out << "@HOLE_OFFSET:\t\t"       << holeOffset                    << "px\n";
+	out << "@TRACKER_HOLES:\t\t"     << trackerholes                  << " (estimate)\n";
 	out << "@SOFTWARE_DATE:\t\t"     << __DATE__ << " " << __TIME__ << endl;
 	out << "@ANALYSIS_DATE:\t\t"     << std::ctime(&current_time);
-	out << "@ANALYSIS_TIME:\t\t"     << processing_time.count() << " seconds" << endl;
-	out << "@COLOR_CHANNEL:\t\t"     << "green"                   << endl;
-	out << "@CHANNEL_MD5:\t\t"       << getDataMD5Sum()           << endl;
-	//out << "@BASS_TRACK_MARGIN:\t"    << leftCol                << "px\n";
-	//out << "@TREBLE_TRACK_MARGIN:\t"  << rightCol               << "px\n";
+	out << "@ANALYSIS_TIME:\t\t"     << int(processing_time.count()*100.0+0.5)/100.0 << "sec" << endl;
+	out << "@COLOR_CHANNEL:\t\t"     << "green"                       << endl;
+	out << "@CHANNEL_MD5:\t\t"       << getDataMD5Sum()               << endl;
+	out << "@MANUAL_EDITS:\t\t"      << "no"                          << endl;
 
-	// DRIFT FUNCTION /////////////////////////////////////////////////////
-	out << "\n\n";
-	out << "@@\n";
-	out << "@@ The Drift data describes the left/right shifting of the roll along the\n";
-	out << "@@ length of the image.  Each data point is a list values:\n";
-	out << "@@    (1) The row number in the image\n";
-	//out << "@@    (2) The distance in feet from the start of the roll (not the image)\n";
-	//out << "@@        to the given row.\n";
-	out << "@@    (2) The correction to apply to the row to straighten the roll.\n";
-	out << "@@ A new data point is given whenever the drift changes by more than 0.1 pixels.\n";
-	out << "@@ Drift analysis starts at the first music hole on the roll.\n";
-	out << "@@\n";
-	out << "\n";
-	out << "@@BEGIN: DRIFT\n";
-	// ulong fff = getPreleaderIndex();
-	// ulong fff = getFirstMusicHoleStart();
-	double lastdrift = -1.0;
-	double drift;
-	for (ulong i=getFirstMusicHoleStart(); i<getLastMusicHoleEnd(); i++) {
-		drift = int(driftCorrection.at(i)*10.0+0.5)/10.0;
-		if (drift == lastdrift) {
-			continue;
-		}
-		lastdrift = drift;
-		out << "\t" << i;
-		// out << "\t" << int((i - fff)/300.25/12*10000.0+0.5)/10000.0;
-		out << "\t" << drift << "\n";
-	}
-	out << "@@END: DRIFT\n";
 
-	// List of musical holes //////////////////////////////////////////////
+	/// MUSICAL HOLES /////////////////////////////////////////////////////////
 	out << "\n\n";
 	out << "@@ The HOLES array contains a list of all musical holes (note and expression holes).\n";
 	out << "@@ They are sorted in time (or image row) from the start of the roll to the end.\n";
 	out << "@@\n";
 	out << "@@ Meaning of HOLE parameters:\n";
 	out << "@@\n";
-	out << "@@   ORIGIN_ROW:\tThe pixel row of the leading edge of the bounding box around the hole.\n";
-	out << "@@   ORIGIN_COL:\tThe pixel column of the leading edge of the bounding box around the hole, bass side.\n";
-	out << "@@   WIDTH_ROW:\t\tThe pixel length of the bounding box around the hole.\n";
-	out << "@@   WIDTH_COL:\t\tThe pixel column of the leading edge of the hole, bass side.\n";
-	out << "@@   CENTROID_ROW:\tThe center of mass row of the hole.\n";
-	out << "@@   CENTROID_COL:\tThe center of mass column of the hole.\n";
-	out << "@@   AREA:\t\tThe area of the hole (in pixels).\n";
-	out << "@@   PERIMETER:\t\tThe perimeter of the hole (in pixels).\n";
-	out << "@@   CIRCULARITY:\tThe circularity of the hole (1 = circular, 0 = very uncircular).\n";
-	out << "@@   MAJOR_AXIS:\tThe major axis of the hole in degrees (0 = vertically aligned with roll).\n";
-	out << "@@   HPIXCOR:\tHorizontal (column) pixel correction: shift to straighten hole columns on paper.\n";
-	out << "@@      If the leading and trailing edges of musical holes do not have the same correction value,\n";
-	out << "@@      then the following two parameters are given instead:\n";
-	out << "@@         HPIXCOR_LEAD:\tHorizontal pixel correction of the hole's leading edge.\n";
-	out << "@@         HPIXCOR_TRAIL:\tHorizontal pixel correction of the hole's trailing edge.\n";
+	out << "@@ ORIGIN_ROW:\t\tThe pixel row of the leading edge of the bounding box" << std::endl;
+	out << "@@ \t\t\taround the hole.\n";
+	out << "@@ ORIGIN_COL:\t\tThe pixel column of the leading edge of the bounding box around" << std::endl;
+	out << "@@ \t\t\tthe hole, bass side.\n";
+	out << "@@ WIDTH_ROW:\t\tThe pixel length of the bounding box around the hole.\n";
+	out << "@@ WIDTH_COL:\t\tThe pixel column of the leading edge of the hole, bass side.\n";
+	out << "@@ CENTROID_ROW:\tThe center of mass row of the hole.\n";
+	out << "@@ CENTROID_COL:\tThe center of mass column of the hole.\n";
+	out << "@@ AREA:\t\tThe area of the hole (in pixels).\n";
+	out << "@@ PERIMETER:\t\tThe perimeter of the hole (in pixels).\n";
+	out << "@@ CIRCULARITY:\t\tThe circularity of the hole (1 = circular, 0 = very uncircular).\n";
+	out << "@@ MAJOR_AXIS:\t\tThe major axis of the hole in degrees (0 = vertically aligned" << std::endl;
+	out << "@@ \t\t\twith roll).\n";
+	out << "@@ HPIXCOR:\t\tHorizontal (column) pixel correction: shift to straighten hole columns" << std::endl;
+	out << "@@ \t\t\ton paper.  If the leading and trailing edges of musical holes do not have" << std::endl;
+	out << "@@ \t\t\tthe same correction value, then the following two parameters are given instead:\n";
+	out << "@@ \t\t\t   HPIXCOR_LEAD:\tHorizontal pixel correction of the hole's leading edge.\n";
+	out << "@@ \t\t\t   HPIXCOR_TRAIL:\tHorizontal pixel correction of the hole's trailing edge.\n";
 	out << "@@\n";
 	out << "\n";
 
@@ -4139,10 +4185,9 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 	out << "@@END: HOLES\n\n";
 
 
-	// List of bad holes //////////////////////////////////////////////
+	/// BAD HOLES //////////////////////////////////////////////////////////
 	if (!badHoles.empty()) {
 		sortBadHolesByArea();
-
 		for (ulong i=0; i<badHoles.size(); i++) {
 			string id = "bad";
 			if (i+1 < 100) { id += "0"; }
@@ -4150,7 +4195,6 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 			id += to_string(i+1);
 			badHoles.at(i)->id = id;
 		}
-
 		out << "\n\n";
 		out << "@@BEGIN: BADHOLES\n\n";
 		for (ulong i=0; i<badHoles.size(); i++) {
@@ -4161,7 +4205,7 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 	}
 
 
-	// List of significant edge tears /////////////////////////////////
+	/// EDGE TEARS /////////////////////////////////////////////////////////
 	if (bassTears.size() + trebleTears.size() > 0) {
 		sortTearsByArea();
 		out << "\n@@BEGIN: TEARS\n";
@@ -4196,10 +4240,42 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 		out << "@@END: TEARS\n";
 	}
 
-	// Shifts:
+	/// DRIFT /////////////////////////////////////////////////////////////
+	out << "\n\n";
+	out << "@@\n";
+	out << "@@ The Drift data describes the left/right shifting of the roll along the\n";
+	out << "@@ length of the image.  Each data point is a list values:\n";
+	out << "@@    (1) The row number in the image\n";
+	//out << "@@    (2) The distance in feet from the start of the roll (not the image)\n";
+	//out << "@@        to the given row.\n";
+	out << "@@    (2) The correction to apply to the row to straighten the roll.\n";
+	out << "@@ A new data point is given whenever the drift changes by more than 0.1 pixels.\n";
+	out << "@@ Drift analysis starts at the first music hole on the roll.\n";
+	out << "@@\n";
+	out << "\n";
+	out << "@@BEGIN: DRIFT\n";
+	out << "@RESOLUTION:\t0.1px\n";
+	out << "@DATA:\n";
+	// ulong fff = getPreleaderIndex();
+	// ulong fff = getFirstMusicHoleStart();
+	double lastdrift = -1.0;
+	double drift;
+	for (ulong i=getFirstMusicHoleStart(); i<getLastMusicHoleEnd(); i++) {
+		drift = int(driftCorrection.at(i)*10.0+0.5)/10.0;
+		if (drift == lastdrift) {
+			continue;
+		}
+		lastdrift = drift;
+		out << "\t" << i;
+		// out << "\t" << int((i - fff)/300.25/12*10000.0+0.5)/10000.0;
+		out << "\t" << drift << "\n";
+	}
+	out << "@@END: DRIFT\n";
+
+
+	/// SHIFTS //////////////////////////////////////////////////////////////
 	if (!shifts.empty()) {
 		sortShiftsByAmount();
-
 		for (ulong i=0; i<shifts.size(); i++) {
 			string id = "shift";
 			if (i+1 < 100) { id += "0"; }
@@ -4207,7 +4283,6 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 			id += to_string(i+1);
 			shifts.at(i)->id = id;
 		}
-
 		out << "\n\n";
 		out << "@@\n";
 		out << "@@ Shifts are left/right movements of the roll that are most likely\n";
@@ -4229,18 +4304,19 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 		out << "@@END: SHIFTS\n";
 	}
 
-	out << "\n@@BEGIN: MIDIFILES\n\n";
 
+	out << "\n@@BEGIN: MIDIFILES\n\n";
 	out << "@MIDIFILE:\n";
 	stringstream ss;
 	generateNoteMidiFileBinasc(ss);
 	out << ss.str();
 	out << "\n@@END: MIDIFILE\n";
-
 	out << "\n@@END: MIDIFILES\n\n";
 
-	out << "\n@@BEGIN: DEBUGGING\n";
 
+	// The following section is for displaying intermediate analysis data, mostly about
+	// the tracker bar position.
+	out << "\n@@BEGIN: DEBUGGING\n";
 	out << "\n";
 	out << "@@ HOLE_HISTOGRAM: a histogram of the centers of holes, both with and without" << endl;
 	out << "@@ drift correction.  The meaning of the columns:\n";
@@ -4249,12 +4325,10 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 	out << "@@ (3) the weighted-average positions of the hole centers from (2) for each tracker bar position\n";
 	out << "@@ (4) the modeled position of the tracker bar positions\n";
 	out << "\n@@HOLE_HISTOGRAM:" << endl;
-
 	std::vector<int> three(getCols(), 0);
 	for (ulong i=0; i< rawRowPositions.size(); i++) {
 		three.at(rawRowPositions.at(i).first + 0.5) += rawRowPositions.at(i).second;
 	}
-
 	std::vector<double>& position = m_normalizedPosition;
 	std::vector<int> four(getCols(), 0);
 	for (ulong i=0; i<position.size(); i++) {
@@ -4263,15 +4337,14 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 		}
 		four.at(position.at(i) + 0.5) += -100;
 	}
-
 	for (ulong i=0; i<correctedCentroidHistogram.size(); i++) {
 		out << "\t" << uncorrectedCentroidHistogram.at(i);
 		out << "\t" << correctedCentroidHistogram.at(i);
 		out << "\t" << three.at(i);
 		out << "\t" << four.at(i) << endl;
 	}
-
 	out << "\n@@END: DEBUGGING\n";
+
 
 	out << "\n@@END: ROLLINFO\n";
 	return out;

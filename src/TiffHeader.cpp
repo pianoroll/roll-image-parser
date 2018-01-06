@@ -246,14 +246,12 @@ bool TiffHeader::parseHeader(std::fstream& input) {
 		return false;
 	}
 
-	ulong expected = this->getRows() * this->getCols() * 3;
-	if (expected != this->getDataBytes()) {
-		std::cerr << "ERROR: image size does not match header information." << std::endl;
+	long long expected = this->getRows() * this->getCols() * 3;
+	if (expected != (long long)this->getDataBytes()) {
+		std::cerr << "WARNING: image size does not match header information." << std::endl;
 		std::cerr << "STRIP BYTE COUNT " << this->getDataBytes() << std::endl;
 		std::cerr << "EXPECTED BYTE COUNT " << expected<< std::endl;
-		std::cerr << "DIFFERENCE " << this->getDataBytes() - expected << std::endl;
-		clear();
-		return false;
+		std::cerr << "DIFFERENCE " << (long long)this->getDataBytes() - expected << std::endl;
 	}
 
 	return true;
