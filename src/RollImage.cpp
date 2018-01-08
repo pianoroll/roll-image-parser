@@ -642,7 +642,6 @@ void RollImage::analyzeMidiKeyMapping(void) {
 		exit(1);
 	}
 
-
 	// Rough guess for now on the mapping: placing the middle hole position on E4/F4 boundary
 	int F4split = int((rightmostIndex - leftmostIndex) / 2 + leftmostIndex + 0.5); // 0.5 needed?
 
@@ -2576,6 +2575,9 @@ ulong RollImage::getBoundary(std::vector<int>& status) {
 		}
 	}
 
+	// make a guess at six inches if not found
+	return 6 * 300;
+
 	std::cerr << "COULD NOT FIND LEADER BOUNDARY" << std::endl;
 	std::cerr << "SEARCH LENGTH:\t" << status.size() << std::endl;
 	std::cerr << "WINDOW SIZE:\t" << windowsize*2+1 << endl;
@@ -2877,11 +2879,13 @@ void RollImage::analyzeHardMargins(ulong leaderBoundary) {
 	}
 
 	ulong maxpos = rightMarginIndex[leaderBoundary];
-	for (ulong r=leaderBoundary+1; r<rows; r++) {
+	for (ulong r=leaderBoundary+1; r<rows-endboundary; r++) {
 		if ((ulong)rightMarginIndex[r] > maxpos) {
 			maxpos = rightMarginIndex[r];
 		}
 	}
+	setHardMarginRightIndex(maxpos);
+
 	for (ulong r=leaderBoundary; r<rows; r++) {
 		ulong cols = pixelType[r].size();
 		for (ulong c=maxpos; c<cols; c++) {
@@ -2890,7 +2894,6 @@ void RollImage::analyzeHardMargins(ulong leaderBoundary) {
 			}
 		}
 	}
-	setHardMarginRightIndex(maxpos);
 
 }
 
@@ -3230,7 +3233,7 @@ void RollImage::markHoleBBs(void) {
 
 void RollImage::markHoleBB(HoleInfo& hi) {
 // cerr << "MARKING HOLE " << hi << endl;
-	ulong r;
+	long r;
 	long c;
 
 	// Mark upper side of box (leading edge)
@@ -3245,9 +3248,9 @@ void RollImage::markHoleBB(HoleInfo& hi) {
 		}
 	}
 
-	// Mark lower side of box (trailing edge
+	// Mark lower side of box (trailing edge):
 	r = hi.origin.first + hi.width.first + 1;
-	if (r < getRows()) {
+	if (r < (long)getRows()) {
 		for (c=-1; c<(long)hi.width.second+1; c++) {
 			pixelType.at(r).at(c + (long)hi.origin.second) = PIX_HOLEBB_TRAILING;
 		}
@@ -3256,7 +3259,7 @@ void RollImage::markHoleBB(HoleInfo& hi) {
 	// Mark left side of box:
 	c = hi.origin.second - 1;
 	if (c >= 0) {
-		for (r=-1; r<hi.width.first+1; r++) {
+		for (r=-1; r<(long)hi.width.first+1; r++) {
 			pixelType.at(r + (long)hi.origin.first).at(c) = PIX_HOLEBB_BASS;
 		}
 	}
@@ -3264,7 +3267,7 @@ void RollImage::markHoleBB(HoleInfo& hi) {
 	// Mark right side of box:
 	c = hi.origin.second + hi.width.second + 1;
 	if (c < (long)getCols()) {
-		for (r=-1; r<hi.width.first+1; r++) {
+		for (r=-1; r<=(long)hi.width.first+1; r++) {
 			pixelType.at(r + (long)hi.origin.first).at(c) = PIX_HOLEBB_TREBLE;
 		}
 	}
