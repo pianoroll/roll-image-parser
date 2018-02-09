@@ -4042,6 +4042,20 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 		}
 	}
 
+	double driftmax = driftCorrection.at(getFirstMusicHoleStart());;
+	double driftmin = driftCorrection.at(getFirstMusicHoleStart());;
+
+	for (ulong i=getFirstMusicHoleStart()+1; i<getLastMusicHoleEnd(); i++) {
+		double drift = driftCorrection.at(i);
+		if (driftmax < drift) {
+			driftmax = drift;
+		}
+		if (driftmin > drift) {
+			driftmin = drift;
+		}
+	}
+	double driftrange = driftmax - driftmin;
+
 	std::chrono::duration<double> processing_time = stop_time - start_time;
 	std::chrono::system_clock::time_point nowtime = std::chrono::system_clock::now();
 	std::time_t current_time = std::chrono::system_clock::to_time_t(nowtime);
@@ -4069,6 +4083,9 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 	out << "@@ MAX_TREBLE_DRIFT:\t"    << "Maximum range of the \"soft\" margin on the treble side: the margin" << std::endl;
 	out << "@@ \t\t\tarea where the roll edge will temporarily enter." << std::endl;
 	out << "@@ AVG_SOFT_MARGIN_SUM:\t" << "Average sum of the bass and treble soft margins." << std::endl;
+	out << "@@ DRIFT_RANGE:\t"         << "Total drift range in pixels." << std::endl;
+	out << "@@ DRIFT_MIN:\t\t"         << "Leftmost drift from average position in pixels." << std::endl;
+	out << "@@ DRIFT_MAX:\t\t"         << "Rightmost drift from average position in pixels." << std::endl;
 	out << "@@ PRELEADER_ROW:\t"     << "Last pixel row of the portion of the image which contains" << std::endl;
 	out << "@@ \t\t\tthe velcro strap that initially pulls the roll." << std::endl;
 	out << "@@ LEADER_ROW:\t\t"        << "Last pixel row of the leader (although text on" << std::endl;
@@ -4121,6 +4138,9 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 	out << "@MAX_BASS_DRIFT:\t"      << getSoftMarginLeftWidthMax()   << "px\n";
 	out << "@MAX_TREBLE_DRIFT:\t"    << getSoftMarginRightWidthMax()  << "px\n";
 	out << "@AVG_SOFT_MARGIN_SUM:\t" << averageSoftMarginWidth        << "px\n";
+	out << "@DRIFT_RANGE:\t\t"       << int(driftrange*100+0.5)/100.0 << "px\n";
+	out << "@DRIFT_MIN:\t\t"         << int(driftmax*100+0.5)/100.0   << "px\n";
+	out << "@DRIFT_MAX:\t\t"         << int(driftmin*100+0.5)/100.0   << "px\n";
 	out << "@PRELEADER_ROW:\t\t"     << getPreleaderIndex()           << "px\n";
 	out << "@LEADER_ROW:\t\t"        << getLeaderIndex()              << "px\n";
 	out << "@FIRST_HOLE:\t\t"        << getFirstMusicHoleStart()      << "px\n";
