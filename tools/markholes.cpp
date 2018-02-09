@@ -38,6 +38,8 @@ int main(int argc, char** argv) {
 		exit(1);
 	}
 
+	roll.setDebugOn();
+	roll.setWarningOn();
 	roll.loadGreenChannel();
 	roll.analyze();
 	cerr << "DONE ANALYZING" << endl;

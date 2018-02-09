@@ -102,57 +102,56 @@ void RollImage::loadGreenChannel(void) {
 void RollImage::analyze(void) {
 	start_time = std::chrono::system_clock::now();
 
-	bool debug = 1;
-	if (debug) { cerr << "STEP 1: analyzeBasicMargins" << endl; }
+	if (m_debug) { cerr << "STEP 1: analyzeBasicMargins" << endl; }
 	analyzeBasicMargins();
-	if (debug) { cerr << "STEP 2: analyzeLeaders" << endl; }
+	if (m_debug) { cerr << "STEP 2: analyzeLeaders" << endl; }
 	analyzeLeaders();
-	if (debug) { cerr << "STEP 3: analyzeAdvancedMargins" << endl; }
+	if (m_debug) { cerr << "STEP 3: analyzeAdvancedMargins" << endl; }
 	analyzeAdvancedMargins();
-	if (debug) { cerr << "STEP 4: generateDriftCorrection" << endl; }
+	if (m_debug) { cerr << "STEP 4: generateDriftCorrection" << endl; }
 	generateDriftCorrection(0.01);
-	if (debug) { cerr << "STEP 5: analyzeHoles" << endl; }
+	if (m_debug) { cerr << "STEP 5: analyzeHoles" << endl; }
 	analyzeHoles();
-	if (debug) { cerr << "STEP 6: analyzeTears" << endl; }
+	if (m_debug) { cerr << "STEP 6: analyzeTears" << endl; }
 	analyzeTears();
-	if (debug) { cerr << "STEP 7: analyzeShifts" << endl; }
+	if (m_debug) { cerr << "STEP 7: analyzeShifts" << endl; }
 	analyzeShifts();
-	if (debug) { cerr << "STEP 8: generateDriftCorrection" << endl; }
+	if (m_debug) { cerr << "STEP 8: generateDriftCorrection" << endl; }
 	generateDriftCorrection(0.01);
-	if (debug) { cerr << "STEP 9: calculateHoleDescriptors" << endl; }
+	if (m_debug) { cerr << "STEP 9: calculateHoleDescriptors" << endl; }
 	calculateHoleDescriptors();
-	if (debug) { cerr << "STEP 10: invalidateSkewedHoles" << endl; }
+	if (m_debug) { cerr << "STEP 10: invalidateSkewedHoles" << endl; }
 	invalidateSkewedHoles();
-	if (debug) { cerr << "STEP 11: markPosteriorLeader" << endl; }
+	if (m_debug) { cerr << "STEP 11: markPosteriorLeader" << endl; }
 	markPosteriorLeader();
-	if (debug) { cerr << "STEP 12: analyzeTrackerBarSpacing" << endl; }
+	if (m_debug) { cerr << "STEP 12: analyzeTrackerBarSpacing" << endl; }
 	storeCorrectedCentroidHistogram();
 	analyzeRawRowPositions();
 	analyzeTrackerBarSpacing();
-	if (debug) { cerr << "STEP 13: analyzeTrackerBarPositions" << endl; }
+	if (m_debug) { cerr << "STEP 13: analyzeTrackerBarPositions" << endl; }
 	// analyzeTrackerBarPositions();
 	calculateTrackerSpacings2();
-	if (debug) { cerr << "STEP 14: analyzeHorizontalHolePosition" << endl; }
+	if (m_debug) { cerr << "STEP 14: analyzeHorizontalHolePosition" << endl; }
 	analyzeHorizontalHolePosition();
-	if (debug) { cerr << "STEP 15: analyzeMidiKeyMapping" << endl; }
+	if (m_debug) { cerr << "STEP 15: analyzeMidiKeyMapping" << endl; }
 	analyzeMidiKeyMapping();
-	if (debug) { cerr << "STEP 16: invalidateEdgeHoles" << endl; }
+	if (m_debug) { cerr << "STEP 16: invalidateEdgeHoles" << endl; }
 	invalidateEdgeHoles();
-	if (debug) { cerr << "STEP 17: invalidateOffTrackerHoles" << endl; }
+	if (m_debug) { cerr << "STEP 17: invalidateOffTrackerHoles" << endl; }
 	invalidateOffTrackerHoles();
-	if (debug) { cerr << "STEP 18: recalculateFirstMusicHole" << endl; }
+	if (m_debug) { cerr << "STEP 18: recalculateFirstMusicHole" << endl; }
 	recalculateFirstMusicHole();
-	if (debug) { cerr << "STEP 19: addDriftInfoToHoles" << endl; }
+	if (m_debug) { cerr << "STEP 19: addDriftInfoToHoles" << endl; }
 	addDriftInfoToHoles();
-	if (debug) { cerr << "STEP 20: addAntidustToBadHoles" << endl; }
+	if (m_debug) { cerr << "STEP 20: addAntidustToBadHoles" << endl; }
 	addAntidustToBadHoles(50);
-	if (debug) { cerr << "STEP 21: assignMusicHoleIds" << endl; }
+	if (m_debug) { cerr << "STEP 21: assignMusicHoleIds" << endl; }
 	assignMusicHoleIds();
-	if (debug) { cerr << "STEP 22: groupHoles" << endl; }
+	if (m_debug) { cerr << "STEP 22: groupHoles" << endl; }
 	groupHoles();
-	if (debug) { cerr << "STEP 23: analyzeSnakeBites" << endl; }
+	if (m_debug) { cerr << "STEP 23: analyzeSnakeBites" << endl; }
 	analyzeSnakeBites();
-	if (debug) { cerr << "STEP 24: FINSHED WITH ANALYSIS!" << endl; }
+	if (m_debug) { cerr << "STEP 24: FINSHED WITH ANALYSIS!" << endl; }
 
 	stop_time = std::chrono::system_clock::now();
 }
@@ -634,11 +633,11 @@ void RollImage::analyzeMidiKeyMapping(void) {
 	}
 
 	int holecount = rightmostIndex - leftmostIndex + 1;
-	if (holecount > 100) {
+	if (m_warning && (holecount > 100)) {
 		std::cerr << "Warning hole count is quite large: " << holecount << std::endl;
 	}
 	if (holecount > 105) {
-		std::cerr << "Error: way too many holes on paper (can't handle organ rolls yet)" << endl;
+		std::cerr << "Error: way too many hole rows on paper (can't handle organ rolls yet)" << endl;
 		exit(1);
 	}
 
@@ -4009,6 +4008,40 @@ void RollImage::generateMidifile(MidiFile& midifile) {
 
 //////////////////////////////
 //
+// RollImage::printQualityReport --
+//    default value: out = cerr
+//
+
+std::ostream& RollImage::printQualityReport(std::ostream& out) {
+	if (!m_analyzedLeaders) {
+		analyzeLeaders();
+	}
+
+	if (shifts.size() >= 20) {
+		out << "Error: Too many shifts (" << shifts.size() << ")." 
+		    << " Maximum allowed is 19." << endl;
+	}
+	sortShiftsByAmount();
+	if (!shifts.empty()) {
+		double maxshift = std::fabs(shifts[0]->score);
+		if (maxshift > 15.0) {
+			out << "Error: Too large of a shift detected (" << maxshift << ")."
+			    << " Maximum allowed is 15 pixels." << endl;
+		}
+	}
+	int dustscore = int(getDustScore() + 0.5);
+	if (dustscore > 1000) {
+		out << "Error: margins are too dusty (" << dustscore << ")"
+		    << " Maximum allowed is 1000 ppm." << endl;
+	}
+
+	return out;
+}
+
+
+
+//////////////////////////////
+//
 // RollImage::printRollImageProperties --
 //    default value: out = cout
 //
@@ -4373,6 +4406,48 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 	return out;
 }
 
+
+//////////////////////////////
+//
+// RollImage::setDebugOn --
+//
+
+void RollImage::setDebugOn(void) { 
+	m_debug = true;
+}
+
+
+
+//////////////////////////////
+//
+// RollImage::setDebugOff --
+//
+
+void RollImage::setDebugOff(void) { 
+	m_debug = false;
+}
+
+
+
+//////////////////////////////
+//
+// RollImage::setWarningOn --
+//
+
+void RollImage::setWarningOn(void) { 
+	m_warning = true;
+}
+
+
+
+//////////////////////////////
+//
+// RollImage::setWarningOff --
+//
+
+void RollImage::setWarningOff(void) { 
+	m_warning = false;
+}
 
 
 } // end of namespace prp

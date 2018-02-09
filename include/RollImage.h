@@ -84,6 +84,7 @@ class RollImage : public TiffFile, public RollOptions {
 		void            mergePixelOverlay             (std::fstream& output);
 		void            markHoleBBs                   (void);
 		std::ostream&   printRollImageProperties      (std::ostream& out = std::cout);
+		std::ostream&   printQualityReport            (std::ostream& out = std::cerr);
 		int             getHardMarginLeftWidth        (void);
 		int             getHardMarginRightWidth       (void);
 		int             getHardMarginLeftIndex        (void);
@@ -127,6 +128,10 @@ class RollImage : public TiffFile, public RollOptions {
 		void            generateNoteMidiFileBinasc    (ostream& output);
 		void            generateMidifile              (MidiFile& midifile);
 		void            assignMidiKeyNumbersToHoles   (void);
+		void            setDebugOn                    (void);
+		void            setDebugOff                   (void);
+		void            setWarningOn                  (void);
+		void            setWarningOff                 (void);
 
 		// pixelType: a bitmask which contains enumerated types for the
 		// functions of pixels (the PIX_* defines above):
@@ -274,6 +279,8 @@ class RollImage : public TiffFile, public RollOptions {
 		void       calculateTrackerSpacings2   (void);
 
 	private:
+		bool       m_debug                     = false;
+		bool       m_warning                   = false;
 		bool       m_analyzedBasicMargins      = false;
 		bool       m_analyzedLeaders           = false;
 		bool       m_analyzedAdvancedMargins   = false;
