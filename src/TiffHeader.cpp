@@ -338,6 +338,14 @@ bool TiffHeader::readDirectoryEntry(std::fstream& input) {
 			}
 			break;
 
+		case 266: // Tag fill order.  Should be 1 if parameter exists
+			value = readEntryUInt(input, datatype, count);
+			if (value != 1) {
+				std::cerr << "Unknown Tag fill order: " << value << std::endl;
+				return false;
+			}
+			break;
+
 		case 273: // strip offset
 			this->setDataOffset(readEntryUInt(input, datatype, count));
 			break;
@@ -352,6 +360,12 @@ bool TiffHeader::readDirectoryEntry(std::fstream& input) {
 				std::cerr << "Error image must be full color." << std::endl;
 				return false;
 			}
+			break;
+
+		case 278: // rows per strip
+			value = readEntryUInt(input, datatype, count);
+			// Currently ignoring this value and assuming the strip
+			// count is 1 and the rows per strip is the rows of the image.
 			break;
 
 		case 279: // strip byte counts
@@ -385,6 +399,9 @@ bool TiffHeader::readDirectoryEntry(std::fstream& input) {
 				return false;
 			}
 			break;
+
+		// case 297: // The page number of the page from which this images was scanned.
+		// case 319: // The chromaticities of the primaries of the image.
 
 		default:  // ignore unknown parameters
 			value = readLittleEndian4ByteUInt(input);
