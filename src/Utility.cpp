@@ -3,7 +3,7 @@
 // Creation Date: Thu Nov 23 11:47:47 PST 2017
 // Last Modified: Sat Nov 25 16:51:23 PST 2017
 // Filename:      Utilities.cpp
-// Web Address:   
+// Web Address:
 // Syntax:        C++
 // vim:           ts=3:nowrap:ft=text
 //
@@ -18,50 +18,26 @@ namespace prp {
 
 //////////////////////////////
 //
-// readType5Value -- read a double expressed as two 4-byte unsigned longs.
+// readLittleEndian8ByteUInt -- Read eight-byte int which is in
+//      little-endian order (smallest byte is first).
 //
 
-double readType5Value(std::fstream& input, int datatype, int count) {
-	if (count != 1) {
-		std::cerr << "Problem1 reading value, bad parameter count: " << count << std::endl;
-		exit(1);
-	}
-	if (datatype != 5) {
-		std::cerr << "Wrong data type for reading a double value: " << datatype << "." << std::endl;
-		exit(1);
-	}
-	ulong offset = readLittleEndian4ByteUInt(input);
-	input.seekg(offset, input.beg);
-	int top = readLittleEndian4ByteUInt(input);
-	int bot = readLittleEndian4ByteUInt(input);
-	return (double)top / (double)bot;
-}
-
-
-
-//////////////////////////////
-//
-// readEntryUInt -- Read a short or long in 4-byte location in file.
-//      Throw away any padding bytes.
-//
-
-ulong readEntryUInt(std::fstream& input, int datatype, int count) {
-	if (count != 1) {
-		std::cerr << "Problem2 reading value, bad parameter count: " << count << std::endl;
-		exit(1);
-	}
-	ulong output = 0;
-	if (datatype == 3) {  // unsigned short
-		output = readLittleEndian2ByteUInt(input);
-		// skip over buffer bytes
-		readLittleEndian2ByteUInt(input);
-	} else if (datatype == 4) { // unsigned long
-		output = readLittleEndian4ByteUInt(input);
-	} else {
-		std::cerr << "Unknown directory entry data type: " << datatype << std::endl;
-		exit(1);
-	}
-	return output;
+ulonglongint readLittleEndian8ByteUInt(std::istream& input) {
+   ucharint buffer[8];
+   input.read((char*)buffer, 8);
+   if (input.eof()) {
+      std::cerr << "Error: unexpected end of file." << std::endl;
+      return 0;
+   }
+	ulonglongint output = buffer[7];
+	output = (output << 8) | buffer[6];
+	output = (output << 8) | buffer[5];
+	output = (output << 8) | buffer[4];
+	output = (output << 8) | buffer[3];
+	output = (output << 8) | buffer[2];
+	output = (output << 8) | buffer[1];
+	output = (output << 8) | buffer[0];
+   return output;
 }
 
 
@@ -72,14 +48,14 @@ ulong readEntryUInt(std::fstream& input, int datatype, int count) {
 //      little-endian order (smallest byte is first).
 //
 
-ulong readLittleEndian4ByteUInt(std::istream& input) {
-   uchar buffer[4];
+ulongint readLittleEndian4ByteUInt(std::istream& input) {
+   ucharint buffer[4];
    input.read((char*)buffer, 4);
    if (input.eof()) {
       std::cerr << "Error: unexpected end of file." << std::endl;
       return 0;
    }
-	ulong output = buffer[3];
+	ulongint output = buffer[3];
 	output = (output << 8) | buffer[2];
 	output = (output << 8) | buffer[1];
 	output = (output << 8) | buffer[0];
@@ -95,7 +71,7 @@ ulong readLittleEndian4ByteUInt(std::istream& input) {
 //
 
 ushort readLittleEndian2ByteUInt(std::istream& input) {
-   uchar buffer[2];
+   ucharint buffer[2];
    input.read((char*)buffer, 2);
    if (input.eof()) {
       std::cerr << "Error: unexpected end of file." << std::endl;
@@ -113,8 +89,8 @@ ushort readLittleEndian2ByteUInt(std::istream& input) {
 // read1UByte -- Read a single byte from the current position in the file stream.
 //
 
-uchar  read1UByte(std::istream& input) {
-	uchar buffer[1];
+ucharint  read1UByte(std::istream& input) {
+	ucharint buffer[1];
 	input.read((char*)buffer, 1);
    if (input.eof()) {
       std::cerr << "Error: unexpected end of file." << std::endl;
@@ -149,7 +125,7 @@ std::string readString(std::istream& input, int count) {
 //    given threshold value.
 //
 
-bool aboveThreshold(uchar value, uchar threshold) {
+bool aboveThreshold(ucharint value, ucharint threshold) {
 	if (value >= threshold) {
 		return true;
 	} else {
@@ -164,12 +140,12 @@ bool aboveThreshold(uchar value, uchar threshold) {
 // maxValueIndex -- return the index of the largest value in the list.
 //
 
-ulong maxValueIndex(std::vector<ulong> array) {
+ulongint maxValueIndex(std::vector<ulongint> array) {
 	if (array.empty()) {
 		return 0;
 	}
-	ulong maxindex = 0;
-	for (ulong i=1; i<array.size(); i++) {
+	ulongint maxindex = 0;
+	for (ulongint i=1; i<array.size(); i++) {
 		if (array[i] > array[maxindex]) {
 			maxindex = i;
 		}
@@ -185,13 +161,13 @@ ulong maxValueIndex(std::vector<ulong> array) {
 // getMaximum --
 //
 
-int getMaximum(std::vector<int>& array, ulong startindex, ulong length) {
-	ulong stopindex = array.size() - 1;
+int getMaximum(std::vector<int>& array, ulongint startindex, ulongint length) {
+	ulongint stopindex = array.size() - 1;
 	if (length > 0) {
 		stopindex = startindex + length;
 	}
 	int maxi = startindex;
-	for (ulong r=startindex+1; r<=stopindex; r++) {
+	for (ulongint r=startindex+1; r<=stopindex; r++) {
 		if (array[r] > array[maxi]) {
 			array[maxi] = array[r];
 		}
@@ -210,7 +186,7 @@ int getMaximum(std::vector<int>& array, ulong startindex, ulong length) {
 void exponentialSmoothing(std::vector<double>& array, double gain) {
 	double k = gain;
 	double nk = 1.0 - k;
-	for (ulong i=1; i<array.size(); i++) {
+	for (ulongint i=1; i<array.size(); i++) {
 		array[i] = k * array[i] + nk * array[i-1];
 	}
 	for (int i=array.size()-2; i>=0; i--) {

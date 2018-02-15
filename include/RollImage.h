@@ -89,19 +89,19 @@ class RollImage : public TiffFile, public RollOptions {
 		int             getHardMarginRightWidth       (void);
 		int             getHardMarginLeftIndex        (void);
 		int             getHardMarginRightIndex       (void);
-		ulong           getLeaderIndex                (void);
-		ulong           getPreLeaderIndex             (void);
-		ulong           getPreleaderIndex             (void);
-		ulong           getFirstMusicHoleStart        (void);
-		ulong           getLastMusicHoleEnd           (void);
-		int             getSoftMarginLeftWidth        (ulong rowindex);
-		int             getSoftMarginRightWidth       (ulong rowindex);
+		ulongint        getLeaderIndex                (void);
+		ulongint        getPreLeaderIndex             (void);
+		ulongint        getPreleaderIndex             (void);
+		ulongint        getFirstMusicHoleStart        (void);
+		ulongint        getLastMusicHoleEnd           (void);
+		int             getSoftMarginLeftWidth        (ulongint rowindex);
+		int             getSoftMarginRightWidth       (ulongint rowindex);
 		int             getSoftMarginLeftWidthMax     (void);
 		int             getSoftMarginRightWidthMax    (void);
 		double          getAverageRollWidth           (void);
 		double          getAverageMusicalHoleWidth    (void);
-		ulong           getLeftMarginWidth            (ulong rowindex);
-		ulong           getRightMarginWidth           (ulong rowindex);
+		ulongint        getLeftMarginWidth            (ulongint rowindex);
+		ulongint        getRightMarginWidth           (ulongint rowindex);
 		double          getAverageSoftMarginTotal     (void);
 		void            generateDriftCorrection       (double gain);
 		void            analyzeTrackerBarSpacing      (void);
@@ -216,65 +216,65 @@ class RollImage : public TiffFile, public RollOptions {
 		void       waterfallUpMargins          (void);
 		void       waterfallLeftMargins        (void);
 		void       waterfallRightMargins       (void);
-		ulong      findLeftLeaderBoundary      (std::vector<int>& margin, double avg,
-		                                        ulong cols, ulong searchlength);
-		ulong      findRightLeaderBoundary     (std::vector<int>& margin, double avg,
-		                                        ulong cols, ulong searchlength);
-		ulong      getBoundary                 (std::vector<int>& status);
-		void       markHardMargin              (ulong leaderBoundary);
+		ulongint   findLeftLeaderBoundary      (std::vector<int>& margin, double avg,
+		                                        ulongint cols, ulongint searchlength);
+		ulongint   findRightLeaderBoundary     (std::vector<int>& margin, double avg,
+		                                        ulongint cols, ulongint searchlength);
+		ulongint   getBoundary                 (std::vector<int>& status);
+		void       markHardMargin              (ulongint leaderBoundary);
 		void       markPreleaderRegion         (void);
 		void       markLeaderRegion            (void);
-		void       setHardMarginLeftIndex      (ulong index);
-		void       setHardMarginRightIndex     (ulong index);
-		ulong      extractPreleaderIndex       (ulong leaderBoundary);
-		void       setPreleaderIndex           (ulong value);
-		void       setLeaderIndex              (ulong value);
-		void       analyzeHardMargins          (ulong leaderBoundary);
-		void       fillHoleInfo                (HoleInfo& hi, ulong r, ulong c, int& counter);
-		void       fillTearInfo                (TearInfo& ti, ulong r, ulong c, int& counter);
-		void       extractHole                 (ulong row, ulong col);
+		void       setHardMarginLeftIndex      (ulongint index);
+		void       setHardMarginRightIndex     (ulongint index);
+		ulongint   extractPreleaderIndex       (ulongint leaderBoundary);
+		void       setPreleaderIndex           (ulongint value);
+		void       setLeaderIndex              (ulongint value);
+		void       analyzeHardMargins          (ulongint leaderBoundary);
+		void       fillHoleInfo                (HoleInfo& hi, ulongint r, ulongint c, int& counter);
+		void       fillTearInfo                (TearInfo& ti, ulongint r, ulongint c, int& counter);
+		void       extractHole                 (ulongint row, ulongint col);
 		void       markPosteriorLeader         (void);
 		void       markHoleBB                  (HoleInfo& hi);
 		double     getTrackerShiftScore        (double shift);
 		void       analyzeTears                (void);
 		void       analyzeShifts               (void);
-		ulong      storeShift                  (std::vector<double>& scores, ulong startrow);
-		ulong      findPeak                    (std::vector<double>& array, ulong r,
-		                                        ulong& peakindex, double& peakvalue);
+		ulongint   storeShift                  (std::vector<double>& scores, ulongint startrow);
+		ulongint   findPeak                    (std::vector<double>& array, ulongint r,
+		                                        ulongint& peakindex, double& peakvalue);
 		void       invalidateEdgeHoles         (void);
-		void       fillHoleSimple              (ulong r, ulong c, int target, int type, int& counter);
+		void       fillHoleSimple              (ulongint r, ulongint c, int target, int type, int& counter);
 		void       clearHole                   (HoleInfo& hi, int type);
 		void       calculateHoleDescriptors    (void);
 		bool       calculateHolePerimeter      (HoleInfo& hole);
-		int        findNextPerimeterPoint      (std::pair<ulong, ulong>& point, 
+		int        findNextPerimeterPoint      (std::pair<ulongint, ulongint>& point, 
 		                                        int dir);
 		double     calculateCentralMoment      (HoleInfo& hole, int p, int q);
 		double     calculateNormalCentralMoment(HoleInfo& hole, int p, int q);
 		double     calculateMajorAxis          (HoleInfo& hole);
 		void       invalidateSkewedHoles       (void);
 		void       drawMajorAxis               (HoleInfo& hi);
-		void       addAntidustToBadHoles       (ulong areaThreshold);
-		bool       goodColumn                  (ulong col, ulong toprow, ulong botrow,
-		                                        ulong ptype, ulong threshold);
-		void       fillColumn                  (ulong col, ulong toprow, ulong botrow,
-		                                        ulong target, ulong threshold, ulong replacement,
+		void       addAntidustToBadHoles       (ulongint areaThreshold);
+		bool       goodColumn                  (ulongint col, ulongint toprow, ulongint botrow,
+		                                        ulongint ptype, ulongint threshold);
+		void       fillColumn                  (ulongint col, ulongint toprow, ulongint botrow,
+		                                        ulongint target, ulongint threshold, ulongint replacement,
 		                                        std::vector<int>& margin);
 		int        getTrackerHoleCount         (void);
 		void       recalculateFirstMusicHole   (void);
 		void       removeBadLeaderHoles        (void);
 		void       addDriftInfoToHoles         (void);
 		void       groupHoles                  (void);
-		void       groupHoles                  (ulong index);
+		void       groupHoles                  (ulongint index);
 		void       describeTears               (void);
-		ulong      processTearLeft             (ulong startrow, ulong startcol);
-		ulong      processTearRight            (ulong startrow, ulong startcol);
-		void       removeTearLeft              (ulong minrow, ulong maxrow, ulong mincol, ulong maxcol);
-		void       removeTearRight             (ulong minrow, ulong maxrow, ulong mincol, ulong maxcol);
+		ulongint   processTearLeft             (ulongint startrow, ulongint startcol);
+		ulongint   processTearRight            (ulongint startrow, ulongint startcol);
+		void       removeTearLeft              (ulongint minrow, ulongint maxrow, ulongint mincol, ulongint maxcol);
+		void       removeTearRight             (ulongint minrow, ulongint maxrow, ulongint mincol, ulongint maxcol);
 		void       invalidateOffTrackerHoles   (void);
-		void       invalidateHolesOffTracker   (std::vector<HoleInfo*>& hi, ulong index);
+		void       invalidateHolesOffTracker   (std::vector<HoleInfo*>& hi, ulongint index);
 		void       analyzeSnakeBites           (void);
 		void       analyzeRawRowPositions      (void);
-		ulong      storeWeightedCentroidGroup  (ulong startindex);
+		ulongint   storeWeightedCentroidGroup  (ulongint startindex);
 		void       storeCorrectedCentroidHistogram(void);
 		void       calculateTrackerSpacings2   (void);
 
@@ -286,10 +286,10 @@ class RollImage : public TiffFile, public RollOptions {
 		bool       m_analyzedAdvancedMargins   = false;
 		int        hardMarginLeftIndex         = 0;
 		int        hardMarginRightIndex        = 0;
-		ulong      preleaderIndex              = 0;
-		ulong      leaderIndex                 = 0;
-		ulong      firstMusicRow               = 0;
-		ulong      lastMusicRow                = 0;
+		ulongint   preleaderIndex              = 0;
+		ulongint   leaderIndex                 = 0;
+		ulongint   firstMusicRow               = 0;
+		ulongint   lastMusicRow                = 0;
 		double     m_lastHolePosition          = 0.0;
 		double     m_firstHolePosition         = 0.0;
 		double     m_dustscore                 = -1.0;

@@ -20,8 +20,8 @@ namespace prp  {
 // TearInfo::TearInfo --
 //
 
-TearInfo::TearInfo(void) { 
-	clear(); 
+TearInfo::TearInfo(void) {
+	clear();
 }
 
 

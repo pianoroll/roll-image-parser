@@ -38,11 +38,11 @@ int main(int argc, char** argv) {
 		exit(1);
 	}
 
-	vector<uchar> pixel(3, 0);
+	vector<ucharint> pixel(3, 0);
 	tfile.goToPixelIndex(0);
-	ulong count = tfile.getPixelCount();
-	ulong offset;
-	for (ulong i=0; i<count; i++) {
+	ulongint count = tfile.getPixelCount();
+	ulongint offset;
+	for (ulongint i=0; i<count; i++) {
 		pixel[0] = tfile.read1UByte();  // red
 		pixel[1] = tfile.read1UByte();  // green
 		pixel[2] = tfile.read1UByte();  // blue

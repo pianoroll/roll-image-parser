@@ -15,18 +15,18 @@
 class DuplicateInfo {
 	public:
 		int count = 0;
-		vector<ulong> rows;
+		vector<ulongint> rows;
 };
 
 // function declarations:
 void     getTiffHeader            (TiffHeader& header, fstream& input, int diroffset);
-ulong    readEntryUInt            (fstream& input, int datatype, int count);
+ulongint    readEntryUInt            (fstream& input, int datatype, int count);
 void     readDirectoryEntry       (TiffHeader& header, fstream& input);
 double   readType5Value           (fstream& input, int datatype, int count);
-void     getRowCheckSums          (vector<ulong>& checksums, fstream& input,
+void     getRowCheckSums          (vector<ulongint>& checksums, fstream& input,
                                    TiffHeader& header);
 void     identifyDuplicateFrames  (fstream& output, TiffHeader& header,
-                                   vector<ulong>& rowchecksums, int framesize);
+                                   vector<ulongint>& rowchecksums, int framesize);
 void     markImageDuplicateFrame  (fstream& output, TiffHeader& header, int color,
                                    int firstrow, int otherrow, int framesize,
                                    int dupnum);
@@ -42,7 +42,7 @@ int main(int argc, char** argv) {
 		exit(1);
 	}
 
-	vector<ulong> rowchecksums;
+	vector<ulongint> rowchecksums;
 	getRowCheckSums(rowchecksums, input, header);
 	// for (int i=0; i<(int)rowchecksums.size(); i++) {
 	// 	cout << rowchecksums[i] << endl;
@@ -65,9 +65,9 @@ int main(int argc, char** argv) {
 //
 
 void identifyDuplicateFrames(fstream& output, TiffHeader& header,
-		vector<ulong>& rowchecksums, int framesize) {
+		vector<ulongint>& rowchecksums, int framesize) {
 
-	map<ulong, DuplicateInfo> duplicates;
+	map<ulongint, DuplicateInfo> duplicates;
 	for (int i=0; i<(int)rowchecksums.size(); i++) {
 		duplicates[rowchecksums[i]].count++;
 		duplicates[rowchecksums[i]].rows.push_back(i);
@@ -80,7 +80,7 @@ void identifyDuplicateFrames(fstream& output, TiffHeader& header,
 		if (marked[i]) {
 			continue;
 		}
-		ulong checksum = rowchecksums[i];
+		ulongint checksum = rowchecksums[i];
 		DuplicateInfo& di = duplicates[checksum];
 		if (di.count < 2) {
 			continue;
@@ -166,7 +166,7 @@ void markImageDuplicateFrame(fstream& output, TiffHeader& header, int color,
 	}
 
 	int side = dupnum % 2;
-	ulong offset;
+	ulongint offset;
 
 	if (dupnum == 1) {
 		for (int i = 0; i<framesize; i++) {
@@ -190,13 +190,13 @@ void markImageDuplicateFrame(fstream& output, TiffHeader& header, int color,
 // getRowCheckSums -- Calculate checksums for each row of the image.
 //
 
-void getRowCheckSums(vector<ulong>& checksums, fstream& input, TiffHeader& header) {
+void getRowCheckSums(vector<ulongint>& checksums, fstream& input, TiffHeader& header) {
 	input.seekg(header.dataoffset);
 	int rowbytecount = header.cols * 3;
 	string rowbytes;
 
 	checksums.resize(header.rows);
-	ulong crc;
+	ulongint crc;
 	for (int i=0; i<header.rows; i++) {
 		rowbytes = readString(input, rowbytecount);
     	crc = crc32_fast(rowbytes.data(), rowbytecount, 0);

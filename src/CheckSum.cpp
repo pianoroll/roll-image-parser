@@ -120,7 +120,7 @@ unsigned long CheckSum::crc32(const char* buf, int length) {
 int main (void) {
 	char* mystring = "This is a test.\n";
 	int length = strlen(mystring);
-	
+
 	long value = string_cksum(mystring, length);
 	printf("Checksum = %u\n", value);
 

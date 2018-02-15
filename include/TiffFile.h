@@ -1,7 +1,7 @@
 //
 // Programmer:    Craig Stuart Sapp <craig@ccrma.stanford.edu>
 // Creation Date: Thu Nov 23 11:47:47 PST 2017
-// Last Modified: Sat Nov 25 18:26:03 PST 2017
+// Last Modified: Thu Feb 15 02:58:49 PST 2018
 // Filename:      TiffFile.h
 // Web Address:   
 // Syntax:        C++
@@ -32,14 +32,13 @@ class TiffFile : public std::fstream, public TiffHeader {
 
 		void        close                       (void);
 		bool        open                        (const std::string& filename);
-		bool        goToByteIndex               (ulong offset);
+		bool        goToByteIndex               (ulonglongint offset);
 		ushort      readLittleEndian2ByteUInt   (void);
-		std::string readString                  (ulong count);
-		uchar       read1UByte                  (void);
-		void        getImageGreenChannel        (std::vector<std::vector<uchar>>& image);
-
-		bool        goToPixelIndex              (ulong pindex);
-		bool        goToRowColumnIndex          (ulong rowindex, ulong colindex);
+		std::string readString                  (ulongint count);
+		ucharint    read1UByte                  (void);
+		void        getImageGreenChannel        (std::vector<std::vector<ucharint>>& image);
+		bool        goToPixelIndex              (ulonglongint pindex);
+		bool        goToRowColumnIndex          (ulongint rowindex, ulongint colindex);
 
 	private:
 		// std::fstream m_input;

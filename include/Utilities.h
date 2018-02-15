@@ -1,7 +1,7 @@
 //
 // Programmer:    Craig Stuart Sapp <craig@ccrma.stanford.edu>
 // Creation Date: Thu Nov 23 11:47:47 PST 2017
-// Last Modified: Thu Nov 23 11:47:50 PST 2017
+// Last Modified: Thu Feb 15 06:08:56 PST 2018
 // Filename:      Utilities.h
 // Web Address:   
 // Syntax:        C++; 
@@ -24,28 +24,29 @@
 
 namespace prp {
 
-typedef unsigned long ulong;
-typedef unsigned short ushort;
-typedef unsigned char uchar;
+typedef int64_t  longlongint;
+typedef uint64_t ulonglongint;
+typedef uint32_t ulongint;
+typedef uint16_t ushortint;
+typedef uint8_t  ucharint;
 
 // File reading functions
-ulong       readLittleEndian4ByteUInt  (std::istream& input);
-ushort      readLittleEndian2ByteUInt  (std::istream& input);
-uchar       read1UByte                 (std::istream& input);
-std::string readString                 (std::istream& input, int count);
-ulong       readEntryUInt              (std::fstream& input, int datatype, int count);
-double      readType5Value             (std::fstream& input, int datatype, int count);
+ulonglongint   readLittleEndian8ByteUInt  (std::istream& input);
+ulongint       readLittleEndian4ByteUInt  (std::istream& input);
+ushortint      readLittleEndian2ByteUInt  (std::istream& input);
+ucharint       read1UByte                 (std::istream& input);
+std::string    readString                 (std::istream& input, int count);
 
 // misc. utility functions:
-bool        aboveThreshold             (uchar value, uchar threshold);
-int         getMaximum                 (std::vector<int>& array, ulong startindex = 0, 
-                                        ulong length = 0);
-ulong       maxValueIndex              (std::vector<ulong> array);
-void        exponentialSmoothing       (std::vector<double>& array, double gain);
+bool           aboveThreshold             (ucharint value, ucharint threshold);
+int            getMaximum                 (std::vector<int>& array, ulongint startindex = 0, 
+                                           ulongint length = 0);
+ulongint       maxValueIndex              (std::vector<ulongint> array);
+void           exponentialSmoothing       (std::vector<double>& array, double gain);
 
 template <class TYPE>
-double      getAverage                 (std::vector<TYPE>& array, ulong startindex = 0,
-                                        ulong length = 0);
+double         getAverage                 (std::vector<TYPE>& array, ulongint startindex = 0,
+                                           ulongint length = 0);
 
 
 ///////////////////////////////////////////////////////////////////////////
@@ -59,14 +60,14 @@ double      getAverage                 (std::vector<TYPE>& array, ulong startind
 //
 
 template <class TYPE>
-double getAverage(std::vector<TYPE>& array, ulong startindex, ulong length) {
-	ulong stopindex = array.size() - 1;
+double getAverage(std::vector<TYPE>& array, ulongint startindex, ulongint length) {
+	ulongint stopindex = array.size() - 1;
 	if (length > 0) {
 		stopindex = startindex + length - 1;
 	}
 	int newlength =  stopindex - startindex + 1;
 	double average = 0.0;
-	for (ulong r=startindex; r<=stopindex; r++) {
+	for (ulongint r=startindex; r<=stopindex; r++) {
 		average += (double)array.at(r);
 	}
 	return average / (double)newlength;

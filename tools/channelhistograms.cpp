@@ -30,24 +30,24 @@ int main(int argc, char** argv) {
 		exit(1);
 	}
 
-	vector<vector<ulong>> histograms(3);
-	for (ulong i=0; i<histograms.size(); i++) {
+	vector<vector<ulongint>> histograms(3);
+	for (ulongint i=0; i<histograms.size(); i++) {
 		histograms[i].resize(256);
 		std::fill(histograms[i].begin(), histograms[i].end(), 0);
 	}
 	tfile.goToPixelIndex(0);
-	ulong count = tfile.getPixelCount();
-	for (ulong i=0; i<count; i++) {
-		uchar red   = tfile.read1UByte();
-		uchar green = tfile.read1UByte();
-		uchar blue  = tfile.read1UByte();
+	ulongint count = tfile.getPixelCount();
+	for (ulongint i=0; i<count; i++) {
+		ucharint red   = tfile.read1UByte();
+		ucharint green = tfile.read1UByte();
+		ucharint blue  = tfile.read1UByte();
 		histograms[0].at(red)++;
 		histograms[1].at(green)++;
 		histograms[2].at(blue)++;
 	}
 
 	cout << "**value\t**red\t**green\t**blue\n";
-	for (ulong j=0; j<256; j++) {
+	for (ulongint j=0; j<256; j++) {
 		cout << j;
 		cout << "\t" << histograms[0].at(j);
 		cout << "\t" << histograms[1].at(j);

@@ -62,7 +62,7 @@ void RollOptions::reset(void) {
 // RollOptions::getAspectRatioThreshold --
 //
 
-double RollOptions::getAspectRatioThreshold(void) { 
+double RollOptions::getAspectRatioThreshold(void) {
 	return m_aspectRatioThreshold;
 }
 
@@ -151,7 +151,7 @@ void RollOptions::setMajorAxisCutoff(double value) {
 // RollOptions::getCircularityThreshold --
 //
 
-double RollOptions::getCircularityThreshold(void) { 
+double RollOptions::getCircularityThreshold(void) {
 	return m_circularityThreshold;
 }
 
@@ -162,7 +162,7 @@ double RollOptions::getCircularityThreshold(void) {
 // RollOptions::setCircularityThreshold --
 //
 
-void RollOptions::setCircularityThreshold(double value) { 
+void RollOptions::setCircularityThreshold(double value) {
 	m_circularityThreshold = value;
 }
 
@@ -195,7 +195,7 @@ void RollOptions::setMaxHoleCount(int value) {
 // RollOptions::getMaxTearFill --
 //
 
-int RollOptions::getMaxTearFill(void) { 
+int RollOptions::getMaxTearFill(void) {
 	return m_maxTearFill;
 }
 
@@ -206,7 +206,7 @@ int RollOptions::getMaxTearFill(void) {
 // RollOptions::setMaxTearFill --
 //
 
-void RollOptions::setMaxTearFill(int value) { 
+void RollOptions::setMaxTearFill(int value) {
 	m_maxTearFill = value;
 }
 
@@ -239,7 +239,7 @@ void RollOptions::setAttackLineSpacing(int value) {
 // RollOptions::getHoleShiftCutoff --
 //
 
-double RollOptions::getHoleShiftCutoff(void) { 
+double RollOptions::getHoleShiftCutoff(void) {
 	return m_holeShiftCutoff;
 }
 
@@ -250,7 +250,7 @@ double RollOptions::getHoleShiftCutoff(void) {
 // RollOptions::setHoleShiftCutoff --
 //
 
-void RollOptions::setHoleShiftCutoff(double value) { 
+void RollOptions::setHoleShiftCutoff(double value) {
 	m_holeShiftCutoff = value;
 }
 

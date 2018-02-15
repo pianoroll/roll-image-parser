@@ -25,9 +25,9 @@ namespace prp  {
 
 class PreTearInfo {
 	public:
-		ulong startindex = 0;
-		ulong endindex = 0;
-		ulong peakindex = 0;
+		ulongint startindex = 0;
+		ulongint endindex   = 0;
+		ulongint peakindex  = 0;
 		double peak = 0.0;
 };
 

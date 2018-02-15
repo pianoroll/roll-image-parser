@@ -25,16 +25,18 @@
 using namespace std;
 using namespace prp;
 
+typedef uint32_t ulongint;
+
 class DuplicateInfo {
 	public:
 		int count = 0;
-		vector<ulong> rows;
+		vector<ulongint> rows;
 };
 
 // function declarations:
-void   getRowCheckSums            (vector<ulong>& checksums, TiffFile& tfile);
+void   getRowCheckSums            (vector<ulongint>& checksums, TiffFile& tfile);
 void   identifyDuplicateFrames    (fstream& output, TiffFile& tfile, 
-                                   vector<ulong>& rowchecksums, ulong framesize);
+                                   vector<ulongint>& rowchecksums, ulongint framesize);
 void   markImageDuplicateFrame    (fstream& output, TiffFile& tfile, int color,
                                    int firstrow, int otherrow, int framesize,
                                    int dupnum);
@@ -61,7 +63,7 @@ int main(int argc, char** argv) {
 		exit(1);
 	}
 
-	ulong expected = tfile.getRows() * tfile.getCols() * 3;
+	ulongint expected = tfile.getRows() * tfile.getCols() * 3;
 	if (expected != tfile.getDataBytes()) {
 		cerr << "ERROR: image size does not match header information." << endl;
 		cerr << "STRIP BYTE COUNT " << tfile.getDataBytes() << endl;
@@ -70,7 +72,7 @@ int main(int argc, char** argv) {
 		exit(1);
 	}
 
-	vector<ulong> rowchecksums;
+	vector<ulongint> rowchecksums;
 	getRowCheckSums(rowchecksums, tfile);
 	//for (int i=0; i<(int)rowchecksums.size(); i++) {
 	//	cout << rowchecksums[i] << endl;
@@ -92,10 +94,10 @@ int main(int argc, char** argv) {
 //
 
 void identifyDuplicateFrames(fstream& output, TiffFile& tfile, 
-		vector<ulong>& rowchecksums, ulong framesize) {
+		vector<ulongint>& rowchecksums, ulongint framesize) {
 
-	map<ulong, DuplicateInfo> duplicates;
-	for (ulong i=0; i<rowchecksums.size(); i++) {
+	map<ulongint, DuplicateInfo> duplicates;
+	for (ulongint i=0; i<rowchecksums.size(); i++) {
 		duplicates[rowchecksums[i]].count++;
 		duplicates[rowchecksums[i]].rows.push_back(i);
 	}
@@ -103,11 +105,11 @@ void identifyDuplicateFrames(fstream& output, TiffFile& tfile,
 	int color = 2;
 	vector<int> marked(rowchecksums.size(), -1);
 
-	for (ulong i=0; i<rowchecksums.size(); i++) {
+	for (ulongint i=0; i<rowchecksums.size(); i++) {
 		if (marked[i] >0) {
 			continue;
 		}
-		ulong checksum = rowchecksums[i];
+		ulongint checksum = rowchecksums[i];
 		DuplicateInfo& di = duplicates[checksum];
 		if (di.count < 2) {
 			continue;
@@ -129,7 +131,7 @@ void identifyDuplicateFrames(fstream& output, TiffFile& tfile,
 			}
 		}
 
-		for (ulong j=1; j<di.rows.size(); j++) {
+		for (ulongint j=1; j<di.rows.size(); j++) {
 			int ii = di.rows[j];
 			if (!verifyDuplicate(tfile, i, ii)) {
 				continue;
@@ -141,7 +143,7 @@ void identifyDuplicateFrames(fstream& output, TiffFile& tfile,
 		}
 	}
 
-	//for (ulong i=0; i<marked.size(); i++) {
+	//for (ulongint i=0; i<marked.size(); i++) {
 	//	cerr << marked[i] << endl;
 	//}
 
@@ -198,7 +200,7 @@ void markImageDuplicateFrame(fstream& output, TiffFile& tfile, int color, int fi
 	}
 
 	int side = dupnum % 2;
-	ulong offset;
+	ulongint offset;
 
 	if (dupnum == 1) {
 		for (int i = 0; i<framesize; i++) {
@@ -222,14 +224,14 @@ void markImageDuplicateFrame(fstream& output, TiffFile& tfile, int color, int fi
 // getRowCheckSums -- Calculate checksums for each row of the image.
 //
 
-void getRowCheckSums(vector<ulong>& checksums, TiffFile& tfile) {
+void getRowCheckSums(vector<ulongint>& checksums, TiffFile& tfile) {
 	tfile.goToPixelIndex(0);
 	int rowbytecount = tfile.getCols() * 3;
 	string rowbytes;
 
 	checksums.resize(tfile.getRows());
-	ulong crc;
-	for (ulong i=0; i<tfile.getRows(); i++) {
+	ulongint crc;
+	for (ulongint i=0; i<tfile.getRows(); i++) {
 		rowbytes = tfile.readString(rowbytecount);
     	crc = crc32_fast(rowbytes.data(), rowbytecount, 0);
 		checksums[i] = crc;

@@ -20,8 +20,8 @@ namespace prp  {
 // ShiftInfo::ShiftInfo --
 //
 
-ShiftInfo::ShiftInfo(void) { 
-	clear(); 
+ShiftInfo::ShiftInfo(void) {
+	clear();
 }
 
 

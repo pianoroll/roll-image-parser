@@ -19,7 +19,7 @@
 
 namespace prp  {
 
-typedef unsigned long ulong;
+typedef uint32_t ulongint;
 
 class ShiftInfo {
 	public:
@@ -28,8 +28,8 @@ class ShiftInfo {
 		void     clear         (void);
 		std::ostream& printAton(std::ostream& out);
 
-		ulong  row;
-		double score;
+		ulongint    row;
+		double      score;
 		std::string id;
 };
 

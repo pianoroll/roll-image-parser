@@ -1,7 +1,7 @@
 //
 // Programmer:    Craig Stuart Sapp <craig@ccrma.stanford.edu>
 // Creation Date: Thu Nov 23 11:47:47 PST 2017
-// Last Modified: Sat Nov 25 12:29:32 PST 2017
+// Last Modified: Thu Feb 15 03:26:42 PST 2018
 // Filename:      TiffHeader.h
 // Web Address:   
 // Syntax:        C++;
@@ -25,44 +25,50 @@ namespace prp  {
 
 class TiffHeader {
 	public:
-		       TiffHeader          (void);
-		      ~TiffHeader          ();
-		void   clear               (void);
+		               TiffHeader          (void);
+		              ~TiffHeader          ();
+		void           clear               (void);
 
-		ulong  getRows             (void) const;
-		ulong  getCols             (void) const;
-		int    getOrientation      (void) const;
-		ulong  getDataOffset       (void) const;
-		ulong  getDataBytes        (void) const;
-		double getRowDpi           (void) const;
-		double getColDpi           (void) const;
-		ulong  getPixelOffset      (ulong pindex) const;
-		ulong  getPixelOffset      (ulong rindex, ulong cindex) const;
-		ulong  getPixelCount       (void) const;
-
-		bool   parseHeader         (std::fstream& input);
+		ulongint       getRows             (void) const;
+		ulongint       getCols             (void) const;
+		int            getOrientation      (void) const;
+		ulonglongint   getDataOffset       (void) const;
+		ulonglongint   getDataBytes        (void) const;
+		double         getRowDpi           (void) const;
+		double         getColDpi           (void) const;
+		ulongint       getPixelOffset      (ulongint pindex) const;
+		ulongint       getPixelOffset      (ulongint rindex, ulongint cindex) const;
+		ulongint       getPixelCount       (void) const;
+		void           setBigTiff          (void);
+		bool           isBigTiff           (void);
+		bool           parseHeader         (std::fstream& input);
 
 	protected:
-		void   setOrientation      (int value);
-		void   setRows             (ulong value);
-		void   setCols             (ulong value);
-		void   setRowDpi           (double value);
-		void   setColDpi           (double value);
-		void   setDataBytes        (ulong value);
-		void   setDataOffset       (ulong value);
+		void           setOrientation      (int value);
+		void           setRows             (ulongint value);
+		void           setCols             (ulongint value);
+		void           setRowDpi           (double value);
+		void           setColDpi           (double value);
+		void           setDataBytes        (ulonglongint value);
+		void           setDataOffset       (ulonglongint value);
+		ulonglongint   readEntryUInteger   (std::fstream& input, int datatype, ulonglongint count, int tag = -1);
+		double         readType5Value      (std::fstream& input, int datatype, ulonglongint count, int tag = -1);
+		bool           goToByteIndex       (std::fstream& input, ulongint offset);
+		bool           goToByteIndex       (std::fstream& input, ulonglongint offset);
 
 	private:
-		bool   parseDirectory      (std::fstream& input, ulong diroffset);
-		bool   readDirectoryEntry  (std::fstream& input);
+		bool           parseDirectory      (std::fstream& input, ulonglongint diroffset);
+		bool           readDirectoryEntry  (std::fstream& input);
 
 	private:
-		ulong  m_rows;
-		ulong  m_cols;
-		int    m_orientation;
-		ulong  m_dataoffset;
-		ulong  m_databytes;
-		double m_rowdpi;
-		double m_coldpi;
+		ulongint       m_rows        = 0;
+		ulongint       m_cols        = 0;
+		int            m_orientation = 0;
+		ulonglongint   m_dataoffset  = 0;
+		ulonglongint   m_databytes   = 0;
+		double         m_rowdpi      = 0.0;
+		double         m_coldpi      = 0.0;
+		bool           m_64bitQ      = false;
 };
 
 

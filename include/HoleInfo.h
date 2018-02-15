@@ -22,21 +22,23 @@
 
 namespace prp  {
 
-typedef unsigned long ulong;
-typedef unsigned short ushort;
-typedef unsigned char uchar;
+typedef int64_t  longlong;
+typedef uint64_t ulonglongint;
+typedef uint32_t ulongint;
+typedef uint16_t ushort;
+typedef uint8_t  uchar;
 
 class HoleInfo {
 	public:
 		         HoleInfo     (void);
 		        ~HoleInfo     ();
 
-		std::pair<ulong, ulong>   origin;       // Row, Column of origin (top let corner)
-		std::pair<ulong, ulong>   width;        // Row, Column widths.
-		std::pair<double, double> centroid;     // Center of mass
-		std::pair<ulong, ulong>   entry;        // entry point for filling holes
-		ulong                     track;        // tracker hole index
-		ulong                     area;         // area of hole
+		std::pair<ulongint, ulongint> origin;   // Row, Column of origin (top let corner)
+		std::pair<ulongint, ulongint> width;    // Row, Column widths.
+		std::pair<double, double>     centroid; // Center of mass
+		std::pair<ulongint, ulongint> entry;    // entry point for filling holes
+		ulongint                  track;        // tracker hole index
+		ulongint                  area;         // area of hole
 		double                    circularity;  // circularity of hole
 		double                    perimeter;    // outer contour of hole
 		double                    majoraxis;    // angle of longest axis
@@ -48,7 +50,7 @@ class HoleInfo {
 		double                    prevOff;      // distance from onset to offset of previous hole in track
 		bool                      attack;       // true if note attack false otherwise
 		bool                      snakebite;    // true if part of melody highlighting
-		ulong                     offtime;      // if attack==true, then this is the offtime of the note
+		ulongint                  offtime;      // if attack==true, then this is the offtime of the note
 		int                       midikey;      // MIDI key number for note
 
 		void     clear            (void);

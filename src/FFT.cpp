@@ -3,7 +3,7 @@
 // Creation Date: Thu Dec  7 22:24:12 PST 2017
 // Last Modified: Thu Dec  7 22:24:15 PST 2017
 // Filename:      FFT.cpp
-// Web Address:   
+// Web Address:
 // Syntax:        C++
 // vim:           ts=3:nowrap:ft=text
 //
@@ -12,6 +12,8 @@
 
 
 #include "FFT.h"
+
+#ifndef DONOTUSEFFT
 
 #include <iostream>
 
@@ -41,9 +43,9 @@ bool isPowerOfTwo(int value) {
 
 void FFT(std::vector<mycomplex>& output, std::vector<mycomplex>& input) {
    int N = input.size();
- 
+
    if (!isPowerOfTwo(N)) {
-      std::cerr << "You can only take the FFT of a block with length being" 
+      std::cerr << "You can only take the FFT of a block with length being"
            << " a power of 2.\nRequested transform length: " << N << std::endl;
       exit(1);
    }
@@ -103,7 +105,7 @@ mycomplex cexp(mycomplex& Z) {
 
 //////////////////////////////
 //
-// dftmerge -- put DFTs back together 
+// dftmerge -- put DFTs back together
 //
 
 void dftmerge(std::vector<mycomplex>& XF) {
@@ -127,12 +129,12 @@ void dftmerge(std::vector<mycomplex>& XF) {
             XF[q] = A - B;
          }
          V = V * W;                  // V = VW = W**(k+1)
-      }    
+      }
       M = 2 * M;                     // next stage
    }
 }
 
- 
+
 
 //////////////////////////////
 //
@@ -140,7 +142,7 @@ void dftmerge(std::vector<mycomplex>& XF) {
 //
 
 void swap(mycomplex& a, mycomplex& b) {
-   mycomplex temp = a;   
+   mycomplex temp = a;
    a = b;
    b = temp;
 }
@@ -168,3 +170,4 @@ int bitrev(int n, int B) {
 } // end namespace prp
 
 
+#endif /* DONOTUSEFFT */

@@ -25,8 +25,8 @@ namespace prp  {
 // HoleInfo::HoleInfo --
 //
 
-HoleInfo::HoleInfo(void) { 
-	clear(); 
+HoleInfo::HoleInfo(void) {
+	clear();
 }
 
 

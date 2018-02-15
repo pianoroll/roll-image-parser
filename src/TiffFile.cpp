@@ -3,7 +3,7 @@
 // Creation Date: Thu Nov 23 11:47:47 PST 2017
 // Last Modified: Sat Nov 25 18:24:51 PST 2017
 // Filename:      TiffFile.cpp
-// Web Address:   
+// Web Address:
 // Syntax:        C++;
 // vim:           ts=3:nowrap:ft=text
 //
@@ -82,8 +82,20 @@ bool TiffFile::open(const std::string& filename) {
 // TiffFile::goToByteIndex --
 //
 
-bool TiffFile::goToByteIndex(ulong offset) {
-	seekg(offset, this->beg);
+bool TiffFile::goToByteIndex(ulonglongint offset) {
+	if (offset <= (ulonglongint)0xffffffff) {
+		seekg((ulongint)offset, this->beg);
+	} else {
+		seekg((ulongint)0xffffffff, this->beg);
+		ulonglongint amount = offset - 0xffffffff;
+		while (amount > (ulonglongint)0xffffffff) {
+			seekg((ulongint)0xffffffff, this->cur);
+			amount -= (ulonglongint)0xffffffff;
+		}
+		if (amount > 0) {
+			seekg((ulongint)amount, this->cur);
+		}
+	}
 	return true;
 }
 
@@ -94,7 +106,7 @@ bool TiffFile::goToByteIndex(ulong offset) {
 // TiffFile::readLittleEndian2ByteUInt --
 //
 
-ushort TiffFile::readLittleEndian2ByteUInt(void) {
+ushortint TiffFile::readLittleEndian2ByteUInt(void) {
 	return prp::readLittleEndian2ByteUInt(*this);
 }
 
@@ -105,7 +117,7 @@ ushort TiffFile::readLittleEndian2ByteUInt(void) {
 // TiffFile::read1UByte --
 //
 
-uchar TiffFile::read1UByte(void) {
+ucharint TiffFile::read1UByte(void) {
 	return prp::read1UByte(*this);
 }
 
@@ -116,7 +128,7 @@ uchar TiffFile::read1UByte(void) {
 // TiffFile::readString --
 //
 
-std::string TiffFile::readString(ulong count) {
+std::string TiffFile::readString(ulongint count) {
 	return prp::readString(*this, count);
 }
 
@@ -127,8 +139,8 @@ std::string TiffFile::readString(ulong count) {
 // TiffFile::readString -- Hard-coded to 24-bit pixels for now.
 //
 
-bool TiffFile::goToPixelIndex(ulong pindex) {
-	seekg(this->getDataOffset() + pindex * 3);
+bool TiffFile::goToPixelIndex(ulonglongint pindex) {
+	goToByteIndex(this->getDataOffset() + pindex * 3);
 	return true;
 }
 
@@ -139,8 +151,8 @@ bool TiffFile::goToPixelIndex(ulong pindex) {
 // TiffFile::goToRowColumnIndex -- Hard-coded to 24-bit pixels for now.
 //
 
-bool TiffFile::goToRowColumnIndex(ulong rowindex, ulong colindex) {
-	ulong offset = rowindex * 3 * this->getCols() + colindex * 3;
+bool TiffFile::goToRowColumnIndex(ulongint rowindex, ulongint colindex) {
+	ulonglongint offset = rowindex * 3 * this->getCols() + colindex * 3;
 	seekg(this->getDataOffset() + offset);
 	return true;
 }
@@ -149,18 +161,18 @@ bool TiffFile::goToRowColumnIndex(ulong rowindex, ulong colindex) {
 
 //////////////////////////////
 //
-// TiffFile::getImageGreenChannel -- 
+// TiffFile::getImageGreenChannel --
 //
 
-void TiffFile::getImageGreenChannel(std::vector<std::vector<uchar>>& image) {
-	this->goToPixelIndex(0);
-	ulong rows = this->getRows();
-	ulong cols = this->getCols();
-	std::vector<uchar> pixel(3);
+void TiffFile::getImageGreenChannel(std::vector<std::vector<ucharint>>& image) {
+	this->goToPixelIndex((int)0);
+	ulongint rows = this->getRows();
+	ulongint cols = this->getCols();
+	std::vector<ucharint> pixel(3);
 	image.resize(rows);
-	for (ulong r=0; r<rows; r++) {
+	for (ulongint r=0; r<rows; r++) {
 		image.at(r).resize(cols);
-		for (ulong c=0; c<cols; c++) {
+		for (ulongint c=0; c<cols; c++) {
 			pixel[0] = this->read1UByte();  // red
 			pixel[1] = this->read1UByte();  // green
 			pixel[2] = this->read1UByte();  // blue
