@@ -578,8 +578,16 @@ ulonglongint TiffHeader::readEntryUInteger(std::fstream& input, int datatype,
 		if (this->isBigTiff()) {
 			readLittleEndian4ByteUInt(input);
 		}
+	} else if (datatype == 16) { // unsigned long long
+		if (this->isBigTiff()) {
+			output = readLittleEndian8ByteUInt(input);
+		} else {
+			std::cerr << "32-bit TIFF images should not have this data type." << std::endl;
+			exit(1);
+		}
 	} else {
 		std::cerr << "Unknown directory entry data type: " << datatype << std::endl;
+		std::cerr << "For TIFF tag " << tag << std::endl;
 		exit(1);
 	}
 
