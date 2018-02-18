@@ -1,13 +1,13 @@
 //
 // Programmer:    Craig Stuart Sapp <craig@ccrma.stanford.edu>
-// Creation Date: Fri Feb 16 21:39:57 PST 2018
-// Last Modified: Fri Feb 16 21:40:00 PST 2018
-// Filename:      tifflength.cpp
+// Creation Date: Sat Feb 17 14:47:22 PST 2018
+// Last Modified: Sat Feb 17 14:47:25 PST 2018
+// Filename:      tifforientation.cpp
 // Web Address:   
 // Syntax:        C++
 // vim:           ts=3:nowrap:ft=text
 //
-// Description:   Returns the number of rows in the TIFF image.  Works on 32-bit TIFFs as
+// Description:   Returns the orientation of the TIFF image.  Works on 32-bit TIFFs as
 //                well as 64-bit TIFFs (tiffinfo program only works on 32-bit TIFFs).
 //
 
@@ -33,7 +33,7 @@ int main(int argc, char** argv) {
 		exit(1);
 	}
 
-	cout << image.getRows() << endl;
+	cout << image.getOrientation() << endl;
 
 	return 0;
 }

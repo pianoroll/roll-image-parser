@@ -78,7 +78,7 @@ class RollImage : public TiffFile, public RollOptions {
 		                 RollImage                    (void);
 		                ~RollImage                    ();
 
-		void	          loadGreenChannel              (void);
+		void	          loadGreenChannel              (int threshold);
 		void            analyze                       (void);
 		void            analyzeHoles                  (void);
 		void            mergePixelOverlay             (std::fstream& output);
@@ -132,6 +132,8 @@ class RollImage : public TiffFile, public RollOptions {
 		void            setDebugOff                   (void);
 		void            setWarningOn                  (void);
 		void            setWarningOff                 (void);
+		void            setThreshold                  (int value);
+		ucharint        getThreshold                  (void);
 
 		// pixelType: a bitmask which contains enumerated types for the
 		// functions of pixels (the PIX_* defines above):
@@ -139,7 +141,7 @@ class RollImage : public TiffFile, public RollOptions {
 
 		// monochrome: a monochrome version of the roll image (typically
 		// the green channel):
-		std::vector<std::vector<uchar>>   monochrome;
+		std::vector<std::vector<ucharint>>   monochrome;
 
 		// leftMarginIndex: The row-by-row margin to the left roll edge:
 		std::vector<int>                  leftMarginIndex;
@@ -286,6 +288,7 @@ class RollImage : public TiffFile, public RollOptions {
 		bool       m_analyzedAdvancedMargins   = false;
 		int        hardMarginLeftIndex         = 0;
 		int        hardMarginRightIndex        = 0;
+		int        m_threshold                 = 255;
 		ulongint   preleaderIndex              = 0;
 		ulongint   leaderIndex                 = 0;
 		ulongint   firstMusicRow               = 0;

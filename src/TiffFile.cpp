@@ -153,7 +153,7 @@ bool TiffFile::goToPixelIndex(ulonglongint pindex) {
 
 bool TiffFile::goToRowColumnIndex(ulongint rowindex, ulongint colindex) {
 	ulonglongint offset = rowindex * 3 * this->getCols() + colindex * 3;
-	seekg(this->getDataOffset() + offset);
+	goToByteIndex(this->getDataOffset() + offset);
 	return true;
 }
 
@@ -176,7 +176,7 @@ void TiffFile::getImageGreenChannel(std::vector<std::vector<ucharint>>& image) {
 			pixel[0] = this->read1UByte();  // red
 			pixel[1] = this->read1UByte();  // green
 			pixel[2] = this->read1UByte();  // blue
-			image.at(r).at(c) = pixel[2];
+			image.at(r).at(c) = pixel[1];
 		}
 	}
 }

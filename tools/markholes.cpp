@@ -38,9 +38,11 @@ int main(int argc, char** argv) {
 		exit(1);
 	}
 
+	int threshold = 249;
+
 	roll.setDebugOn();
 	roll.setWarningOn();
-	roll.loadGreenChannel();
+	roll.loadGreenChannel(threshold);
 	roll.analyze();
 	cerr << "DONE ANALYZING" << endl;
 	roll.printRollImageProperties();

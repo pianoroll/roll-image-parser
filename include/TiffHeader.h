@@ -36,9 +36,9 @@ class TiffHeader {
 		ulonglongint   getDataBytes        (void) const;
 		double         getRowDpi           (void) const;
 		double         getColDpi           (void) const;
-		ulongint       getPixelOffset      (ulongint pindex) const;
-		ulongint       getPixelOffset      (ulongint rindex, ulongint cindex) const;
-		ulongint       getPixelCount       (void) const;
+		ulonglongint   getPixelOffset      (ulonglongint pindex) const;
+		ulonglongint   getPixelOffset      (ulongint rindex, ulongint cindex) const;
+		ulonglongint   getPixelCount       (void) const;
 		void           setBigTiff          (void);
 		bool           isBigTiff           (void);
 		bool           parseHeader         (std::fstream& input);

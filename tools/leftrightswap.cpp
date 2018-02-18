@@ -64,7 +64,6 @@ int main(int argc, char** argv) {
 	ulong trailersize = endpos - position;
 	string trailer = image.readString(trailersize);
 	output.write(trailer.data(), trailer.size());
-	cerr << "TRAILER SIZE = " << trailersize << endl;
 
 	output.close();
 	return 0;

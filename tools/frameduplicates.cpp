@@ -47,7 +47,7 @@ bool   verifyDuplicate            (TiffFile& tfile, int row1, int row2);
 
 int main(int argc, char** argv) {
 	if (argc != 3) {
-		cerr << "Usage: frameduplicates file.tiff\n";
+		cerr << "Usage: frameduplicates input.tiff output.tiff\n";
 	}
 
 	TiffFile tfile;
@@ -182,6 +182,9 @@ bool verifyDuplicate(TiffFile& tfile, int row1, int row2) {
 
 void markImageDuplicateFrame(fstream& output, TiffFile& tfile, int color, int firstrow, 
 		int otherrow, int framesize, int dupnum) {
+if (firstrow % 30 == 0) {
+	cerr << "DUPLICATE FRAMES STARTING AT " << firstrow << " and " << otherrow << endl;
+}
 	vector<char> pixel;
 	pixel.resize(3);
 	switch (color % 3) {

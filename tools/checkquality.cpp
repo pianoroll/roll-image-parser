@@ -31,7 +31,7 @@ int main(int argc, char** argv) {
 		exit(1);
 	}
 
-	roll.loadGreenChannel();
+	roll.loadGreenChannel(255);
 	roll.analyze();
 	roll.printQualityReport();
 

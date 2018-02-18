@@ -10,6 +10,42 @@
 // Description:   Piano-roll description parameters.
 //
 
+///////////////////////////////////////////////////////////
+//
+// red Welte tracker holes:
+//
+//   10 expression on left side:
+//       1:  MF-Off                          MIDI Key 14
+//       2:  MF-On                           MIDI Key 15
+//       3:  Crescendo-Off                   MIDI Key 16
+//       4:  Crescendo-On                    MIDI Key 17
+//       5:  Forzando-Off                    MIDI Key 18
+//       6:  Forzando-On                     MIDI Key 19
+//       7:  Soft-Pedal-Off                  MIDI Key 20
+//       8:  Soft-Pedal-On                   MIDI Key 21
+//       9:  Motor-Off                       MIDI Key 21
+//       10: Motor-On                        MIDI Key 23
+//   Then 80 notes from C1 to G7 (MIDI note 24 to 103
+//       11: C1                              MIDI Key 24 
+//       ...
+//       50:  D#4                            MIDI Key 63
+//    Treble register:
+//       51:  E4                             MIDI Key 64
+//       ...
+//       90:  G7                             MIDI Key 103
+//   Then 10 expression holes on the right side:
+//       91:  -10: Rewind                    MIDI Key 104
+//       92:  -9:  Electric-Cutoff           MIDI Key 105
+//       93:  -8:  Sustain-Pedal-On          MIDI Key 106
+//       94:  -7:  Sustain-Pedal-Off         MIDI Key 107
+//       95:  -6:  Forzando-On               MIDI Key 108
+//       96:  -5:  Forzando-Off              MIDI Key 109
+//       97:  -4:  Crescendo-On              MIDI Key 110
+//       98:  -3:  Crescendo-Off             MIDI Key 111
+//       99:  -2:  Mezzo-Forte-Off           MIDI Key 112
+//       100: -1:  Mezzo-ForteCrescendo-Off  MIDI Key 113
+//
+
 
 #include "RollImage.h"
 #include "HoleInfo.h"
@@ -75,7 +111,8 @@ RollImage::~RollImage(void) {
 // RollImage::loadGreenChannel --
 //
 
-void RollImage::loadGreenChannel(void) {
+void RollImage::loadGreenChannel(int threshold) {
+	setThreshold(threshold);
 	ulongint rows = getRows();
 	ulongint cols = getCols();
 	this->getImageGreenChannel(monochrome);
@@ -83,7 +120,7 @@ void RollImage::loadGreenChannel(void) {
 	for (ulongint r=0; r<rows; r++) {
 		pixelType[r].resize(getCols());
 		for (ulongint c=0; c<cols; c++) {
-			if (aboveThreshold(monochrome[r][c], 255)) {
+			if (aboveThreshold(monochrome[r][c], getThreshold())) {
 				pixelType[r][c] = PIX_NONPAPER;
 			} else {
 				pixelType[r][c] = PIX_PAPER;
@@ -648,6 +685,7 @@ void RollImage::analyzeMidiKeyMapping(void) {
 	std::fill(midiToTrackMapping.begin(), midiToTrackMapping.end(), 0);
 
 	int adjustment = 64 - F4split;
+	adjustment -= 1;  // temporary fix for red Welte rolls.
 	for (int i=leftmostIndex; i<=rightmostIndex; i++) {
 		midiToTrackMapping.at(i + adjustment) = i;
 	}
@@ -2285,10 +2323,12 @@ void RollImage::getRawMargins(void) {
 	leftMarginIndex.resize(rows);
 	rightMarginIndex.resize(rows);
 
+	int startcol = 5; // starting a little off of the margin due to digital noise
+	                  // the second and third columns.
 	for (ulongint r=0; r<rows; r++) {
 		std::vector<ucharint>& rowdata = pixelType.at(r);
 		leftMarginIndex[r] = 0;
-		for (ulongint c=0; c<cols; c++) {
+		for (ulongint c=startcol; c<cols; c++) {
 			if (rowdata.at(c) == PIX_PAPER) {
 				leftMarginIndex[r] = c - 1;
 				break;
@@ -2303,7 +2343,7 @@ void RollImage::getRawMargins(void) {
 	for (ulongint r=0; r<rows; r++) {
 		std::vector<ucharint>& rowdata = pixelType.at(r);
 		rightMarginIndex[r] = 0;
-		for (int c=cols-1; c>=0; c--) {
+		for (int c=cols-1-startcol; c>=0; c--) {
 			if (rowdata.at(c) == PIX_PAPER) {
 				rightMarginIndex[r] = c + 1;
 				break;
@@ -2469,10 +2509,21 @@ void RollImage::analyzeLeaders(void) {
 	ulongint cols = getCols();
 	ulongint rows = getRows();
 
+cerr << ">>> COLUMNS " << getCols() << endl;
+cerr << ">>> ROWS " << getRows() << endl;
+
+//cerr << "LEFT MARGIN INDEX " << endl;
+//for (int zz=0; zz<(int)leftMarginIndex.size(); zz++) {
+//cerr << "\t" << leftMarginIndex[zz] << endl;
+//}
+//cerr << endl;
+
+	// Analyze the average margin width in a square region 4096x4096 at
+	// each corner of the image:
 	double topLeftAvg  = getAverage(leftMarginIndex, 0, cols);
 	double topRightAvg = getAverage(rightMarginIndex, 0, cols);
-	double botLeftAvg  = getAverage(leftMarginIndex, rows-1-4096, cols);
-	double botRightAvg = getAverage(rightMarginIndex, rows-1-4096, cols);
+	double botLeftAvg  = getAverage(leftMarginIndex, rows-1-cols, cols);
+	double botRightAvg = getAverage(rightMarginIndex, rows-1-cols, cols);
 
 	// std::cerr << "topLeftAvg = "  << topLeftAvg << std::endl;
 	// std::cerr << "topRightAvg = " << topRightAvg << std::endl;
@@ -2488,6 +2539,12 @@ void RollImage::analyzeLeaders(void) {
 		exit(1);
 	} else {
 		std::cerr << "Cannot find leader (deal with partial rolls later)." << std::endl;
+		std::cerr << "TOP LEFT SHOULD BE GREATER THAN BOTTOM LEFT:" << std::endl;
+		std::cerr << "   TOP    LEFT  AVERAGE " << topLeftAvg << std::endl;
+		std::cerr << "   BOTTOM LEFT  AVERAGE " << botLeftAvg << std::endl;
+		std::cerr << "TOP RIGHT SHOULD BE GREATER THAN BOTTOM RIGHT:" << std::endl;
+		std::cerr << "TOP    RIGHT AVERAGE " << topRightAvg << std::endl;
+		std::cerr << "BOTTOM RIGHT AVERAGE " << botRightAvg << std::endl;
 		exit(1);
 	}
 
@@ -2600,7 +2657,7 @@ ulongint RollImage::getBoundary(std::vector<int>& status) {
 void RollImage::mergePixelOverlay(std::fstream& output) {
 
 	std::vector<ucharint> pixel(3);
-	ulongint offset;
+	ulonglongint offset;
 	ulongint rows = getRows();
 	ulongint cols = getCols();
 
@@ -3529,7 +3586,9 @@ void RollImage::markTrackerPositions(bool showAll) {
 		endrow = getRows() - 1;
 	}
 
-	int cutoff = midiToTrackMapping.at(65);
+	// int cutoff = midiToTrackMapping.at(65);
+	// temporary fix for red Welte: Lowest pitch of treble register (E4)
+	int cutoff = midiToTrackMapping.at(64);
 
 	int c;
 	int color;
@@ -3966,21 +4025,21 @@ void RollImage::generateMidifile(MidiFile& midifile) {
 
 		// estimate the location of the expression tracks and the
 		// bass/treble register split (refine later):
-		if (key < 25) {
+		if (key < 24) {          // Bass expression: for red Welte specifically
 			track    = 3;
-			channel  = 3;
+			channel  = 0;
 			velocity = 1;
-		} else if (key < 65) {
+		} else if (key < 64) {   // Bass register: for red Welte specifically
 			track    = 1;
 			channel  = 1;
 			velocity = 64;
-		} else if (key < 104) {
+		} else if (key < 104) {  // Treble register: for red Welte specifically
 			track    = 2;
 			channel  = 2;
 			velocity = 64;
-		} else {
+		} else {                  // Treble expression: for red Welte specifically
 			track    = 4;
-			channel  = 4;
+			channel  = 3;
 			velocity = 1;
 		}
 		midifile.addNoteOn(track, hi->origin.first - mintime, channel, hi->midikey, velocity);
@@ -4453,6 +4512,28 @@ void RollImage::setWarningOn(void) {
 
 void RollImage::setWarningOff(void) {
 	m_warning = false;
+}
+
+
+
+//////////////////////////////
+//
+// RollImage::setThreshold --
+//
+
+void RollImage::setThreshold(int value) {
+	m_threshold = value;
+}
+
+
+
+//////////////////////////////
+//
+// RollImage::getThreshold --
+//
+
+ucharint RollImage::getThreshold(void) {
+	return (ucharint)m_threshold;
 }
 
 
