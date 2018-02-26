@@ -641,12 +641,14 @@ double TiffHeader::readType5Value(std::fstream& input, int datatype,
 //
 
 ulonglongint TiffHeader::getPixelOffset(ulonglongint pindex) const {
-	return getDataOffset() + 3 * pindex;
+	return (ulonglongint)getDataOffset() + (ulonglongint)3 * (ulonglongint)pindex;
 }
 
 
 ulonglongint TiffHeader::getPixelOffset(ulongint rindex, ulongint cindex) const {
-	return this->getDataOffset() + 3 * rindex * this->getCols() + 3 * cindex;
+	return (ulonglongint)this->getDataOffset() +
+			(ulonglongint)3 * (ulonglongint)rindex * (ulonglongint)this->getCols() +
+			(ulonglongint)3 * (ulonglongint)cindex;
 }
 
 

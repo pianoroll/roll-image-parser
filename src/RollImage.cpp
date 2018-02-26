@@ -42,8 +42,8 @@
 //       96:  -5:  Forzando-Off              MIDI Key 109
 //       97:  -4:  Crescendo-On              MIDI Key 110
 //       98:  -3:  Crescendo-Off             MIDI Key 111
-//       99:  -2:  Mezzo-Forte-Off           MIDI Key 112
-//       100: -1:  Mezzo-ForteCrescendo-Off  MIDI Key 113
+//       99:  -2:  Mezzo-Forte-On            MIDI Key 112
+//       100: -1:  Mezzo-Forte-Off           MIDI Key 113
 //
 
 
@@ -433,7 +433,10 @@ void RollImage::assignMidiKeyNumbersToHoles(void) {
 		if (track <= 0) {
 			continue;
 		}
-		for (ulongint j=0; j<trackerArray[track].size(); j++) {
+		if (track >= (int)trackerArray.size()) {
+			continue;
+		}
+		for (ulongint j=0; j<trackerArray.at(track).size(); j++) {
 			trackerArray[track][j]->midikey = i;
 		}
 	}
@@ -656,20 +659,33 @@ void RollImage::analyzeMidiKeyMapping(void) {
 		}
 	}
 
-	if (!trackerArray[rightmostIndex+1].empty()) {
+	if ((rightmostIndex < (int)trackerArray.size() - 1) && 
+			!trackerArray.at(rightmostIndex+1).empty()) {
 		rightmostIndex++;
 	}
-	if (!trackerArray[leftmostIndex-1].empty()) {
+
+	if (!trackerArray.at(leftmostIndex-1).empty()) {
 		leftmostIndex--;
 	}
 
-	if (trackerArray[rightmostIndex].empty() && trackerArray[leftmostIndex].empty()) {
+	if (trackerArray.at(rightmostIndex).empty() && trackerArray.at(leftmostIndex).empty()) {
+cerr << "GOT HERE AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" << endl;
 		// shrink if no holes in extreme positions of both sides
 		leftmostIndex++;
 		rightmostIndex--;
 	}
 
+	if (trackerArray[rightmostIndex].empty() && trackerArray[leftmostIndex].empty()) {
+cerr << "GOT HERE BBBBBBBBBBBBBBBBBBBBBBBBBBBBBB" << endl;
+		// shrink if no holes in extreme positions of both sides
+		leftmostIndex++;
+		rightmostIndex--;
+	}
+
+cerr << ">>>>>>>>>>>>>> LEFTMOST INDEX = " << leftmostIndex << endl;
+cerr << ">>>>>>>>>>>>>> RIGHTMOST INDEX = " << rightmostIndex << endl;
 	int holecount = rightmostIndex - leftmostIndex + 1;
+cerr << "HOLECOUNT " << holecount << " +++++++++++++++++++++++++++++++" << endl;
 	if (m_warning && (holecount > 100)) {
 		std::cerr << "Warning hole count is quite large: " << holecount << std::endl;
 	}
@@ -838,6 +854,7 @@ void RollImage::clearHole(HoleInfo& hi, int type) {
 // ggg problem area
 
 void RollImage::analyzeHorizontalHolePosition() {
+
 	int tcount = (getCols()+holeOffset) / holeSeparation;
 	trackerArray.resize(0);
 	trackerArray.resize(tcount);
@@ -882,6 +899,7 @@ void RollImage::assignMusicHoleIds(void) {
 	for (ulongint i=0; i<ta.size(); i++) {
 		counter = 1;
 		key = midiToTrackMapping[i];
+cerr << "++++++++++++++++++++++++ SIZE OF TRACKERARRAY " << i << " IS " << ta[i].size() << endl;
 		for (ulongint j=0; j<ta[i].size(); j++) {
 			if (!ta[i][j]->isMusicHole()) {
 				continue;
@@ -1074,7 +1092,6 @@ void RollImage::storeCorrectedCentroidHistogram(void) {
 //
 
 void RollImage::analyzeTrackerBarSpacing(void) {
-
 
 	ulongint leftside  = getHardMarginLeftIndex();
 	ulongint rightside = getHardMarginRightIndex();
@@ -2509,9 +2526,6 @@ void RollImage::analyzeLeaders(void) {
 	ulongint cols = getCols();
 	ulongint rows = getRows();
 
-cerr << ">>> COLUMNS " << getCols() << endl;
-cerr << ">>> ROWS " << getRows() << endl;
-
 //cerr << "LEFT MARGIN INDEX " << endl;
 //for (int zz=0; zz<(int)leftMarginIndex.size(); zz++) {
 //cerr << "\t" << leftMarginIndex[zz] << endl;
@@ -2867,7 +2881,7 @@ void RollImage::mergePixelOverlay(std::fstream& output) {
 
 			}
 			offset = this->getPixelOffset(r, c);
-			output.seekp(offset);
+			prp::goToByteIndex(output, offset);
 			output.write((char*)pixel.data(), 3);
 		}
 	}
@@ -3580,6 +3594,10 @@ void RollImage::markTrackerPositions(bool showAll) {
 		colend   = realcolend;
 	}
 
+	if (colend >= (int)trackerArray.size()) {
+		colend = (int)trackerArray.size() - 1;
+	}
+
 	ulongint startrow = getFirstMusicHoleStart() - 100;
 	ulongint endrow   = getLastMusicHoleEnd()    + 100;
 	if (endrow >= getRows()) {
@@ -3608,10 +3626,12 @@ void RollImage::markTrackerPositions(bool showAll) {
 			} else {
 				color = PIX_TRACKER_TREBLE;
 			}
-			if (i == realcolstart) {
+			if (i < realcolstart + 10) {
+				// expression tracks on the left (for red rolls only: need to generalize)
 				color = PIX_DEBUG7;
 			}
-			if (i == realcolend) {
+			if (i > realcolend-10) {
+				// expression tracks on the right (for red rolls only: need to generalize)
 				color = PIX_DEBUG7;
 			}
 			if ((i < realcolstart) || (i > realcolend)) {
@@ -4012,6 +4032,8 @@ void RollImage::generateMidifile(MidiFile& midifile) {
 	ulongint mintime = holes[0]->origin.first;
 	ulongint maxtime = 0;
 
+cerr << "GOT HERE TTT" << endl;
+
 	int track;
 	int key;
 	int channel;
@@ -4054,6 +4076,7 @@ void RollImage::generateMidifile(MidiFile& midifile) {
 			maxtime = hi->offtime;
 		}
 	}
+cerr << "GOT HERE UUU" << endl;
 
 	// add tempo correction
 	double timevalue = 1.0;
@@ -4065,8 +4088,10 @@ void RollImage::generateMidifile(MidiFile& midifile) {
 		curtime += 3600;
 		timevalue /= 1.0004;
 	}
+cerr << "GOT HERE MMM" << endl;
 
 	midifile.sortTracks();
+cerr << "GOT HERE NNN" << endl;
 }
 
 
@@ -4169,6 +4194,7 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 
 	out << "@@ Description of extracted parameters:\n";
 	out << "@@\n";
+	out << "@@ THRESHOLD:\t\t"         << "Threshold byte value for non-paper boundary" << std::endl;
 	out << "@@ IMAGE_WIDTH:\t\t"       << "Width of the input image in pixels." << std::endl;
 	out << "@@ IMAGE_LENGTH:\t"        << "Length of the input image in pixels." << std::endl;
 	out << "@@ ROLL_WIDTH:\t\t"        << "Measured average width of the piano-roll in pixels." << std::endl;
@@ -4228,6 +4254,7 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 	out << "@@ MANUAL_EDITS:\t\t"      << "Set this field to \"yes\" if any manual edits are made to this file." << std::endl;
 	out << "\n";
 
+	out << "@THRESHOLD:\t\t"         << getThreshold()                << "\n";
 	out << "@IMAGE_WIDTH:\t\t"       << getCols()                     << "px\n";
 	out << "@IMAGE_LENGTH:\t\t"      << getRows()                     << "px\n";
 	out << "@ROLL_WIDTH:\t\t"        << averageRollWidth              << "px\n";
@@ -4361,6 +4388,7 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 		out << "@@END: TEARS\n";
 	}
 
+
 	/// DRIFT /////////////////////////////////////////////////////////////
 	out << "\n\n";
 	out << "@@\n";
@@ -4425,7 +4453,6 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 		out << "@@END: SHIFTS\n";
 	}
 
-
 	out << "\n@@BEGIN: MIDIFILES\n\n";
 	out << "@MIDIFILE:\n";
 	stringstream ss;
@@ -4433,7 +4460,6 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 	out << ss.str();
 	out << "\n@@END: MIDIFILE\n";
 	out << "\n@@END: MIDIFILES\n\n";
-
 
 	// The following section is for displaying intermediate analysis data, mostly about
 	// the tracker bar position.

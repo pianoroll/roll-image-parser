@@ -195,6 +195,32 @@ void exponentialSmoothing(std::vector<double>& array, double gain) {
 }
 
 
+
+//////////////////////////////
+//
+// goToByteIndex -- Generalized to work with files larger than 4GB, especially
+//    when seekg cannot handle 64-bit integers.
+//
+
+bool goToByteIndex(std::fstream& file, ulonglongint offset) {
+	if (offset <= (ulonglongint)0xffffffff) {
+		file.seekg((ulongint)offset, std::ios::beg);
+	} else {
+		file.seekg((ulongint)0xffffffff, std::ios::beg);
+		ulonglongint amount = offset - 0xffffffff;
+		while (amount > (ulonglongint)0xffffffff) {
+			file.seekg((ulongint)0xffffffff, std::ios::cur);
+			amount -= (ulonglongint)0xffffffff;
+		}
+		if (amount > 0) {
+			file.seekg((ulongint)amount, std::ios::cur);
+		}
+	}
+	return true;
+}
+
+
+
 } // end namespace prp
 
 

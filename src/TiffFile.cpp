@@ -84,16 +84,16 @@ bool TiffFile::open(const std::string& filename) {
 
 bool TiffFile::goToByteIndex(ulonglongint offset) {
 	if (offset <= (ulonglongint)0xffffffff) {
-		seekg((ulongint)offset, this->beg);
+		seekg((ulongint)offset, std::ios::beg);
 	} else {
-		seekg((ulongint)0xffffffff, this->beg);
+		seekg((ulongint)0xffffffff, std::ios::beg);
 		ulonglongint amount = offset - 0xffffffff;
 		while (amount > (ulonglongint)0xffffffff) {
-			seekg((ulongint)0xffffffff, this->cur);
+			seekg((ulongint)0xffffffff, std::ios::cur);
 			amount -= (ulonglongint)0xffffffff;
 		}
 		if (amount > 0) {
-			seekg((ulongint)amount, this->cur);
+			seekg((ulongint)amount, std::ios::cur);
 		}
 	}
 	return true;

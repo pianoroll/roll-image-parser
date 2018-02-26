@@ -19,17 +19,16 @@ class DuplicateInfo {
 };
 
 // function declarations:
-void     getTiffHeader            (TiffHeader& header, fstream& input, int diroffset);
-ulongint    readEntryUInt            (fstream& input, int datatype, int count);
-void     readDirectoryEntry       (TiffHeader& header, fstream& input);
-double   readType5Value           (fstream& input, int datatype, int count);
-void     getRowCheckSums          (vector<ulongint>& checksums, fstream& input,
-                                   TiffHeader& header);
-void     identifyDuplicateFrames  (fstream& output, TiffHeader& header,
-                                   vector<ulongint>& rowchecksums, int framesize);
-void     markImageDuplicateFrame  (fstream& output, TiffHeader& header, int color,
-                                   int firstrow, int otherrow, int framesize,
-                                   int dupnum);
+void       getTiffHeader            (TiffHeader& header, fstream& input, int diroffset);
+ulongint    readEntryUInt           (fstream& input, int datatype, int count);
+void       readDirectoryEntry       (TiffHeader& header, fstream& input);
+double     readType5Value           (fstream& input, int datatype, int count);
+void       getRowCheckSums          (vector<ulongint>& checksums, fstream& input,
+                                     TiffHeader& header);
+void       identifyDuplicateFrames  (fstream& output, TiffHeader& header,
+                                     vector<ulongint>& rowchecksums, int framesize);
+void       markImageDuplicateFrame  (fstream& output, TiffHeader& header, int color,
+                                     int firstrow, int otherrow, int framesize, int dupnum);
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -171,14 +170,14 @@ void markImageDuplicateFrame(fstream& output, TiffHeader& header, int color,
 	if (dupnum == 1) {
 		for (int i = 0; i<framesize; i++) {
 			offset = header.dataoffset + (firstrow + i) * header.cols * 3;
-			output.seekp(offset, output.beg);
+			prp::goToByteIndex(output, offset);
 			output.write(quarterrow.data(), qsize * 3);
 		}
 	}
 
 	for (int i = 0; i<framesize; i++) {
 		offset = header.dataoffset + (otherrow + i) * header.cols * 3 + side * 3 * qsize * 3;
-		output.seekp(offset, output.beg);
+		prp::goToByteIndex(output, offset);
 		output.write(quarterrow.data(), qsize * 3);
 	}
 }
@@ -191,7 +190,7 @@ void markImageDuplicateFrame(fstream& output, TiffHeader& header, int color,
 //
 
 void getRowCheckSums(vector<ulongint>& checksums, fstream& input, TiffHeader& header) {
-	input.seekg(header.dataoffset);
+	prp::goToByteIndex(input, header.dataoffset);
 	int rowbytecount = header.cols * 3;
 	string rowbytes;
 

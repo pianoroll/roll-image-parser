@@ -42,7 +42,7 @@ int main(int argc, char** argv) {
 		exit(1);
 	}
 
-	ulong dataoffset = image.getDataOffset();
+	ulonglongint dataoffset = image.getDataOffset();
 
 	image.goToByteIndex(0);
 	string header = image.readString(dataoffset);
@@ -50,18 +50,18 @@ int main(int argc, char** argv) {
 	output.write(header.data(), header.size());
 
 	image.goToPixelIndex(0);  // should already be there, but being careful.
-	ulong rows = image.getRows();
+	ulongint rows = image.getRows();
 	
 	// assuming 24-bit color for now.
-	for (ulong r=0; r<rows; r++) {
+	for (ulongint r=0; r<rows; r++) {
 		flipRow(output, image);
 	}
 
-	ulong position = image.tellg();
-	image.seekg(0, image.end);
-	ulong endpos = image.tellg();
-	image.seekg(position, image.beg);
-	ulong trailersize = endpos - position;
+	ulonglongint position = image.tellg();
+	image.seekg(0, std::ios::end);
+	ulonglongint endpos = image.tellg();
+	prp::goToByteIndex(image, position);
+	ulonglongint trailersize = endpos - position;
 	string trailer = image.readString(trailersize);
 	output.write(trailer.data(), trailer.size());
 

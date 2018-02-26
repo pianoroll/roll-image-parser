@@ -43,6 +43,7 @@ int            getMaximum                 (std::vector<int>& array, ulongint sta
                                            ulongint length = 0);
 ulongint       maxValueIndex              (std::vector<ulongint> array);
 void           exponentialSmoothing       (std::vector<double>& array, double gain);
+bool           goToByteIndex              (std::fstream& file, ulonglongint offset);
 
 template <class TYPE>
 double         getAverage                 (std::vector<TYPE>& array, ulongint startindex = 0,

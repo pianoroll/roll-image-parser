@@ -63,7 +63,7 @@ int main(int argc, char** argv) {
 		exit(1);
 	}
 
-	ulongint expected = tfile.getRows() * tfile.getCols() * 3;
+	ulonglongint expected = (ulonglongint)tfile.getRows() * (ulonglongint)tfile.getCols() * (ulonglongint)3;
 	if (expected != tfile.getDataBytes()) {
 		cerr << "ERROR: image size does not match header information." << endl;
 		cerr << "STRIP BYTE COUNT " << tfile.getDataBytes() << endl;
@@ -182,9 +182,10 @@ bool verifyDuplicate(TiffFile& tfile, int row1, int row2) {
 
 void markImageDuplicateFrame(fstream& output, TiffFile& tfile, int color, int firstrow, 
 		int otherrow, int framesize, int dupnum) {
-if (firstrow % 30 == 0) {
-	cerr << "DUPLICATE FRAMES STARTING AT " << firstrow << " and " << otherrow << endl;
-}
+
+	if (firstrow % 30 == 0) {
+		cerr << "DUPLICATE FRAME PAIR AT " << firstrow << " and " << otherrow << endl;
+	}
 	vector<char> pixel;
 	pixel.resize(3);
 	switch (color % 3) {
@@ -203,7 +204,7 @@ if (firstrow % 30 == 0) {
 	}
 
 	int side = dupnum % 2;
-	ulongint offset;
+	ulonglongint offset;
 
 	if (dupnum == 1) {
 		for (int i = 0; i<framesize; i++) {
