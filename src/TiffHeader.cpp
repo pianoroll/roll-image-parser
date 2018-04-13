@@ -18,6 +18,8 @@
 
 #include "TiffHeader.h"
 
+#include <stdlib.h>
+
 
 namespace prp {
 

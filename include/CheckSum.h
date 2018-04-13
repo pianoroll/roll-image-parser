@@ -34,7 +34,7 @@ class CheckSum {
 
       // equivalent to the md5sum output by "md5sum" command:
       string               getMD5Sum (const string& data);
-      string               getMD5Sum (vector<vector<unsigned char>>& data);
+      string               getMD5Sum (vector<vector<unsigned char> >& data);
       void                 getMD5Sum (ostream& out, stringstream& data);
 
    protected:

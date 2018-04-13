@@ -33,10 +33,10 @@ class TiffFile : public std::fstream, public TiffHeader {
 		void        close                       (void);
 		bool        open                        (const std::string& filename);
 		bool        goToByteIndex               (ulonglongint offset);
-		ushort      readLittleEndian2ByteUInt   (void);
+		ushortint   readLittleEndian2ByteUInt   (void);
 		std::string readString                  (ulongint count);
 		ucharint    read1UByte                  (void);
-		void        getImageGreenChannel        (std::vector<std::vector<ucharint>>& image);
+		void        getImageGreenChannel        (std::vector<std::vector<ucharint> >& image);
 		bool        goToPixelIndex              (ulonglongint pindex);
 		bool        goToRowColumnIndex          (ulongint rowindex, ulongint colindex);
 

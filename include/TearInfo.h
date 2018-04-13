@@ -24,11 +24,21 @@
 namespace prp  {
 
 class PreTearInfo {
+	PreTearInfo(void) {
+		startindex = 0;
+		endindex   = 0;
+		peakindex  = 0;
+		peak = 0.0;
+	}
 	public:
-		ulongint startindex = 0;
-		ulongint endindex   = 0;
-		ulongint peakindex  = 0;
-		double peak = 0.0;
+//		ulongint startindex = 0;
+//		ulongint endindex   = 0;
+//		ulongint peakindex  = 0;
+//		double peak = 0.0;
+		ulongint startindex;
+		ulongint endindex;
+		ulongint peakindex;
+		double peak;
 };
 
 class TearInfo : public HoleInfo {

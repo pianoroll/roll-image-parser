@@ -70,14 +70,14 @@ ulongint readLittleEndian4ByteUInt(std::istream& input) {
 //      little-endian order (smallest byte is first).
 //
 
-ushort readLittleEndian2ByteUInt(std::istream& input) {
+ushortint readLittleEndian2ByteUInt(std::istream& input) {
    ucharint buffer[2];
    input.read((char*)buffer, 2);
    if (input.eof()) {
       std::cerr << "Error: unexpected end of file." << std::endl;
       return 0;
    }
-	ushort output = buffer[1];
+	ushortint output = buffer[1];
 	output = (output << 8) | buffer[0];
    return output;
 }

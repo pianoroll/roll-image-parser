@@ -452,7 +452,7 @@ void CheckSum::Decode (unsigned long *output, unsigned char *input,
 // CheckSum::getMD5Sum -- interface to the previous functions.
 //
 
-string CheckSum::getMD5Sum(vector<vector<unsigned char>>& data) {
+string CheckSum::getMD5Sum(vector<vector<unsigned char> >& data) {
 	MD5_CTX context;
 	MD5Init(&context);
 

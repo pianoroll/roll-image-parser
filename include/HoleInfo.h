@@ -22,11 +22,17 @@
 
 namespace prp  {
 
-typedef int64_t  longlong;
-typedef uint64_t ulonglongint;
-typedef uint32_t ulongint;
-typedef uint16_t ushort;
-typedef uint8_t  uchar;
+// typedef int64_t  longlong;
+// typedef uint64_t ulonglongint;
+// typedef uint32_t ulongint;
+// typedef uint16_t ushort;
+// typedef uint8_t  uchar;
+
+typedef long long  longlongint;
+typedef unsigned long long ulonglongint;
+typedef unsigned long  ulongint;
+typedef unsigned short  ushort;
+typedef unsigned char  uchar;
 
 class HoleInfo {
 	public:

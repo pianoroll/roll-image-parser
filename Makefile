@@ -57,6 +57,7 @@ PREFLAGS += -O3 -Wall
 # using C++ 2011 standard in Humlib:
 #PREFLAGS += -std=c++14 -fext-numeric-literals
 #PREFLAGS += -std=c++14
+PREFLAGS += -std=c++98
 #PREFLAGS += -std=c++11
 
 # Add -static flag to compile without dynamics libraries for better portability:

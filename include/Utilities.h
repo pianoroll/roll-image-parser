@@ -24,11 +24,17 @@
 
 namespace prp {
 
-typedef int64_t  longlongint;
-typedef uint64_t ulonglongint;
-typedef uint32_t ulongint;
-typedef uint16_t ushortint;
-typedef uint8_t  ucharint;
+//typedef int64_t  longlongint;
+//typedef uint64_t ulonglongint;
+//typedef uint32_t ulongint;
+//typedef uint16_t ushortint;
+//typedef uint8_t  ucharint;
+
+typedef long long longlongint;
+typedef unsigned long long ulonglongint;
+typedef unsigned long ulongint;
+typedef unsigned short ushortint;
+typedef unsigned char ucharint;
 
 // File reading functions
 ulonglongint   readLittleEndian8ByteUInt  (std::istream& input);

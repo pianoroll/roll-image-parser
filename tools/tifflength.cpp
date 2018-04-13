@@ -16,6 +16,8 @@
 #include <vector>
 #include <iostream>
 
+#include <stdlib.h>
+
 using namespace std;
 using namespace prp;
 

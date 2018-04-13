@@ -61,14 +61,24 @@ class TiffHeader {
 		bool           readDirectoryEntry  (std::fstream& input);
 
 	private:
-		ulongint       m_rows        = 0;
-		ulongint       m_cols        = 0;
-		int            m_orientation = 0;
-		ulonglongint   m_dataoffset  = 0;
-		ulonglongint   m_databytes   = 0;
-		double         m_rowdpi      = 0.0;
-		double         m_coldpi      = 0.0;
-		bool           m_64bitQ      = false;
+
+	//	ulongint       m_rows        = 0;
+	//	ulongint       m_cols        = 0;
+	//	int            m_orientation = 0;
+	//	ulonglongint   m_dataoffset  = 0;
+	//	ulonglongint   m_databytes   = 0;
+	//	double         m_rowdpi      = 0.0;
+	//	double         m_coldpi      = 0.0;
+	//	bool           m_64bitQ      = false;
+
+		ulongint       m_rows;
+		ulongint       m_cols;
+		int            m_orientation;
+		ulonglongint   m_dataoffset;
+		ulonglongint   m_databytes;
+		double         m_rowdpi;
+		double         m_coldpi;
+		bool           m_64bitQ;
 };
 
 

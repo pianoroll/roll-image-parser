@@ -19,7 +19,8 @@
 
 namespace prp  {
 
-typedef uint32_t ulongint;
+// typedef uint32_t ulongint;
+typedef unsigned long ulongint;
 
 class ShiftInfo {
 	public:

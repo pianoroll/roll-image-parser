@@ -66,8 +66,52 @@ namespace prp {
 //
 
 RollImage::RollImage(void) {
-	// do nothing
+	clear();
 }
+
+//////////////////////////////
+//
+// RollImage::my_to_string --
+//
+
+string RollImage::my_to_string(int value) {
+	stringstream stream;
+	stream << value;
+	return stream.str();
+}
+
+
+
+//////////////////////////////
+//
+// RollImage::clear --
+//
+
+void RollImage::clear(void) {
+	holeSeparation = 0.0;
+	holeOffset = 0.0;
+	averageRollWidth = 0.0;
+	m_debug                     = false;
+	m_warning                   = false;
+	m_analyzedBasicMargins      = false;
+	m_analyzedLeaders           = false;
+	m_analyzedAdvancedMargins   = false;
+	hardMarginLeftIndex         = 0;
+	hardMarginRightIndex        = 0;
+	m_threshold                 = 255;
+	preleaderIndex              = 0;
+	leaderIndex                 = 0;
+	firstMusicRow               = 0;
+	lastMusicRow                = 0;
+	m_lastHolePosition          = 0.0;
+	m_firstHolePosition         = 0.0;
+	m_dustscore                 = -1.0;
+	m_dustscorebass             = -1.0;
+	m_dustscoretreble           = -1.0;
+	m_averageHoleWidth          = -1.0;
+
+}
+
 
 
 
@@ -137,7 +181,9 @@ void RollImage::loadGreenChannel(int threshold) {
 //
 
 void RollImage::analyze(void) {
+#ifndef DONOTUSEFFT
 	start_time = std::chrono::system_clock::now();
+#endif
 
 	if (m_debug) { cerr << "STEP 1: analyzeBasicMargins" << endl; }
 	analyzeBasicMargins();
@@ -190,7 +236,9 @@ void RollImage::analyze(void) {
 	analyzeSnakeBites();
 	if (m_debug) { cerr << "STEP 24: FINSHED WITH ANALYSIS!" << endl; }
 
+#ifndef DONOTUSEFFT
 	stop_time = std::chrono::system_clock::now();
+#endif
 }
 
 
@@ -204,6 +252,8 @@ void RollImage::analyze(void) {
 //
 
 void RollImage::analyzeSnakeBites(void) {
+
+#ifndef DONOTUSEFFT
 	std::vector<double> avgwidth(trackerArray.size(), 0.0);
 	ulongint count;
 
@@ -222,7 +272,7 @@ void RollImage::analyzeSnakeBites(void) {
 	}
 
 	std::pair<double, int> a;
-	std::vector<std::pair<double, int>> sortlist;
+	std::vector<std::pair<double, int> > sortlist;
 	for (ulongint i=0; i<avgwidth.size(); i++) {
 		if (avgwidth[i] == 0) {
 			continue;
@@ -295,6 +345,7 @@ void RollImage::analyzeSnakeBites(void) {
 			trackerArray[index][j]->snakebite = true;
 		}
 	}
+#endif
 }
 
 
@@ -722,7 +773,7 @@ void RollImage::analyzeMidiKeyMapping(void) {
 // Later move from holes to antidust as well as removing from trackerArray
 // std::vector<HoleInfo*> antidust;
 // std::vector<HoleInfo*> holes;
-// std::vector<std::vector<HoleInfo*>> trackerArray;
+// std::vector<std::vector<HoleInfo*> > trackerArray;
 //
 
 void RollImage::invalidateEdgeHoles(void) {
@@ -887,7 +938,7 @@ void RollImage::analyzeHorizontalHolePosition() {
 //
 
 void RollImage::assignMusicHoleIds(void) {
-	vector<vector<HoleInfo*>>& ta = trackerArray;
+	vector<vector<HoleInfo*> >& ta = trackerArray;
 
 	ulongint counter;
 	ulongint key;
@@ -898,7 +949,7 @@ void RollImage::assignMusicHoleIds(void) {
 			if (!ta[i][j]->isMusicHole()) {
 				continue;
 			}
-			ta[i][j]->id = "K" + to_string(key) + "_N" + to_string(counter++);
+			ta[i][j]->id = "K" + my_to_string(key) + "_N" + my_to_string(counter++);
 		}
 	}
 }
@@ -980,7 +1031,7 @@ double RollImage::getTrackerShiftScore(double shift) {
 //
 
 void RollImage::analyzeRawRowPositions(void) {
-	std::vector<pair<double, int>>& rrp = rawRowPositions;
+	std::vector<pair<double, int> >& rrp = rawRowPositions;
 	rrp.resize(0);
 
 	std::vector<int>& cch = correctedCentroidHistogram;
@@ -1000,7 +1051,7 @@ void RollImage::analyzeRawRowPositions(void) {
 //
 
 void RollImage::calculateTrackerSpacings2(void) {
-	std::vector<pair<double, int>>& rrp = rawRowPositions;
+	std::vector<pair<double, int> >& rrp = rawRowPositions;
 	if (rrp.empty()) {
 		return;
 	}
@@ -1029,7 +1080,7 @@ void RollImage::calculateTrackerSpacings2(void) {
 //
 
 ulongint RollImage::storeWeightedCentroidGroup(ulongint startindex) {
-	std::vector<pair<double, int>>& rrp = rawRowPositions;
+	std::vector<pair<double, int> >& rrp = rawRowPositions;
 	std::vector<int>& cch = correctedCentroidHistogram;
 
 	ulongint holesum = 0;
@@ -3161,7 +3212,7 @@ ulongint RollImage::getFirstMusicHoleStart(void) {
 
 void RollImage::recalculateFirstMusicHole(void) {
 	ulongint minrow = getRows() - 1;
-	std::vector<std::vector<HoleInfo*>>& ta = trackerArray;
+	std::vector<std::vector<HoleInfo*> >& ta = trackerArray;
 	ulongint row;
 	for (ulongint i=0; i<ta.size(); i++) {
 		for (ulongint j=0; j<ta[i].size(); j++) {
@@ -3839,6 +3890,8 @@ double RollImage::getDustScoreTreble(void) {
 //
 
 void RollImage::sortBadHolesByArea(void) {
+
+#ifndef DONOTUSEFFT
 	if (badHoles.size() <= 1) {
 		// nothing to do.
 		return;
@@ -3850,6 +3903,7 @@ void RollImage::sortBadHolesByArea(void) {
 				return a->area > b->area;
 			}
 		);
+#endif
 }
 
 
@@ -3862,6 +3916,7 @@ void RollImage::sortBadHolesByArea(void) {
 //
 
 void RollImage::sortShiftsByAmount(void) {
+#ifndef DONOTUSEFFT
 	if (shifts.size() <= 1) {
 		// nothing to do
 		return;
@@ -3873,6 +3928,7 @@ void RollImage::sortShiftsByAmount(void) {
 				return fabs(a->score) > fabs(b->score);
 			}
 		);
+#endif
 }
 
 
@@ -3884,6 +3940,7 @@ void RollImage::sortShiftsByAmount(void) {
 //
 
 void RollImage::sortTearsByArea(void) {
+#ifndef DONOTUSEFFT
 	if (bassTears.size() >= 1) {
 		std::sort(bassTears.begin(), bassTears.end(),
 			[](TearInfo* a, TearInfo* b) -> bool
@@ -3900,6 +3957,7 @@ void RollImage::sortTearsByArea(void) {
 				}
 			);
 	}
+#endif
 }
 
 
@@ -4168,9 +4226,11 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 	}
 	double driftrange = driftmax - driftmin;
 
+#ifndef DONOTUSEFFT
 	std::chrono::duration<double> processing_time = stop_time - start_time;
 	std::chrono::system_clock::time_point nowtime = std::chrono::system_clock::now();
 	std::time_t current_time = std::chrono::system_clock::to_time_t(nowtime);
+#endif
 
 	out << "@@ This file describes features extracted from a scan of a piano roll.\n";
 	out << "@@ The contents of this file can be converted to JSON format with the\n";
@@ -4277,8 +4337,10 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 	out << "@HOLE_OFFSET:\t\t"       << holeOffset                    << "px\n";
 	out << "@TRACKER_HOLES:\t\t"     << trackerholes                  << " (estimate)\n";
 	out << "@SOFTWARE_DATE:\t\t"     << __DATE__ << " " << __TIME__ << endl;
+#ifndef DONOTUSEFFT
 	out << "@ANALYSIS_DATE:\t\t"     << std::ctime(&current_time);
 	out << "@ANALYSIS_TIME:\t\t"     << int(processing_time.count()*100.0+0.5)/100.0 << "sec" << endl;
+#endif
 	out << "@COLOR_CHANNEL:\t\t"     << "green"                       << endl;
 	out << "@CHANNEL_MD5:\t\t"       << getDataMD5Sum()               << endl;
 	out << "@MANUAL_EDITS:\t\t"      << "no"                          << endl;
@@ -4329,7 +4391,7 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 			string id = "bad";
 			if (i+1 < 100) { id += "0"; }
 			if (i+1 < 10 ) { id += "0"; }
-			id += to_string(i+1);
+			id += my_to_string(i+1);
 			badHoles.at(i)->id = id;
 		}
 		out << "\n\n";
@@ -4351,7 +4413,7 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 				string id = "trebletear";
 				if (i+1 < 100) { id += "0"; }
 				if (i+1 < 10 ) { id += "0"; }
-				id += to_string(i+1);
+				id += my_to_string(i+1);
 				trebleTears.at(i)->id = id;
 			}
 			out << "@@BEGIN: TREBLE_TEARS\n";
@@ -4365,7 +4427,7 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 				string id = "basstear";
 				if (i+1 < 100) { id += "0"; }
 				if (i+1 < 10 ) { id += "0"; }
-				id += to_string(i+1);
+				id += my_to_string(i+1);
 				bassTears.at(i)->id = id;
 			}
 			out << "\n@@BEGIN: BASS_TEARS\n";
@@ -4418,7 +4480,7 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 			string id = "shift";
 			if (i+1 < 100) { id += "0"; }
 			if (i+1 < 10 ) { id += "0"; }
-			id += to_string(i+1);
+			id += my_to_string(i+1);
 			shifts.at(i)->id = id;
 		}
 		out << "\n\n";

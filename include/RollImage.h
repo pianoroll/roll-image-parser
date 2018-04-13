@@ -19,7 +19,10 @@
 #include <utility>
 #include <string>
 #include <ctime>
-#include <chrono>
+
+#ifndef DONOTUSEFFT
+   #include <chrono>
+#endif
 
 #include "TiffFile.h"
 #include "HoleInfo.h"
@@ -137,11 +140,11 @@ class RollImage : public TiffFile, public RollOptions {
 
 		// pixelType: a bitmask which contains enumerated types for the
 		// functions of pixels (the PIX_* defines above):
-		std::vector<std::vector<pixtype>> pixelType;
+		std::vector<std::vector<pixtype> > pixelType;
 
 		// monochrome: a monochrome version of the roll image (typically
 		// the green channel):
-		std::vector<std::vector<ucharint>>   monochrome;
+		std::vector<std::vector<ucharint> >   monochrome;
 
 		// leftMarginIndex: The row-by-row margin to the left roll edge:
 		std::vector<int>                  leftMarginIndex;
@@ -159,13 +162,15 @@ class RollImage : public TiffFile, public RollOptions {
 		std::vector<int> correctedCentroidHistogram;
 
 		// rawRowPositions: Location of groups of holes (from correctedCentroid Histogram):
-		std::vector<pair<double, int>> rawRowPositions;
+		std::vector<pair<double, int> > rawRowPositions;
 
 		// holeSeparation -- number of pixels between hole centers.
-		double holeSeparation = 0.0;
+		// double holeSeparation = 0.0;
+		double holeSeparation;
 
 		// holeOffset -- Pixel offset for holeSeparation on normalized width.
-		double holeOffset = 0.0;
+		// double holeOffset = 0.0;
+		double holeOffset;
 
 		// holes: List of musical holes on the piano roll (or at least
 		// larger holes which are not anti-dust
@@ -181,7 +186,7 @@ class RollImage : public TiffFile, public RollOptions {
 		std::vector<HoleInfo*> antidust;
 
 		// trackerArray -- holes sorted by tracker position
-		std::vector<std::vector<HoleInfo*>> trackerArray;
+		std::vector<std::vector<HoleInfo*> > trackerArray;
 
 		// midiToTrackMapping -- mapping from MIDI key number to hole position 
 		// (in image, not roll).  Zero means no mapping (not allowed to reference
@@ -202,7 +207,8 @@ class RollImage : public TiffFile, public RollOptions {
 		std::vector<TearInfo*> trebleTears;
 
 		// averageRollWidth -- the average width of a roll, 0 if uninit.
-		double averageRollWidth = 0.0;
+		// double averageRollWidth = 0.0;
+		double averageRollWidth;
 
 		// shifts -- list of shifts left or right, typically by the person
 		// operating the scanner.
@@ -246,6 +252,7 @@ class RollImage : public TiffFile, public RollOptions {
 		void       invalidateEdgeHoles         (void);
 		void       fillHoleSimple              (ulongint r, ulongint c, int target, int type, int& counter);
 		void       clearHole                   (HoleInfo& hi, int type);
+		void       clear                       (void);
 		void       calculateHoleDescriptors    (void);
 		bool       calculateHolePerimeter      (HoleInfo& hole);
 		int        findNextPerimeterPoint      (std::pair<ulongint, ulongint>& point, 
@@ -279,28 +286,52 @@ class RollImage : public TiffFile, public RollOptions {
 		ulongint   storeWeightedCentroidGroup  (ulongint startindex);
 		void       storeCorrectedCentroidHistogram(void);
 		void       calculateTrackerSpacings2   (void);
+		string     my_to_string                (int value);
 
 	private:
-		bool       m_debug                     = false;
-		bool       m_warning                   = false;
-		bool       m_analyzedBasicMargins      = false;
-		bool       m_analyzedLeaders           = false;
-		bool       m_analyzedAdvancedMargins   = false;
-		int        hardMarginLeftIndex         = 0;
-		int        hardMarginRightIndex        = 0;
-		int        m_threshold                 = 255;
-		ulongint   preleaderIndex              = 0;
-		ulongint   leaderIndex                 = 0;
-		ulongint   firstMusicRow               = 0;
-		ulongint   lastMusicRow                = 0;
-		double     m_lastHolePosition          = 0.0;
-		double     m_firstHolePosition         = 0.0;
-		double     m_dustscore                 = -1.0;
-		double     m_dustscorebass             = -1.0;
-		double     m_dustscoretreble           = -1.0;
-		double     m_averageHoleWidth          = -1.0;
+
+//		bool       m_debug                     = false;
+//		bool       m_warning                   = false;
+//		bool       m_analyzedBasicMargins      = false;
+//		bool       m_analyzedLeaders           = false;
+//		bool       m_analyzedAdvancedMargins   = false;
+//		int        hardMarginLeftIndex         = 0;
+//		int        hardMarginRightIndex        = 0;
+//		int        m_threshold                 = 255;
+//		ulongint   preleaderIndex              = 0;
+//		ulongint   leaderIndex                 = 0;
+//		ulongint   firstMusicRow               = 0;
+//		ulongint   lastMusicRow                = 0;
+//		double     m_lastHolePosition          = 0.0;
+//		double     m_firstHolePosition         = 0.0;
+//		double     m_dustscore                 = -1.0;
+//		double     m_dustscorebass             = -1.0;
+//		double     m_dustscoretreble           = -1.0;
+//		double     m_averageHoleWidth          = -1.0;
+
+		bool       m_debug;
+		bool       m_warning;
+		bool       m_analyzedBasicMargins;
+		bool       m_analyzedLeaders;
+		bool       m_analyzedAdvancedMargins;
+		int        hardMarginLeftIndex;
+		int        hardMarginRightIndex;
+		int        m_threshold;
+		ulongint   preleaderIndex;
+		ulongint   leaderIndex;
+		ulongint   firstMusicRow;
+		ulongint   lastMusicRow;
+		double     m_lastHolePosition;
+		double     m_firstHolePosition;
+		double     m_dustscore;
+		double     m_dustscorebass;
+		double     m_dustscoretreble;
+		double     m_averageHoleWidth;
+
+#ifndef DONOTUSEFFT
 		std::chrono::system_clock::time_point start_time;
 		std::chrono::system_clock::time_point stop_time;
+#endif
 		std::vector<double> m_normalizedPosition;
 		std::vector<double> m_trackerShiftScores;
 

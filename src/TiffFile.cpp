@@ -164,7 +164,7 @@ bool TiffFile::goToRowColumnIndex(ulongint rowindex, ulongint colindex) {
 // TiffFile::getImageGreenChannel --
 //
 
-void TiffFile::getImageGreenChannel(std::vector<std::vector<ucharint>>& image) {
+void TiffFile::getImageGreenChannel(std::vector<std::vector<ucharint> >& image) {
 	this->goToPixelIndex((int)0);
 	ulongint rows = this->getRows();
 	ulongint cols = this->getCols();
