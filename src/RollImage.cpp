@@ -669,23 +669,18 @@ void RollImage::analyzeMidiKeyMapping(void) {
 	}
 
 	if (trackerArray.at(rightmostIndex).empty() && trackerArray.at(leftmostIndex).empty()) {
-cerr << "GOT HERE AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" << endl;
 		// shrink if no holes in extreme positions of both sides
 		leftmostIndex++;
 		rightmostIndex--;
 	}
 
 	if (trackerArray[rightmostIndex].empty() && trackerArray[leftmostIndex].empty()) {
-cerr << "GOT HERE BBBBBBBBBBBBBBBBBBBBBBBBBBBBBB" << endl;
 		// shrink if no holes in extreme positions of both sides
 		leftmostIndex++;
 		rightmostIndex--;
 	}
 
-cerr << ">>>>>>>>>>>>>> LEFTMOST INDEX = " << leftmostIndex << endl;
-cerr << ">>>>>>>>>>>>>> RIGHTMOST INDEX = " << rightmostIndex << endl;
 	int holecount = rightmostIndex - leftmostIndex + 1;
-cerr << "HOLECOUNT " << holecount << " +++++++++++++++++++++++++++++++" << endl;
 	if (m_warning && (holecount > 100)) {
 		std::cerr << "Warning hole count is quite large: " << holecount << std::endl;
 	}
@@ -899,7 +894,6 @@ void RollImage::assignMusicHoleIds(void) {
 	for (ulongint i=0; i<ta.size(); i++) {
 		counter = 1;
 		key = midiToTrackMapping[i];
-cerr << "++++++++++++++++++++++++ SIZE OF TRACKERARRAY " << i << " IS " << ta[i].size() << endl;
 		for (ulongint j=0; j<ta[i].size(); j++) {
 			if (!ta[i][j]->isMusicHole()) {
 				continue;
@@ -4032,8 +4026,6 @@ void RollImage::generateMidifile(MidiFile& midifile) {
 	ulongint mintime = holes[0]->origin.first;
 	ulongint maxtime = 0;
 
-cerr << "GOT HERE TTT" << endl;
-
 	int track;
 	int key;
 	int channel;
@@ -4076,7 +4068,6 @@ cerr << "GOT HERE TTT" << endl;
 			maxtime = hi->offtime;
 		}
 	}
-cerr << "GOT HERE UUU" << endl;
 
 	// add tempo correction
 	double timevalue = 1.0;
@@ -4088,10 +4079,8 @@ cerr << "GOT HERE UUU" << endl;
 		curtime += 3600;
 		timevalue /= 1.0004;
 	}
-cerr << "GOT HERE MMM" << endl;
 
 	midifile.sortTracks();
-cerr << "GOT HERE NNN" << endl;
 }
 
 
