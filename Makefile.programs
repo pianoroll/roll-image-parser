@@ -44,8 +44,8 @@ endif
 #                                                                         #
 
 INCDIR        = include
-EXTERNALINC   = -Iexternal/midifile/include
-EXTERNALLIB   = -Lexternal/midifile/lib -lmidifile
+#EXTERNALINC   = -Iexternal/midifile/include
+#EXTERNALLIB   = -Lexternal/midifile/lib -lmidifile
 LIBDIR        = lib
 LIBFILE       = pianoroll
 #TARGDIR   = /user/c/craig/www/piano-roll-project/full-scans/bin

@@ -29,7 +29,12 @@
 #include "ShiftInfo.h"
 #include "TearInfo.h"
 #include "RollOptions.h"
-#include "MidiFile.h"
+
+#ifndef DONOTUSEFFT
+   #include "MidiFile.h"
+#endif
+
+using namespace std;
 
 namespace prp  {
 
@@ -129,7 +134,11 @@ class RollImage : public TiffFile, public RollOptions {
 		void            markShift                     (int index);
 		void            generateNoteMidiFileHex       (ostream& output);
 		void            generateNoteMidiFileBinasc    (ostream& output);
+
+#ifndef DONOTUSEFFT
 		void            generateMidifile              (MidiFile& midifile);
+#endif
+
 		void            assignMidiKeyNumbersToHoles   (void);
 		void            setDebugOn                    (void);
 		void            setDebugOff                   (void);

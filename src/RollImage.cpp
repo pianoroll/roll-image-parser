@@ -4011,9 +4011,11 @@ std::string RollImage::getDataMD5Sum(void) {
 //
 
 void RollImage::generateNoteMidiFileHex(ostream& output) {
+#ifndef DONOTUSEFFT
 	MidiFile midifile;
 	generateMidifile(midifile);
 	midifile.writeHex(output, 25);
+#endif
 }
 
 
@@ -4024,9 +4026,11 @@ void RollImage::generateNoteMidiFileHex(ostream& output) {
 //
 
 void RollImage::generateNoteMidiFileBinasc(ostream& output) {
+#ifndef DONOTUSEFFT
 	MidiFile midifile;
 	generateMidifile(midifile);
 	midifile.writeBinasc(output);
+#endif
 }
 
 
@@ -4035,6 +4039,8 @@ void RollImage::generateNoteMidiFileBinasc(ostream& output) {
 // RollImage::generateMidifile --
 //
 
+
+#ifndef DONOTUSEFFT
 void RollImage::generateMidifile(MidiFile& midifile) {
 
 	if (holes.empty()) {
@@ -4140,6 +4146,7 @@ void RollImage::generateMidifile(MidiFile& midifile) {
 
 	midifile.sortTracks();
 }
+#endif
 
 
 
