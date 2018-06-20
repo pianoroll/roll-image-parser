@@ -51,7 +51,7 @@ LIBFILE       = pianoroll
 #TARGDIR   = /user/c/craig/www/piano-roll-project/full-scans/bin
 TARGDIR   = bin
 TOOLDIR   = tools
-DEFINES       = -DDONOTUSEFFT
+#DEFINES       = -DDONOTUSEFFT
 
 PREFLAGS  = -Wall -I$(INCDIR) $(DEFINES) $(EXTERNALINC)
 PREFLAGS += -O3
@@ -59,9 +59,9 @@ PREFLAGS += -O3
 # include debugging information:
 #PREFLAGS += -g
 
-# using C++ 2011 standard:
-#PREFLAGS += -std=c++14
-PREFLAGS += -std=c++98
+# using C++ 2014 standard for imaginary literals for FFT:
+PREFLAGS += -std=c++14
+#PREFLAGS += -std=c++98
 
 # Add -static flag to compile without dynamics libraries for better portability:
 #PREFLAGS += -static

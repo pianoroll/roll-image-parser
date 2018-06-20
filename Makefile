@@ -44,20 +44,20 @@ SRCDIR        = src
 TOOLDIR       = tools
 SRCDIR_MIN    = src
 INCDIR        = include
-#EXTERNALINC   = -Iexternal/midifile/include
+EXTERNALINC   = -Iexternal/midifile/include
 LIBDIR        = lib
 LIBFILE       = libpianoroll.a
 AR            = ar
 RANLIB        = ranlib
-DEFINES       = -DDONOTUSEFFT
+#DEFINES       = -DDONOTUSEFFT
 
 PREFLAGS  = -c -g $(CFLAGS) $(DEFINES) -I$(INCDIR) $(EXTERNALINC)
 PREFLAGS += -O3 -Wall
 
-# using C++ 2011 standard in Humlib:
-#PREFLAGS += -std=c++14 -fext-numeric-literals
+# using C++ 2014 standard for imaginary number literals.
+PREFLAGS += -std=c++14 -fext-numeric-literals
 #PREFLAGS += -std=c++14
-PREFLAGS += -std=c++98
+#PREFLAGS += -std=c++98
 #PREFLAGS += -std=c++11
 
 # Add -static flag to compile without dynamics libraries for better portability:
