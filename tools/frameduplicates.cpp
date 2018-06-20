@@ -25,8 +25,6 @@
 using namespace std;
 using namespace prp;
 
-typedef uint32_t ulongint;
-
 class DuplicateInfo {
 	public:
 		int count = 0;

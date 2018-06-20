@@ -45,6 +45,7 @@ TOOLDIR       = tools
 SRCDIR_MIN    = src
 INCDIR        = include
 EXTERNALINC   = -Iexternal/midifile/include
+EXTERNALSRC   = external/midifile/src
 LIBDIR        = lib
 LIBFILE       = libpianoroll.a
 AR            = ar
@@ -76,14 +77,15 @@ COMPILER      = LANG=C $(ENV) g++ $(ARCH)
 
 
 # setting up the directory paths to search for dependency files
-vpath %.h   $(INCDIR):$(SRCDIR)
-vpath %.cpp $(SRCDIR):$(INCDIR)
+vpath %.h   $(INCDIR):$(SRCDIR):$(EXTERNALSRC)
+vpath %.cpp $(SRCDIR):$(EXTERNALSRC):$(INCDIR)
 vpath %.o   $(OBJDIR)
 
 # generating a list of the object files
 OBJS  =
 OBJS += $(notdir $(patsubst %.cpp,%.o,$(wildcard $(SRCDIR)/tool-*.cpp)))
 OBJS += $(notdir $(patsubst %.cpp,%.o,$(wildcard $(SRCDIR)/[A-Z]*.cpp)))
+OBJS += $(notdir $(patsubst %.cpp,%.o,$(wildcard $(EXTERNALSRC)/[A-Z]*.cpp)))
 
 # targets which don't actually refer to files
 .PHONY: examples myprograms src include dynamic tools
@@ -128,7 +130,7 @@ makedirs:
 
 
 pugixml.o: pugixml.cpp
-	@echo [CC] $@
+	@echo [CC] $@ $<
 	@$(COMPILER) $(PREFLAGS) -o $(OBJDIR)/$(notdir $@) $(POSTFLAGS) $<
 
 ###########################################################################
