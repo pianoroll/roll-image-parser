@@ -23,7 +23,7 @@
 //       6:  Forzando-On                     MIDI Key 19
 //       7:  Soft-Pedal-Off                  MIDI Key 20
 //       8:  Soft-Pedal-On                   MIDI Key 21
-//       9:  Motor-Off                       MIDI Key 21
+//       9:  Motor-Off                       MIDI Key 22
 //       10: Motor-On                        MIDI Key 23
 //   Then 80 notes from C1 to G7 (MIDI note 24 to 103
 //       11: C1                              MIDI Key 24 
