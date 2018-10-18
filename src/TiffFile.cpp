@@ -183,6 +183,29 @@ void TiffFile::getImageGreenChannel(std::vector<std::vector<ucharint> >& image) 
 
 
 
+//////////////////////////////
+//
+// TiffFile::writeSamplesPerPixel -- 1 = monochrome, 3 = color.
+//
+
+bool TiffFile::writeSamplesPerPixel(int count) {
+	return ((TiffHeader*)this)->writeSamplesPerPixel(*this, count);
+}
+
+
+
+//////////////////////////////
+//
+// TiffFile::writeDirectoryOffset --
+//
+
+void TiffFile::writeDirectoryOffset(ulonglongint offset) {
+	((TiffHeader*)this)->writeDirectoryOffset(*this, offset);
+}
+
+
+
+
 
 } // end of namespace prp
 

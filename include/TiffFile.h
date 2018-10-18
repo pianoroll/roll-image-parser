@@ -40,6 +40,10 @@ class TiffFile : public std::fstream, public TiffHeader {
 		bool        goToPixelIndex              (ulonglongint pindex);
 		bool        goToRowColumnIndex          (ulongint rowindex, ulongint colindex);
 
+		// header updates on disk
+		bool        writeSamplesPerPixel        (int count);
+		void        writeDirectoryOffset        (ulonglongint offset);
+
 	private:
 		// std::fstream m_input;
 

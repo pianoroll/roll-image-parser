@@ -121,6 +121,84 @@ std::string readString(std::istream& input, int count) {
 
 //////////////////////////////
 //
+// writeLittleEndian8ByteUInt --
+//
+
+void writeLittleEndian8ByteUInt(std::ostream& output, ulonglongint value) {
+	std::string data;
+	data.resize(8);
+	data[0] = ucharint(0xff & value);
+	data[1] = ucharint(0xff & (value >> 8));
+	data[2] = ucharint(0xff & (value >> 16));
+	data[3] = ucharint(0xff & (value >> 24));
+	data[4] = ucharint(0xff & (value >> 32));
+	data[5] = ucharint(0xff & (value >> 40));
+	data[6] = ucharint(0xff & (value >> 48));
+	data[7] = ucharint(0xff & (value >> 56));
+	writeString(output, data);
+}
+
+
+
+//////////////////////////////
+//
+// writeLittleEndian8ByteUInt --
+//
+
+void writeLittleEndian4ByteUInt(std::ostream& output, ulongint value) {
+	std::string data;
+	data.resize(4);
+	data[0] = ucharint(0xff & value);
+	data[1] = ucharint(0xff & (value >> 8));
+	data[2] = ucharint(0xff & (value >> 16));
+	data[3] = ucharint(0xff & (value >> 24));
+	writeString(output, data);
+}
+
+
+
+//////////////////////////////
+//
+// writeLittleEndian8ByteUInt --
+//
+
+void writeLittleEndian2ByteUInt(std::ostream& output, ushortint value) {
+	std::string data;
+	data.resize(2);
+	data[0] = ucharint(0xff & value);
+	data[1] = ucharint(0xff & (value >> 8));
+	writeString(output, data);
+}
+
+
+
+//////////////////////////////
+//
+// write1UByte --
+//
+
+void write1UByte(std::ostream& output, ucharint value) {
+	std::string data;
+	data.resize(1);
+	data[0] = value;
+	writeString(output, data);
+}
+
+
+
+//////////////////////////////
+//
+// writeString --
+//
+
+void writeString(std::ostream& output, std::string data) {
+	output.write(data.data(), data.size());
+}
+
+
+
+//////////////////////////////
+//
 // aboveThreshold -- Returns true if the value is above (or equal) to
 //    given threshold value.
 //

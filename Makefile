@@ -17,6 +17,7 @@
 # you can compile for OS X 10.9 computers even if you are using the 10.10
 # version of the operating system).
 ENV =
+FLAG =
 
 OS := $(shell uname -s)
 
@@ -27,6 +28,7 @@ ifeq ($(OS),Darwin)
    # use the following to compile for 32-bit architecture on 64-bit comps:
    #ARCH = -m32 -arch i386
 else
+	FLAG = -fext-numeric-literals
    # use the following to compile for 32-bit architecture on 64-bit comps:
    # (you will need 32-bit libraries in order to do this)
    # ARCH = -m32
@@ -56,7 +58,7 @@ PREFLAGS  = -c -g $(CFLAGS) $(DEFINES) -I$(INCDIR) $(EXTERNALINC)
 PREFLAGS += -O3 -Wall
 
 # using C++ 2014 standard for imaginary number literals.
-PREFLAGS += -std=c++14 -fext-numeric-literals
+PREFLAGS += -std=c++14 $(FLAG)
 #PREFLAGS += -std=c++14
 #PREFLAGS += -std=c++98
 #PREFLAGS += -std=c++11

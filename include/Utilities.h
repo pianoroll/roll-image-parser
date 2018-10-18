@@ -43,6 +43,13 @@ ushortint      readLittleEndian2ByteUInt  (std::istream& input);
 ucharint       read1UByte                 (std::istream& input);
 std::string    readString                 (std::istream& input, int count);
 
+// File writing functions
+void           writeLittleEndian8ByteUInt (std::ostream& output, ulonglongint);
+void           writeLittleEndian4ByteUInt (std::ostream& output, ulongint);
+void           writeLittleEndian2ByteUInt (std::ostream& output, ushortint);
+void           write1UByte                (std::ostream& output, ucharint);
+void           writeString                (std::ostream& output, std::string data);
+
 // misc. utility functions:
 bool           aboveThreshold             (ucharint value, ucharint threshold);
 int            getMaximum                 (std::vector<int>& array, ulongint startindex = 0, 

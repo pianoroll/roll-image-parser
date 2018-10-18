@@ -52,14 +52,21 @@ TiffHeader::~TiffHeader() {
 //
 
 void TiffHeader::clear(void) {
-	m_rows        = 0;
-	m_cols        = 0;
-	m_orientation = -1;
-	m_dataoffset  = 0;
-	m_databytes   = 0;
-	m_rowdpi      = 0.0;
-	m_coldpi      = 0.0;
-	m_64bitQ      = false;
+	m_rows            = 0;
+	m_cols            = 0;
+	m_orientation     = -1;
+	m_dataoffset      = 0;
+	m_databytes       = 0;
+	m_rowdpi          = 0.0;
+	m_coldpi          = 0.0;
+	m_64bitQ          = false;
+	m_samplesperpixel = 0;
+
+
+	// clear file offsets:
+	m_samplesperpixel_offset = 0;
+	m_diroffset              = 0;
+	m_diroffset_offset       = 0;
 }
 
 
@@ -198,6 +205,17 @@ void TiffHeader::setDataBytes(ulonglongint value) {
 
 //////////////////////////////
 //
+// TiffHeader::setSamplesPerPixel -- 1 = monochrome, 3 = RGB.
+//
+
+void TiffHeader::setSamplesPerPixel(int value) {
+	m_samplesperpixel = value;
+}
+
+
+
+//////////////////////////////
+//
 // TiffHeader::getRowDpi --
 //
 
@@ -251,7 +269,7 @@ bool TiffHeader::parseHeader(std::fstream& input) {
    // These are hex bytes "4D 4D".
 	std::string format = readString(input, 2);
 	if (format != "II") {
-		std::cerr << "File format must be little-std::endian" << std::endl;
+		std::cerr << "File format must be little-endian" << std::endl;
 		std::cerr << "Format should be 'II', but is instead '" << format << "'." << std::endl;
 		return false;
 	}
@@ -282,14 +300,14 @@ bool TiffHeader::parseHeader(std::fstream& input) {
 	}
 
 	// byte offset of first directory
-	ulonglongint diroffset;
+	m_diroffset_offset = input.tellg();
 	if (this->isBigTiff()) {
-		diroffset = readLittleEndian8ByteUInt(input);
+		m_diroffset = readLittleEndian8ByteUInt(input);
 	} else {
-		diroffset = readLittleEndian4ByteUInt(input);
+		m_diroffset = readLittleEndian4ByteUInt(input);
 	}
 
-	bool status = parseDirectory(input, diroffset);
+	bool status = parseDirectory(input, m_diroffset);
 	if (!status) {
 		clear();
 		return false;
@@ -310,7 +328,30 @@ bool TiffHeader::parseHeader(std::fstream& input) {
 
 //////////////////////////////
 //
-// parseDirectory -- Read data parameters for a TIFF directory structure.
+// TiffHeader::allowMonochrome -- Allow input TIFF image to be a monochrome file.
+//    default value: state = true;
+//
+
+void TiffHeader::allowMonochrome(bool state) {
+	m_allowMonochrome = state;
+}
+
+
+
+//////////////////////////////
+//
+// TiffHeader::isMonochrome -- True if one sample per pixel.
+//
+
+bool TiffHeader::isMonochrome(void) const {
+	return m_samplesperpixel == 1;
+}
+
+
+
+//////////////////////////////
+//
+// TiffHeader::parseDirectory -- Read data parameters for a TIFF directory structure.
 //
 
 bool TiffHeader::parseDirectory(std::fstream& input, ulonglongint diroffset) {
@@ -371,6 +412,8 @@ bool TiffHeader::goToByteIndex(std::fstream& input, ulonglongint offset) {
 //
 
 bool TiffHeader::readDirectoryEntry(std::fstream& input) {
+	ulonglongint entryoffset = input.tellg();
+
 	// get the parameter type (tag)
 	int id = readLittleEndian2ByteUInt(input);
 
@@ -450,11 +493,15 @@ bool TiffHeader::readDirectoryEntry(std::fstream& input) {
 			break;
 
 		case 277: // samples per pixel
+			m_samplesperpixel_offset = entryoffset;
 			value = (ulongint)this->readEntryUInteger(input, datatype, count, id);
 			if (value != 3) {
-				std::cerr << "Error image must be full color." << std::endl;
+				if (!m_allowMonochrome) {
+					std::cerr << "Error image must be full color." << std::endl;
 				return false;
+				}
 			}
+			this->setSamplesPerPixel(value);
 			break;
 
 		case 278: // rows per strip
@@ -505,6 +552,167 @@ bool TiffHeader::readDirectoryEntry(std::fstream& input) {
 	}
 
 	return true;
+}
+
+
+
+//////////////////////////////
+//
+// TiffHeader::writeDirectoryOffset --
+//
+
+void TiffHeader::writeDirectoryOffset(std::ostream& output, ulonglongint offset) {
+	if (m_diroffset_offset == 0) {
+		std::cerr << "Error: directory offset unknown" << std::endl;
+		exit(1);
+	}
+	output.seekp(m_diroffset_offset, output.beg);
+	if (this->isBigTiff()) {
+		// offset field is 8 bytes
+		writeLittleEndian8ByteUInt(output, offset);
+	} else {
+		// offset field is 4 bytes
+		writeLittleEndian4ByteUInt(output, offset);
+	}
+}
+
+
+
+//////////////////////////////
+//
+// TiffHeader::writeDirectoryEntry --
+//		case 277: // samples per pixel
+//
+
+bool TiffHeader::writeDirectoryEntry(std::fstream& output, int tag, int newvalue) {
+
+	// get the parameter type (tag) and make sure it is the expected one
+	int id = readLittleEndian2ByteUInt(output);
+	if (id != tag) {
+		std::cerr << "Error: found tag " << id << " but expecting " << tag << std::endl;
+		exit(1);
+	}
+
+	// get the data type
+	int datatype = readLittleEndian2ByteUInt(output);
+
+	// get number of values in parameter
+	ulonglongint count;
+	if (this->isBigTiff()) {
+		count = readLittleEndian8ByteUInt(output);
+	} else {
+		count = readLittleEndian4ByteUInt(output);
+	}
+
+	if (count > 3) {
+		if (!((id == 273) || (id == 279))) {
+			std::cerr << "LARGE COUNT IS " << count << " FOR ID " << id << std::endl;
+		}
+	}
+
+	// There are four bytes (or eight bytes) left in entry that need to be
+	// processed by the following switch:
+
+	switch (id) {
+		case 277: // samples per pixel
+			this->writeEntryUInteger(output, datatype, count, id, newvalue);
+			break;
+
+		default:
+			std::cerr << "Error: unknown tag " << id << std::endl;
+			exit(1);
+	}
+
+	return true;
+}
+
+
+
+//////////////////////////////
+//
+// TiffHeader::writeEntryUInteger -- Write a short or long or long long in 4-byte
+//      or 8-byte location in file.  Also add any padding bytes that need to come after
+//      the width of the data.
+//
+
+void TiffHeader::writeEntryUInteger(std::fstream& output, int datatype,
+		ulonglongint count, int tag, ulonglongint value) {
+
+	if (count != 1) {
+		if (!((tag == 273) || (tag == 279))) {
+			std::cerr << "Problem2 reading value, bad parameter count: " << count << std::endl;
+			std::cerr << "TAG IS " << tag << std::endl;
+			exit(1);
+		}
+	}
+
+	if ((tag == 273) && (count > 1)) {
+		// read an offset to the offset, and then read that offset
+		// (assuming all "strips" are contiguous).  This case
+		// is needed for libtiff where it lists an offset for each line
+		// of the image in this area.  Only reading first offset from list.
+
+		if (this->isBigTiff()) {
+			ulonglongint valueoffset = readLittleEndian8ByteUInt(output);
+			ulonglongint position = output.tellg();
+			this->goToByteIndex(output, valueoffset);
+			writeLittleEndian8ByteUInt(output, value);
+			this->goToByteIndex(output, position);
+		} else {
+			ulonglongint valueoffset = readLittleEndian4ByteUInt(output);
+			ulonglongint position = output.tellg();
+			this->goToByteIndex(output, valueoffset);
+			writeLittleEndian4ByteUInt(output, value);
+			this->goToByteIndex(output, position);
+		}
+
+	} else if ((tag == 279) && (count > 1)) {
+		// Need this case for multiple strips.  Assume each strip is the same size.
+
+		if (this->isBigTiff()) {
+			ulonglongint valueoffset = readLittleEndian8ByteUInt(output);
+			ulonglongint position = output.tellg();
+			this->goToByteIndex(output, valueoffset);
+			// output = count * adLittleEndian8ByteUInt(output);
+			writeLittleEndian8ByteUInt(output, value);
+			this->goToByteIndex(output, position);
+		} else {
+			ulonglongint valueoffset = readLittleEndian4ByteUInt(output);
+			ulonglongint position = output.tellg();
+			this->goToByteIndex(output, valueoffset);
+			// output = count * readLittleEndian4ByteUInt(output);
+			writeLittleEndian4ByteUInt(output, value);
+			this->goToByteIndex(output, position);
+		}
+
+	} else if (datatype == 3) {  // unsigned short
+		writeLittleEndian2ByteUInt(output, value);
+		// add buffer bytes
+		if (this->isBigTiff()) {
+			writeLittleEndian2ByteUInt(output, 0);
+			writeLittleEndian4ByteUInt(output, 0);
+		} else {
+			writeLittleEndian2ByteUInt(output, 0);
+		}
+	} else if (datatype == 4) { // unsigned long
+		writeLittleEndian4ByteUInt(output, value);
+		// add buffer bytes
+		if (this->isBigTiff()) {
+			writeLittleEndian4ByteUInt(output, 0);
+		}
+	} else if (datatype == 16) { // unsigned long long
+		if (this->isBigTiff()) {
+			writeLittleEndian8ByteUInt(output, value);
+		} else {
+			std::cerr << "32-bit TIFF images should not have this data type." << std::endl;
+			exit(1);
+		}
+	} else {
+		std::cerr << "Unknown directory entry data type: " << datatype << std::endl;
+		std::cerr << "For TIFF tag " << tag << std::endl;
+		exit(1);
+	}
+
 }
 
 
@@ -662,6 +870,41 @@ ulonglongint TiffHeader::getPixelOffset(ulongint rindex, ulongint cindex) const 
 ulonglongint TiffHeader::getPixelCount(void) const {
 	ulonglongint output = getRows() * getCols();
 	return output;
+}
+
+
+
+//////////////////////////////
+//
+// TiffHeader::writeSamplesPerPixel --
+//
+
+bool TiffHeader::writeSamplesPerPixel(std::fstream& output, int count) {
+	ulonglongint& offset = m_samplesperpixel_offset;
+	if (!offset) {
+		std::cerr << "Error: samples-per-pixel offset is not set" << std::endl;
+		return false;
+	}
+	if (this->isBigTiff()) {
+		output.seekp((ulongint)offset, output.beg);
+	} else {
+		output.seekp(offset, output.beg);
+	}
+	setSamplesPerPixel(count);
+	return this->writeDirectoryEntry(output, 277, count);
+}
+
+
+
+//////////////////////////////
+//
+// TiffHeader::getDirectoryOffset -- Return the byte position of the TIFF header
+//   in the file.  This can be either before or after the main data content.
+//   This is the offset for the first directory (given at the start of the file).
+//
+
+ulonglongint TiffHeader::getDirectoryOffset(void) const {
+		return m_diroffset;
 }
 
 

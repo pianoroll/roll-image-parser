@@ -26,7 +26,7 @@
 //       9:  Motor-Off                       MIDI Key 22
 //       10: Motor-On                        MIDI Key 23
 //   Then 80 notes from C1 to G7 (MIDI note 24 to 103
-//       11: C1                              MIDI Key 24 
+//       11: C1                              MIDI Key 24
 //       ...
 //       50:  D#4                            MIDI Key 63
 //    Treble register:
@@ -710,7 +710,7 @@ void RollImage::analyzeMidiKeyMapping(void) {
 		}
 	}
 
-	if ((rightmostIndex < (int)trackerArray.size() - 1) && 
+	if ((rightmostIndex < (int)trackerArray.size() - 1) &&
 			!trackerArray.at(rightmostIndex+1).empty()) {
 		rightmostIndex++;
 	}

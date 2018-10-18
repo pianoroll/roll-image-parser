@@ -22,6 +22,7 @@
 
 namespace prp  {
 
+class TiffFile;
 
 class TiffHeader {
 	public:
@@ -42,19 +43,32 @@ class TiffHeader {
 		void           setBigTiff          (void);
 		bool           isBigTiff           (void);
 		bool           parseHeader         (std::fstream& input);
+		void           allowMonochrome     (bool state = true);
+		bool           isMonochrome        (void) const;
+		ulonglongint   getDirectoryOffset  (void) const;
 
 	protected:
 		void           setOrientation      (int value);
+		void           setSamplesPerPixel  (int value);
 		void           setRows             (ulongint value);
 		void           setCols             (ulongint value);
 		void           setRowDpi           (double value);
 		void           setColDpi           (double value);
 		void           setDataBytes        (ulonglongint value);
 		void           setDataOffset       (ulonglongint value);
+
+		// writing new header information:
+		bool           writeSamplesPerPixel(std::fstream& output, int count);
+		bool           writeDirectoryEntry (std::fstream& input, int tag, int newvalue);
+		void           writeEntryUInteger  (std::fstream& output, int datatype,
+		                                    ulonglongint count, int tag, ulonglongint value);
+
 		ulonglongint   readEntryUInteger   (std::fstream& input, int datatype, ulonglongint count, int tag = -1);
 		double         readType5Value      (std::fstream& input, int datatype, ulonglongint count, int tag = -1);
 		bool           goToByteIndex       (std::fstream& input, ulongint offset);
 		bool           goToByteIndex       (std::fstream& input, ulonglongint offset);
+
+		void           writeDirectoryOffset(std::ostream& output, ulonglongint offset);
 
 	private:
 		bool           parseDirectory      (std::fstream& input, ulonglongint diroffset);
@@ -71,6 +85,8 @@ class TiffHeader {
 	//	double         m_coldpi      = 0.0;
 	//	bool           m_64bitQ      = false;
 
+		bool           m_allowMonochrome = false;
+
 		ulongint       m_rows;
 		ulongint       m_cols;
 		int            m_orientation;
@@ -79,6 +95,18 @@ class TiffHeader {
 		double         m_rowdpi;
 		double         m_coldpi;
 		bool           m_64bitQ;
+		int            m_samplesperpixel;
+
+		// (first) directory offset: byte location of header information
+		ulonglongint   m_diroffset = 0;
+
+		// offset to the m_diroffset parameter;
+		ulonglongint   m_diroffset_offset = 0;
+
+		// store offsets for later updating
+		ulonglongint   m_samplesperpixel_offset = 0;
+
+	friend TiffFile;
 };
 
 
