@@ -109,9 +109,7 @@ void RollImage::clear(void) {
 	m_dustscorebass             = -1.0;
 	m_dustscoretreble           = -1.0;
 	m_averageHoleWidth          = -1.0;
-
 }
-
 
 
 
@@ -2714,7 +2712,6 @@ ulongint RollImage::getBoundary(std::vector<int>& status) {
 //
 
 void RollImage::mergePixelOverlay(std::fstream& output) {
-
 	std::vector<ucharint> pixel(3);
 	ulonglongint offset;
 	ulongint rows = getRows();

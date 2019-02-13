@@ -65,6 +65,8 @@ class TiffHeader {
 
 		ulonglongint   readEntryUInteger   (std::fstream& input, int datatype, ulonglongint count, int tag = -1);
 		double         readType5Value      (std::fstream& input, int datatype, ulonglongint count, int tag = -1);
+		std::string    readType2String     (std::fstream& input, int datatype, ulonglongint count, int tag = -1);
+		std::string    readType1ByteArray  (std::fstream& input, int datatype, ulonglongint count, int tag = -1);
 		bool           goToByteIndex       (std::fstream& input, ulongint offset);
 		bool           goToByteIndex       (std::fstream& input, ulonglongint offset);
 

@@ -14,6 +14,20 @@
 //      https://www.loc.gov/preservation/digital/formats/content/tiff_tags.shtml
 //      https://www.awaresystems.be/imaging/tiff/tifftags/compression.html
 //
+// Data types (page 15&16 of first link to TIFF6.pdf):
+//     1  = byte
+//     2  = ASCII string, last character is 0, count includes null. Padding bytes are not included in count
+//     3  = unsigned short (two-byte integer)
+//     4  = unsigned long (four-byte integer)
+//     5  = rational (two longs: numerator, denominator of a fraction)
+//     6  = signed byte (2's compliment)
+//     7  = undefined
+//     8  = signed short
+//     9  = signed long
+//     10 = signed rational
+//     11 = 4-byte IEEE float
+//     12 = 8-byte IEEE double
+//   
 
 
 #include "TiffHeader.h"
@@ -428,17 +442,30 @@ bool TiffHeader::readDirectoryEntry(std::fstream& input) {
 		count = readLittleEndian4ByteUInt(input);
 	}
 
-	if (count > 3) {
-		if (!((id == 273) || (id == 279))) {
-			std::cerr << "LARGE COUNT IS " << count << " FOR ID " << id << std::endl;
+	if (datatype != 2) {
+		if (count > 3) {
+			if (!((id == 273) || (id == 279))) {
+				std::cerr << "LARGE COUNT IS " << count << " FOR ID " << id << std::endl;
+			}
 		}
 	}
 
 	// There are four bytes (or eight bytes) left in entry that need to be
 	// processed by the following switch:
 
+	std::string text;
 	ulongint value;
 	switch (id) {
+
+		case 254: // NewSubfileType (added by Adobe Photoshop)
+			value = (ulongint)this->readEntryUInteger(input, datatype, count, id);
+			switch (value) {
+				case 0: /* Adobe just puts an unnecessary field */ break;
+				case 1: std::cerr << "SUBTYPE FILETYPE_REDUCEDIMAGE" << std::endl; break;
+				case 2: std::cerr << "SUBTYPE FILETYPE_PAGE" << std::endl; break;
+				case 4: std::cerr << "SUBTYPE FILETYPE_MASK" << std::endl; break;
+			}
+			break;
 
 		case 256: // image width (columns)
 			this->setCols((ulongint)this->readEntryUInteger(input, datatype, count, id));
@@ -539,7 +566,23 @@ bool TiffHeader::readDirectoryEntry(std::fstream& input) {
 			break;
 
 		// case 297: // The page number of the page from which this images was scanned.
+
+		case 305: // Name of software
+			text = this->readType2String(input, datatype, count, id);
+			std::cerr << "SOFTWARE: " << text << std::endl;
+			break;
+
+		case 306: // Date and time string
+			text = this->readType2String(input, datatype, count, id);
+			std::cerr << "DATE & Time: " << text << std::endl;
+			break;
+
 		// case 319: // The chromaticities of the primaries of the image.
+
+		case 700: // XML packet
+			text = this->readType1ByteArray(input, datatype, count, id);
+			std::cerr << "READ XML PACKET IN HEADER" << std::endl;
+			break;
 
 		default:  // ignore unknown parameters
 			value = readLittleEndian4ByteUInt(input);
@@ -640,7 +683,7 @@ void TiffHeader::writeEntryUInteger(std::fstream& output, int datatype,
 
 	if (count != 1) {
 		if (!((tag == 273) || (tag == 279))) {
-			std::cerr << "Problem2 reading value, bad parameter count: " << count << std::endl;
+			std::cerr << "Problem1 reading value, bad parameter count: " << count << std::endl;
 			std::cerr << "TAG IS " << tag << std::endl;
 			exit(1);
 		}
@@ -814,7 +857,7 @@ ulonglongint TiffHeader::readEntryUInteger(std::fstream& input, int datatype,
 double TiffHeader::readType5Value(std::fstream& input, int datatype,
 		ulonglongint count, int tag) {
 	if (count != 1) {
-		std::cerr << "Problem1 reading value, bad parameter count: " << count << std::endl;
+		std::cerr << "Problem3 reading value, bad parameter count: " << count << std::endl;
 		exit(1);
 	}
 	if (datatype != 5) {
@@ -841,6 +884,96 @@ double TiffHeader::readType5Value(std::fstream& input, int datatype,
 	}
 
 	return value;
+}
+
+
+//////////////////////////////
+//
+// TiffHeader::readType1ByteArray --
+//
+
+std::string TiffHeader::readType1ByteArray(std::fstream& input, int datatype, 
+	ulonglongint count, int tag) {
+
+	if (count <= 0) {
+		std::cerr << "Problem4 reading value, bad parameter count: " << count << std::endl;
+		exit(1);
+	}
+	if (datatype != 1) {
+		std::cerr << "Wrong data type for reading a byte array: " << datatype << "." << std::endl;
+		exit(1);
+	}
+
+	std::vector<char> value(count, 0);
+
+	if (this->isBigTiff()) {
+		std::cerr << "DON'T KNOW HOW TO READ A BIGTIFF BYTE ARRAY" << std::endl;
+		exit(1);
+	} else {
+		ulonglongint offset;
+		offset = readLittleEndian4ByteUInt(input);
+ 		ulonglongint position = input.tellg();
+		goToByteIndex(input, offset);
+		input.read(value.data(), count);
+		// go back to after the entry offset value:
+		goToByteIndex(input, position);
+	}
+	std::string output;
+	output.resize(count);
+	for (int i=0; i<count; i++) {
+		output[i] = value[i];
+	}
+std::cerr << "READING COUNT " << count << " STRING " << output << std::endl;
+	return output;
+}
+
+
+
+//////////////////////////////
+//
+// TiffHeader::readType2String -- read a string
+//
+
+std::string TiffHeader::readType2String(std::fstream& input, int datatype,
+		ulonglongint count, int tag) {
+
+	if (count <= 0) {
+		std::cerr << "Problem4 reading value, bad parameter count: " << count << std::endl;
+		exit(1);
+	}
+	if (datatype != 2) {
+		std::cerr << "Wrong data type for reading a string: " << datatype << "." << std::endl;
+		exit(1);
+	}
+
+	int size = count + 100;
+	char* buffer = new char[size];
+	for (int i=0; i<size; i++) {
+		buffer[i] = '\0';
+	}
+
+	if (this->isBigTiff()) {
+		std::cerr << "DON'T KNOW HOW TO READ A BIGTIFF STRING" << std::endl;
+		exit(1);
+	} else {
+		ulonglongint offset;
+		offset = readLittleEndian4ByteUInt(input);
+ 		ulonglongint position = input.tellg();
+		goToByteIndex(input, offset);
+		input.read(buffer, count);
+		// go back to after the entry offset value:
+		goToByteIndex(input, position);
+	}
+
+	int bsize = (int)strlen(buffer);
+	if (bsize != count - 1) {
+		std::cerr << "Bad string, probably has a null inside it, or multiple strings" << std::endl;
+		std::cerr << "STRING: " << buffer << std::endl;
+	}
+	std::string value = buffer;
+	delete [] buffer;
+	return value;
+
 }
 
 
