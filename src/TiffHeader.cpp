@@ -33,6 +33,8 @@
 #include "TiffHeader.h"
 
 #include <stdlib.h>
+#include <cstring>
+
 
 
 namespace prp {
@@ -920,7 +922,7 @@ std::string TiffHeader::readType1ByteArray(std::fstream& input, int datatype,
 	}
 	std::string output;
 	output.resize(count);
-	for (int i=0; i<count; i++) {
+	for (int i=0; i<(int)count; i++) {
 		output[i] = value[i];
 	}
 std::cerr << "READING COUNT " << count << " STRING " << output << std::endl;
@@ -966,7 +968,7 @@ std::string TiffHeader::readType2String(std::fstream& input, int datatype,
 	}
 
 	int bsize = (int)strlen(buffer);
-	if (bsize != count - 1) {
+	if (bsize != (int)(count - 1)) {
 		std::cerr << "Bad string, probably has a null inside it, or multiple strings" << std::endl;
 		std::cerr << "STRING: " << buffer << std::endl;
 	}
