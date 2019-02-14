@@ -33,12 +33,15 @@ int main(int argc, char** argv) {
 		exit(1);
 	}
 
+
+	/*
 	fstream output;
 	output.open(argv[2], ios::binary | ios::in | ios::out);
 	if (!output.is_open()) {
 		cerr << "Output filename " << argv[2] << " cannot be opened" << endl;
 		exit(1);
 	}
+	*/
 
 	int threshold = 249;
 

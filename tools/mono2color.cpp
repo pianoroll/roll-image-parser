@@ -109,13 +109,13 @@ void duplicateSamples(fstream& output, TiffFile& image) {
 	string outdata;
 	outdata.resize(cols*3);
 
-	for (int r=0; r<rows; r++) {
+	for (int r=0; r<(int)rows; r++) {
 		indata = image.readString(cols);
-		if ((int)indata.size() != cols) {
+		if ((int)indata.size() != (int)cols) {
 			cerr << "Strange problem happened converting file." << endl;
 			exit(1);
 		}
-		for (int i=0; i<cols; i++) {
+		for (int i=0; i<(int)cols; i++) {
 			outdata[i*3 + 0] = indata[i + 0];
 			outdata[i*3 + 1] = indata[i + 1];
 			outdata[i*3 + 2] = indata[i + 2];
