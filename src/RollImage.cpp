@@ -4031,11 +4031,11 @@ void RollImage::generateNoteMidiFileBinasc(ostream& output) {
 }
 
 
+
 //////////////////////////////
 //
 // RollImage::generateMidifile --
 //
-
 
 #ifndef DONOTUSEFFT
 void RollImage::generateMidifile(MidiFile& midifile) {
@@ -4043,6 +4043,8 @@ void RollImage::generateMidifile(MidiFile& midifile) {
 	if (holes.empty()) {
 		return;
 	}
+
+	insertRollImageProperties(midifile);
 
 	assignMidiKeyNumbersToHoles();
 
@@ -4177,6 +4179,145 @@ std::ostream& RollImage::printQualityReport(std::ostream& out) {
 	}
 
 	return out;
+}
+
+
+
+//////////////////////////////
+//
+// RollImage::insertRollImageProperties -- see printRollImageProperties().
+//
+
+void RollImage::insertRollImageProperties(MidiFile& midifile) {
+	if (!m_analyzedLeaders) {
+		analyzeLeaders();
+	}
+
+	double averageRollWidth = getAverageRollWidth();
+	averageRollWidth = int(averageRollWidth*100.0+0.5)/100.0;
+	double averageSoftMarginWidth = getAverageSoftMarginTotal();
+	averageSoftMarginWidth = int(averageSoftMarginWidth*100.0+0.5)/100.0;
+
+	int musiclength = getLastMusicHoleEnd() - getFirstMusicHoleStart();
+
+	double avgholewidth = int(getAverageMusicalHoleWidth()*100.0+0.5)/100.0;
+
+	double leftCol = m_firstHolePosition - driftCorrection.at(getFirstMusicHoleStart());
+	leftCol = leftCol - leftMarginIndex.at(getFirstMusicHoleStart());
+
+	double rightCol = m_lastHolePosition - driftCorrection.at(getFirstMusicHoleStart());
+	rightCol = rightMarginIndex.at(getFirstMusicHoleStart()) - rightCol;
+
+	int trackerholes = getTrackerHoleCount();
+
+	ulongint musicnotecount = 0;
+	for (ulongint i=0; i<holes.size(); i++) {
+		if (holes.at(i)->attack) {
+			musicnotecount++;
+		}
+	}
+
+	double driftmax = driftCorrection.at(getFirstMusicHoleStart());;
+	double driftmin = driftCorrection.at(getFirstMusicHoleStart());;
+
+	for (ulongint i=getFirstMusicHoleStart()+1; i<getLastMusicHoleEnd(); i++) {
+		double drift = driftCorrection.at(i);
+		if (driftmax < drift) {
+			driftmax = drift;
+		}
+		if (driftmin > drift) {
+			driftmin = drift;
+		}
+	}
+	double driftrange = driftmax - driftmin;
+
+#ifndef DONOTUSEFFT
+	std::chrono::duration<double> processing_time = stop_time - start_time;
+	std::chrono::system_clock::time_point nowtime = std::chrono::system_clock::now();
+	std::time_t current_time = std::chrono::system_clock::to_time_t(nowtime);
+#endif
+
+	stringstream ss;
+	ss << "@THRESHOLD:\t\t"         << getThreshold()                << "\n";
+	midifile.addText(0, 0, ss.str()); ss.str("");
+	ss << "@IMAGE_WIDTH:\t\t"       << getCols()                     << "px\n";
+	midifile.addText(0, 0, ss.str()); ss.str("");
+	ss << "@IMAGE_LENGTH:\t\t"      << getRows()                     << "px\n";
+	midifile.addText(0, 0, ss.str()); ss.str("");
+	ss << "@ROLL_WIDTH:\t\t"        << averageRollWidth              << "px\n";
+	midifile.addText(0, 0, ss.str()); ss.str("");
+	ss << "@HARD_MARGIN_BASS:\t"    << getHardMarginLeftWidth()      << "px\n";
+	midifile.addText(0, 0, ss.str()); ss.str("");
+	ss << "@HARD_MARGIN_TREBLE:\t"  << getHardMarginRightWidth()     << "px\n";
+	midifile.addText(0, 0, ss.str()); ss.str("");
+	ss << "@MAX_BASS_DRIFT:\t"      << getSoftMarginLeftWidthMax()   << "px\n";
+	midifile.addText(0, 0, ss.str()); ss.str("");
+	ss << "@MAX_TREBLE_DRIFT:\t"    << getSoftMarginRightWidthMax()  << "px\n";
+	midifile.addText(0, 0, ss.str()); ss.str("");
+	ss << "@AVG_SOFT_MARGIN_SUM:\t" << averageSoftMarginWidth        << "px\n";
+	midifile.addText(0, 0, ss.str()); ss.str("");
+	ss << "@DRIFT_RANGE:\t\t"       << int(driftrange*100+0.5)/100.0 << "px\n";
+	midifile.addText(0, 0, ss.str()); ss.str("");
+	ss << "@DRIFT_MIN:\t\t"         << int(driftmax*100+0.5)/100.0   << "px\n";
+	midifile.addText(0, 0, ss.str()); ss.str("");
+	ss << "@DRIFT_MAX:\t\t"         << int(driftmin*100+0.5)/100.0   << "px\n";
+	midifile.addText(0, 0, ss.str()); ss.str("");
+	ss << "@PRELEADER_ROW:\t\t"     << getPreleaderIndex()           << "px\n";
+	midifile.addText(0, 0, ss.str()); ss.str("");
+	ss << "@LEADER_ROW:\t\t"        << getLeaderIndex()              << "px\n";
+	midifile.addText(0, 0, ss.str()); ss.str("");
+	ss << "@FIRST_HOLE:\t\t"        << getFirstMusicHoleStart()      << "px\n";
+	midifile.addText(0, 0, ss.str()); ss.str("");
+	ss << "@LAST_HOLE:\t\t"         << getLastMusicHoleEnd()         << "px\n";
+	midifile.addText(0, 0, ss.str()); ss.str("");
+	ss << "@END_MARGIN:\t\t"        << getRows() - getLastMusicHoleEnd() << "px\n";
+	midifile.addText(0, 0, ss.str()); ss.str("");
+	ss << "@MUSICAL_LENGTH:\t"      << musiclength                   << "px\n";
+	midifile.addText(0, 0, ss.str()); ss.str("");
+	ss << "@MUSICAL_HOLES:\t\t"     << holes.size()                  << "\n";
+	midifile.addText(0, 0, ss.str()); ss.str("");
+	ss << "@MUSICAL_NOTES:\t\t"     << musicnotecount                << "\n";
+	midifile.addText(0, 0, ss.str()); ss.str("");
+	ss << "@AVG_HOLE_WIDTH:\t"      << avgholewidth                  << "px\n";
+	midifile.addText(0, 0, ss.str()); ss.str("");
+	ss << "@ANTIDUST_COUNT:\t"      << antidust.size()               << "\n";
+	midifile.addText(0, 0, ss.str()); ss.str("");
+	ss << "@BAD_HOLE_COUNT:\t"      << badHoles.size()               << "\n";
+	midifile.addText(0, 0, ss.str()); ss.str("");
+	ss << "@EDGE_TEAR_COUNT:\t"     << trebleTears.size() + bassTears.size() << "\n";
+	midifile.addText(0, 0, ss.str()); ss.str("");
+	ss << "@BASS_TEAR_COUNT:\t"     << bassTears.size()              << "\n";
+	midifile.addText(0, 0, ss.str()); ss.str("");
+	ss << "@TREBLE_TEAR_COUNT:\t"   << trebleTears.size()            << "\n";
+	midifile.addText(0, 0, ss.str()); ss.str("");
+	ss << "@DUST_SCORE:\t\t"        << int(getDustScore()+0.5)       << "ppm\n";
+	midifile.addText(0, 0, ss.str()); ss.str("");
+	ss << "@DUST_SCORE_BASS:\t"     << int(getDustScoreBass()+0.5)   << "ppm\n";
+	midifile.addText(0, 0, ss.str()); ss.str("");
+	ss << "@DUST_SCORE_TREBLE:\t"   << int(getDustScoreTreble()+0.5) << "ppm\n";
+	midifile.addText(0, 0, ss.str()); ss.str("");
+	ss << "@SHIFTS:\t\t"            << shifts.size()                 << "\n";
+	midifile.addText(0, 0, ss.str()); ss.str("");
+	ss << "@HOLE_SEPARATION:\t"     << holeSeparation                << "px\n";
+	midifile.addText(0, 0, ss.str()); ss.str("");
+	ss << "@HOLE_OFFSET:\t\t"       << holeOffset                    << "px\n";
+	midifile.addText(0, 0, ss.str()); ss.str("");
+	ss << "@TRACKER_HOLES:\t\t"     << trackerholes                  << " (estimate)\n";
+	midifile.addText(0, 0, ss.str()); ss.str("");
+	ss << "@SOFTWARE_DATE:\t\t"     << __DATE__ << " " << __TIME__ << endl;
+	midifile.addText(0, 0, ss.str()); ss.str("");
+#ifndef DONOTUSEFFT
+	ss << "@ANALYSIS_DATE:\t\t"     << std::ctime(&current_time);
+	midifile.addText(0, 0, ss.str()); ss.str("");
+	ss << "@ANALYSIS_TIME:\t\t"     << int(processing_time.count()*100.0+0.5)/100.0 << "sec" << endl;
+	midifile.addText(0, 0, ss.str()); ss.str("");
+#endif
+	ss << "@COLOR_CHANNEL:\t\t"     << "green"                       << endl;
+	midifile.addText(0, 0, ss.str()); ss.str("");
+	ss << "@CHANNEL_MD5:\t\t"       << getDataMD5Sum()               << endl;
+	midifile.addText(0, 0, ss.str()); ss.str("");
+	ss << "@MANUAL_EDITS:\t\t"      << "no "                         << endl;
+	midifile.addText(0, 0, ss.str()); ss.str("");
 }
 
 
@@ -4613,7 +4754,7 @@ void RollImage::setThreshold(int value) {
 // RollImage::getThreshold --
 //
 
-ucharint RollImage::getThreshold(void) {
+int RollImage::getThreshold(void) {
 	return (ucharint)m_threshold;
 }
 

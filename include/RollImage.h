@@ -92,6 +92,7 @@ class RollImage : public TiffFile, public RollOptions {
 		void            analyzeHoles                  (void);
 		void            mergePixelOverlay             (std::fstream& output);
 		void            markHoleBBs                   (void);
+		void            insertRollImageProperties     (MidiFile& midifile);
 		std::ostream&   printRollImageProperties      (std::ostream& out = std::cout);
 		std::ostream&   printQualityReport            (std::ostream& out = std::cerr);
 		int             getHardMarginLeftWidth        (void);
@@ -146,7 +147,7 @@ class RollImage : public TiffFile, public RollOptions {
 		void            setWarningOn                  (void);
 		void            setWarningOff                 (void);
 		void            setThreshold                  (int value);
-		ucharint        getThreshold                  (void);
+		int             getThreshold                  (void);
 
 		// pixelType: a bitmask which contains enumerated types for the
 		// functions of pixels (the PIX_* defines above):
