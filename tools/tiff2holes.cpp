@@ -13,6 +13,7 @@
 //
 
 #include "RollImage.h"
+#include "Options.h"
 
 #include <vector>
 
@@ -22,32 +23,40 @@ using namespace prp;
 ///////////////////////////////////////////////////////////////////////////
 
 int main(int argc, char** argv) {
-	if (argc != 2) {
-		cerr << "Usage: tiff2holes file.tiff\n";
+	Options options;
+	options.define("r|red-welte=b", "Assume Red-Welte piano roll");
+	options.define("t|threshold=i:249", "Brightness threshold for hole/paper separation");
+	options.process(argc, argv);
+
+	if (options.getArgCount() != 1) {
+		cerr << "Usage: tiff2holes [-rt] file.tiff > analysis.txt\n";
 		exit(1);
 	}
 
 	RollImage roll;
-	if (!roll.open(argv[1])) {
-		cerr << "Input filename " << argv[1] << " cannot be opened" << endl;
+	if (!roll.open(options.getArg(1))) {
+		cerr << "Input filename " << options.getArg(1) << " cannot be opened" << endl;
 		exit(1);
 	}
 
 
 	/*
 	fstream output;
-	output.open(argv[2], ios::binary | ios::in | ios::out);
+	output.open(options.getArg(2), ios::binary | ios::in | ios::out);
 	if (!output.is_open()) {
-		cerr << "Output filename " << argv[2] << " cannot be opened" << endl;
+		cerr << "Output filename " << options.getArg(2) << " cannot be opened" << endl;
 		exit(1);
 	}
 	*/
 
-	int threshold = 249;
+	int threshold = options.getInteger("threshold");
 
 	roll.setDebugOn();
 	roll.setWarningOn();
 	roll.loadGreenChannel(threshold);
+	// if (options.getBoolean("red-welte")) {
+		roll.setRollTypeRedWelte();
+	// }
 	roll.analyze();
 	cerr << "DONE ANALYZING" << endl;
 	roll.printRollImageProperties();

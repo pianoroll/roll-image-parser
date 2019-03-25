@@ -12,6 +12,7 @@
 
 #include "RollOptions.h"
 
+using namespace std;
 
 namespace prp  {
 
@@ -252,6 +253,119 @@ double RollOptions::getHoleShiftCutoff(void) {
 
 void RollOptions::setHoleShiftCutoff(double value) {
 	m_holeShiftCutoff = value;
+}
+
+
+
+//////////////////////////////
+//
+// RollOptions::getRollType -- Return the roll type being processed:
+//   "" = unknown
+//   "welte-red"      = Welte Mignon T-100 red roll
+//   "welte-green"    = Welte Mignon T-98 green roll
+//   "welte-licensee" = Welte Mignon (Deluxe) Licensee
+//   "ampico"         = AMPICO roll (variation not specified)
+//   "ampico-a"       = AMPICO roll, earlier model
+//   "ampico-b"       = AMPICO roll, later model
+//   "duoart"         = Aeolean Duo-Art
+//
+
+std::string RollOptions::getRollType(void) {
+	return m_rollType;
+}
+
+
+
+//////////////////////////////
+//
+// RollOptions::setRollTypeRedWelte -- Apply settings suitable for Red Welte piano rolls.
+//
+// red Welte tracker holes:
+//
+//   10 expression on left side:
+//       1:  MF-Off                          MIDI Key 14
+//       2:  MF-On                           MIDI Key 15
+//       3:  Crescendo-Off                   MIDI Key 16
+//       4:  Crescendo-On                    MIDI Key 17
+//       5:  Forzando-Off                    MIDI Key 18
+//       6:  Forzando-On                     MIDI Key 19
+//       7:  Soft-Pedal-Off                  MIDI Key 20
+//       8:  Soft-Pedal-On                   MIDI Key 21
+//       9:  Motor-Off                       MIDI Key 22
+//       10: Motor-On                        MIDI Key 23
+//   Then 80 notes from C1 to G7 (MIDI note 24 to 103
+//       11: C1                              MIDI Key 24
+//       ...
+//       50:  D#4                            MIDI Key 63
+//    Treble register:
+//       51:  E4                             MIDI Key 64
+//       ...
+//       90:  G7                             MIDI Key 103
+//   Then 10 expression holes on the right side:
+//       91:  -10: Rewind                    MIDI Key 104
+//       92:  -9:  Electric-Cutoff           MIDI Key 105
+//       93:  -8:  Sustain-Pedal-On          MIDI Key 106
+//       94:  -7:  Sustain-Pedal-Off         MIDI Key 107
+//       95:  -6:  Forzando-On               MIDI Key 108
+//       96:  -5:  Forzando-Off              MIDI Key 109
+//       97:  -4:  Crescendo-On              MIDI Key 110
+//       98:  -3:  Crescendo-Off             MIDI Key 111
+//       99:  -2:  Mezzo-Forte-On            MIDI Key 112
+//       100: -1:  Mezzo-Forte-Off           MIDI Key 113
+//
+//
+
+void RollOptions::setRollTypeRedWelte(void) {
+		m_rollType = "welte-red";
+		m_maxHoleCount = 100;
+		m_minHoleCount = 100;
+		m_minTrackerSpacingToPaperEdge = 1.6;
+		m_rewindHole = 91;  // 91st hole from left (bass)
+		m_rewindHoleMidi = 104;
+cerr << ">>> SETTING REWIND HOLE TO " << m_rewindHoleMidi << endl;
+
+		m_bassExpressionTrackStartNumberLeft = 1;
+		m_bassExpressionTrackStartMidi = 14;
+		m_bassNotesTrackStartNumberLeft = 11;
+		m_bassNotesTrackStartMidi = 24;
+		m_trebleNotesTrackStartNumberLeft = 51;
+		m_trebleNotesTrackStartMidi = 64;
+		m_trebleExpressionTrackStartNumberLeft = 91;
+		m_trebleExpressionTrackStartMidi = 104;
+
+}
+
+
+/////////////////////////////////
+//
+// RollOptions::getRewindHoleNumber(void) -- returns 0 if unknown.
+//
+
+int RollOptions::getRewindHoleBassNumber(void) {
+	return m_rewindHole;
+}
+
+
+
+/////////////////////////////////
+//
+// RollOptions::getRewindHoleLeftIndex(void) -- returns 0 if unknown.
+//
+
+int RollOptions::getRewindHoleBassIndex(void) {
+	return m_rewindHole - 1;
+}
+
+
+
+/////////////////////////////////
+//
+// RollOptions::getRewindHoleMidi(void) -- returns 0 if unknown; otherwise,
+//     returns the MIDI note number of the rewind hole.
+//
+
+int RollOptions::getRewindHoleMidi(void) {
+	return m_rewindHoleMidi;
 }
 
 

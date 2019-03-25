@@ -137,6 +137,8 @@ class RollImage : public TiffFile, public RollOptions {
 		void            generateNoteMidiFileHex       (ostream& output);
 		void            generateNoteMidiFileBinasc    (ostream& output);
 
+		void            setRollTypeRedWelte           (void);
+
 #ifndef DONOTUSEFFT
 		void            generateMidifile              (MidiFile& midifile);
 #endif

@@ -44,6 +44,12 @@ class RollOptions {
 		double   getHoleShiftCutoff        (void);
 		void     setHoleShiftCutoff        (double value);
 
+		std::string getRollType            (void);
+		void     setRollTypeRedWelte       (void);
+		int      getRewindHoleBassNumber   (void);
+		int      getRewindHoleBassIndex    (void);
+		int      getRewindHoleMidi         (void);
+
 	private:
 		// m_minTrackerSpacingToPaperEdge: minimum distance from paper
 		// edge to first tracker line on the roll.  The units are in terms
@@ -66,8 +72,11 @@ class RollOptions {
 		// elongated holes (used for detecting bad holes).
 		double m_circularityThreshold;
 
-		// m_maxHoleCount: The maxmimum number of holes expected on roll.
+		// m_maxHoleCount: The maxmimum number of tracker-bar holes expected on roll.
 		int m_maxHoleCount;
+
+		// m_minHoleCount: The maxmimum number of tracker-bar holes expected on roll.
+		int m_minHoleCount;
 
 		// m_maxTearFill: The max number of pixels to fill a tear with.
 		int m_maxTearFill;
@@ -79,6 +88,28 @@ class RollOptions {
 		// leading and trailing edge of a hole to decide if the paper
 		// is shifting while the hole is playing.
 		double m_holeShiftCutoff;
+
+		// m_rollType: the type of roll being processed ("" = unknown).
+		std::string m_rollType;
+
+		// m_rewindHole: the tracker-bar hole position.  Indexed from 1
+		// for the first hole on the left (bass) side of the roll.
+		// 0 means unknown (as in an unknown roll type).
+		int m_rewindHole = 0;
+
+		// m_rewindHoleMidi: the rewind hole positions in terms of 
+		// MIDI key number (0 means unknown position).
+		int m_rewindHoleMidi = 0;
+
+		// starting positions for expression and regular note tracks:
+		int m_bassExpressionTrackStartNumberLeft = 0;
+		int m_bassExpressionTrackStartMidi = 0;
+		int m_bassNotesTrackStartNumberLeft = 0;
+		int m_bassNotesTrackStartMidi = 0;
+		int m_trebleNotesTrackStartNumberLeft = 0;
+		int m_trebleNotesTrackStartMidi = 0;
+		int m_trebleExpressionTrackStartNumberLeft = 0;
+		int m_trebleExpressionTrackStartMidi = 0;
 
 };
 

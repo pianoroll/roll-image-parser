@@ -183,6 +183,9 @@ void RollImage::analyze(void) {
 	start_time = std::chrono::system_clock::now();
 #endif
 
+	setRollTypeRedWelte();
+cerr << "REWIND HOLE MIDI " << getRewindHoleMidi() << endl;
+
 	if (m_debug) { cerr << "STEP 1: analyzeBasicMargins" << endl; }
 	analyzeBasicMargins();
 	if (m_debug) { cerr << "STEP 2: analyzeLeaders" << endl; }
@@ -477,7 +480,7 @@ void RollImage::calculateHoleDescriptors(void) {
 //
 
 void RollImage::assignMidiKeyNumbersToHoles(void) {
-	for (ulongint i=0; i<midiToTrackMapping.size(); i++) {
+	for (int i=0; i<(int)midiToTrackMapping.size(); i++) {
 		int track = midiToTrackMapping[i];
 		if (track <= 0) {
 			continue;
@@ -489,6 +492,86 @@ void RollImage::assignMidiKeyNumbersToHoles(void) {
 			trackerArray[track][j]->midikey = i;
 		}
 	}
+
+	int rewindholemidi = getRewindHoleMidi();
+	rewindholemidi = 104; // hardwired for red-welte for now.
+	if (!rewindholemidi) {
+		// don't know what type of piano roll, so do not try to 
+		// make a correction for the expected rewind hole location.
+		cerr << "REWIND HOLE IS UNDEFINED (set with -r option for red-welte probably)" << endl;
+		cerr << "Rewind hole MIDI is: " << rewindholemidi << endl;
+		return;
+	}
+
+	vector<int> firstHole(trackerArray.size(), 0);
+	vector<int> midiKey(trackerArray.size(), 0);
+	ulongint maxorigin = 0;
+	ulongint maxmidi   = 0;
+	ulongint maxindex  = 0;
+
+	for (int i=0; i<(int)trackerArray.size(); i++) {
+		if (trackerArray[i].empty()) {
+			continue;
+		}
+		midiKey[i] = trackerArray[i][0]->midikey;
+		firstHole[i] = trackerArray[i][0]->origin.second;
+		if (firstHole[i] > maxorigin) {
+			maxorigin = firstHole[i];
+			maxmidi = trackerArray[i][0]->midikey;
+			maxindex = i;
+		}
+	}
+
+	int targetindex = -1;
+	for (int i=1; i<(int)midiKey.size(); i++) {
+		if (midiKey[i] == 0) {
+			midiKey[i] = midiKey[i-1] + 1;
+		}
+		if (midiKey[i] == rewindholemidi) {
+			targetindex = i;
+		}
+	}
+
+	if (targetindex  < 0) {
+		cerr << "Strange error in RollImage::assignMidiKeyNumbersToHoles()" << endl;
+		return;
+	}
+
+	if (rewindholemidi == maxmidi) {
+		// everything is OK
+		cerr << "REWIND HOLE IS IN THE EXPECTED LOCATION " << maxmidi << endl;
+		return;
+	}
+
+	// likely the tracker bar positions need to be shifted.
+	// check up to +/- 2 tracker bar holes for the rewind hole.
+	vector<int> difference(5,0);
+	int newmaxi = targetindex;
+	int newmaxorigin = firstHole[newmaxi];
+
+	for (int i=targetindex-2; i<=targetindex+2; i++) {
+		if (firstHole[i] > firstHole[newmaxi]) {
+			newmaxi = i;
+			newmaxorigin = firstHole[i];
+		}
+	}
+
+	if (midiKey[newmaxi] == rewindholemidi) {
+		// everything is most likely OK: this seems to be the correct rewind hole.
+		cerr << "POSITION OF REWIND HOLE PROBABLY OK" << endl;
+		return;
+	}
+
+	int shifting = midiKey[newmaxi] - rewindholemidi;
+	cerr << "SHIFTING HOLE ASSIGNMENTS BY " << shifting << " REWIND HOLE ALIGNMENT" << endl;
+
+	for (int i=0; i<(int)trackerArray.size(); i++) {
+		for (int j=0; j<(int)trackerArray[i].size(); j++) {
+			trackerArray[i][j]->midikey += shifting;
+			trackerArray[i][j]->track += shifting;
+		}
+	}
+
 }
 
 
@@ -4238,71 +4321,71 @@ void RollImage::insertRollImageProperties(MidiFile& midifile) {
 #endif
 
 	stringstream ss;
-	ss << "@THRESHOLD:\t\t"         << getThreshold()                << "\n";
+	ss << "@THRESHOLD:\t\t"         << getThreshold()                << "";
 	midifile.addText(0, 0, ss.str()); ss.str("");
-	ss << "@IMAGE_WIDTH:\t\t"       << getCols()                     << "px\n";
+	ss << "@IMAGE_WIDTH:\t\t"       << getCols()                     << "px";
 	midifile.addText(0, 0, ss.str()); ss.str("");
-	ss << "@IMAGE_LENGTH:\t\t"      << getRows()                     << "px\n";
+	ss << "@IMAGE_LENGTH:\t\t"      << getRows()                     << "px";
 	midifile.addText(0, 0, ss.str()); ss.str("");
-	ss << "@ROLL_WIDTH:\t\t"        << averageRollWidth              << "px\n";
+	ss << "@ROLL_WIDTH:\t\t"        << averageRollWidth              << "px";
 	midifile.addText(0, 0, ss.str()); ss.str("");
-	ss << "@HARD_MARGIN_BASS:\t"    << getHardMarginLeftWidth()      << "px\n";
+	ss << "@HARD_MARGIN_BASS:\t"    << getHardMarginLeftWidth()      << "px";
 	midifile.addText(0, 0, ss.str()); ss.str("");
-	ss << "@HARD_MARGIN_TREBLE:\t"  << getHardMarginRightWidth()     << "px\n";
+	ss << "@HARD_MARGIN_TREBLE:\t"  << getHardMarginRightWidth()     << "px";
 	midifile.addText(0, 0, ss.str()); ss.str("");
-	ss << "@MAX_BASS_DRIFT:\t"      << getSoftMarginLeftWidthMax()   << "px\n";
+	ss << "@MAX_BASS_DRIFT:\t"      << getSoftMarginLeftWidthMax()   << "px";
 	midifile.addText(0, 0, ss.str()); ss.str("");
-	ss << "@MAX_TREBLE_DRIFT:\t"    << getSoftMarginRightWidthMax()  << "px\n";
+	ss << "@MAX_TREBLE_DRIFT:\t"    << getSoftMarginRightWidthMax()  << "px";
 	midifile.addText(0, 0, ss.str()); ss.str("");
-	ss << "@AVG_SOFT_MARGIN_SUM:\t" << averageSoftMarginWidth        << "px\n";
+	ss << "@AVG_SOFT_MARGIN_SUM:\t" << averageSoftMarginWidth        << "px";
 	midifile.addText(0, 0, ss.str()); ss.str("");
-	ss << "@DRIFT_RANGE:\t\t"       << int(driftrange*100+0.5)/100.0 << "px\n";
+	ss << "@DRIFT_RANGE:\t\t"       << int(driftrange*100+0.5)/100.0 << "px";
 	midifile.addText(0, 0, ss.str()); ss.str("");
-	ss << "@DRIFT_MIN:\t\t"         << int(driftmax*100+0.5)/100.0   << "px\n";
+	ss << "@DRIFT_MIN:\t\t"         << int(driftmax*100+0.5)/100.0   << "px";
 	midifile.addText(0, 0, ss.str()); ss.str("");
-	ss << "@DRIFT_MAX:\t\t"         << int(driftmin*100+0.5)/100.0   << "px\n";
+	ss << "@DRIFT_MAX:\t\t"         << int(driftmin*100+0.5)/100.0   << "px";
 	midifile.addText(0, 0, ss.str()); ss.str("");
-	ss << "@PRELEADER_ROW:\t\t"     << getPreleaderIndex()           << "px\n";
+	ss << "@PRELEADER_ROW:\t\t"     << getPreleaderIndex()           << "px";
 	midifile.addText(0, 0, ss.str()); ss.str("");
-	ss << "@LEADER_ROW:\t\t"        << getLeaderIndex()              << "px\n";
+	ss << "@LEADER_ROW:\t\t"        << getLeaderIndex()              << "px";
 	midifile.addText(0, 0, ss.str()); ss.str("");
-	ss << "@FIRST_HOLE:\t\t"        << getFirstMusicHoleStart()      << "px\n";
+	ss << "@FIRST_HOLE:\t\t"        << getFirstMusicHoleStart()      << "px";
 	midifile.addText(0, 0, ss.str()); ss.str("");
-	ss << "@LAST_HOLE:\t\t"         << getLastMusicHoleEnd()         << "px\n";
+	ss << "@LAST_HOLE:\t\t"         << getLastMusicHoleEnd()         << "px";
 	midifile.addText(0, 0, ss.str()); ss.str("");
-	ss << "@END_MARGIN:\t\t"        << getRows() - getLastMusicHoleEnd() << "px\n";
+	ss << "@END_MARGIN:\t\t"        << getRows() - getLastMusicHoleEnd() << "px";
 	midifile.addText(0, 0, ss.str()); ss.str("");
-	ss << "@MUSICAL_LENGTH:\t"      << musiclength                   << "px\n";
+	ss << "@MUSICAL_LENGTH:\t"      << musiclength                   << "px";
 	midifile.addText(0, 0, ss.str()); ss.str("");
-	ss << "@MUSICAL_HOLES:\t\t"     << holes.size()                  << "\n";
+	ss << "@MUSICAL_HOLES:\t\t"     << holes.size()                  << "";
 	midifile.addText(0, 0, ss.str()); ss.str("");
-	ss << "@MUSICAL_NOTES:\t\t"     << musicnotecount                << "\n";
+	ss << "@MUSICAL_NOTES:\t\t"     << musicnotecount                << "";
 	midifile.addText(0, 0, ss.str()); ss.str("");
-	ss << "@AVG_HOLE_WIDTH:\t"      << avgholewidth                  << "px\n";
+	ss << "@AVG_HOLE_WIDTH:\t"      << avgholewidth                  << "px";
 	midifile.addText(0, 0, ss.str()); ss.str("");
-	ss << "@ANTIDUST_COUNT:\t"      << antidust.size()               << "\n";
+	ss << "@ANTIDUST_COUNT:\t"      << antidust.size()               << "";
 	midifile.addText(0, 0, ss.str()); ss.str("");
-	ss << "@BAD_HOLE_COUNT:\t"      << badHoles.size()               << "\n";
+	ss << "@BAD_HOLE_COUNT:\t"      << badHoles.size()               << "";
 	midifile.addText(0, 0, ss.str()); ss.str("");
-	ss << "@EDGE_TEAR_COUNT:\t"     << trebleTears.size() + bassTears.size() << "\n";
+	ss << "@EDGE_TEAR_COUNT:\t"     << trebleTears.size() + bassTears.size() << "";
 	midifile.addText(0, 0, ss.str()); ss.str("");
-	ss << "@BASS_TEAR_COUNT:\t"     << bassTears.size()              << "\n";
+	ss << "@BASS_TEAR_COUNT:\t"     << bassTears.size()              << "";
 	midifile.addText(0, 0, ss.str()); ss.str("");
-	ss << "@TREBLE_TEAR_COUNT:\t"   << trebleTears.size()            << "\n";
+	ss << "@TREBLE_TEAR_COUNT:\t"   << trebleTears.size()            << "";
 	midifile.addText(0, 0, ss.str()); ss.str("");
-	ss << "@DUST_SCORE:\t\t"        << int(getDustScore()+0.5)       << "ppm\n";
+	ss << "@DUST_SCORE:\t\t"        << int(getDustScore()+0.5)       << "ppm";
 	midifile.addText(0, 0, ss.str()); ss.str("");
-	ss << "@DUST_SCORE_BASS:\t"     << int(getDustScoreBass()+0.5)   << "ppm\n";
+	ss << "@DUST_SCORE_BASS:\t"     << int(getDustScoreBass()+0.5)   << "ppm";
 	midifile.addText(0, 0, ss.str()); ss.str("");
-	ss << "@DUST_SCORE_TREBLE:\t"   << int(getDustScoreTreble()+0.5) << "ppm\n";
+	ss << "@DUST_SCORE_TREBLE:\t"   << int(getDustScoreTreble()+0.5) << "ppm";
 	midifile.addText(0, 0, ss.str()); ss.str("");
-	ss << "@SHIFTS:\t\t"            << shifts.size()                 << "\n";
+	ss << "@SHIFTS:\t\t"            << shifts.size()                 << "";
 	midifile.addText(0, 0, ss.str()); ss.str("");
-	ss << "@HOLE_SEPARATION:\t"     << holeSeparation                << "px\n";
+	ss << "@HOLE_SEPARATION:\t"     << holeSeparation                << "px";
 	midifile.addText(0, 0, ss.str()); ss.str("");
-	ss << "@HOLE_OFFSET:\t\t"       << holeOffset                    << "px\n";
+	ss << "@HOLE_OFFSET:\t\t"       << holeOffset                    << "px";
 	midifile.addText(0, 0, ss.str()); ss.str("");
-	ss << "@TRACKER_HOLES:\t\t"     << trackerholes                  << " (estimate)\n";
+	ss << "@TRACKER_HOLES:\t\t"     << trackerholes                  << " (estimate)";
 	midifile.addText(0, 0, ss.str()); ss.str("");
 	ss << "@SOFTWARE_DATE:\t\t"     << __DATE__ << " " << __TIME__ << endl;
 	midifile.addText(0, 0, ss.str()); ss.str("");
@@ -4757,6 +4840,18 @@ void RollImage::setThreshold(int value) {
 int RollImage::getThreshold(void) {
 	return (ucharint)m_threshold;
 }
+
+
+
+//////////////////////////////
+//
+// RollImage::setRollTypeRedWelte --
+//
+
+void RollImage::setRollTypeRedWelte(void) {
+
+}
+
 
 
 } // end of namespace prp
