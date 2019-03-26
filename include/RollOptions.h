@@ -46,11 +46,12 @@ class RollOptions {
 
 		std::string getRollType            (void);
 		void     setRollTypeRedWelte       (void);
+		void     setRollTypeGreenWelte     (void);
 		int      getRewindHoleBassNumber   (void);
 		int      getRewindHoleBassIndex    (void);
 		int      getRewindHoleMidi         (void);
 
-	private:
+	protected: // (maybe make private, but will have to create accessor functions)
 		// m_minTrackerSpacingToPaperEdge: minimum distance from paper
 		// edge to first tracker line on the roll.  The units are in terms
 		// of spacing between tracker lines.
@@ -111,10 +112,23 @@ class RollOptions {
 		int m_trebleExpressionTrackStartNumberLeft = 0;
 		int m_trebleExpressionTrackStartMidi = 0;
 
+		// MIDI file track assignments (offset from 0, with track 0 note having notes):
+		int m_bass_track       = 1;
+		int m_treble_track     = 2;
+		int m_bass_exp_track   = 3;
+		int m_treble_exp_track = 4;
+
+		// MIDI file channel assignments for each track, (offset from 0):
+		int m_bass_exp_ch      = 0;
+		int m_bass_ch          = 1;
+		int m_treble_ch        = 2;
+		int m_treble_exp_ch    = 3;
 };
 
 
 } // end prp namespace
 
 #endif /* _ROLLOPTIONS_H */
+
+
 

@@ -1,7 +1,7 @@
 //
 // Programmer:    Craig Stuart Sapp <craig@ccrma.stanford.edu>
 // Creation Date: Fri Dec  1 16:40:52 PST 2017
-// Last Modified: Fri Dec 15 03:48:43 PST 2017
+// Last Modified: Mon Mar 25 22:39:46 PDT 2019
 // Filename:      RollImage.cpp
 // Web Address:
 // Syntax:        C++;
@@ -9,43 +9,6 @@
 //
 // Description:   Piano-roll description parameters.
 //
-
-///////////////////////////////////////////////////////////
-//
-// red Welte tracker holes:
-//
-//   10 expression on left side:
-//       1:  MF-Off                          MIDI Key 14
-//       2:  MF-On                           MIDI Key 15
-//       3:  Crescendo-Off                   MIDI Key 16
-//       4:  Crescendo-On                    MIDI Key 17
-//       5:  Forzando-Off                    MIDI Key 18
-//       6:  Forzando-On                     MIDI Key 19
-//       7:  Soft-Pedal-Off                  MIDI Key 20
-//       8:  Soft-Pedal-On                   MIDI Key 21
-//       9:  Motor-Off                       MIDI Key 22
-//       10: Motor-On                        MIDI Key 23
-//   Then 80 notes from C1 to G7 (MIDI note 24 to 103
-//       11: C1                              MIDI Key 24
-//       ...
-//       50:  D#4                            MIDI Key 63
-//    Treble register:
-//       51:  E4                             MIDI Key 64
-//       ...
-//       90:  G7                             MIDI Key 103
-//   Then 10 expression holes on the right side:
-//       91:  -10: Rewind                    MIDI Key 104
-//       92:  -9:  Electric-Cutoff           MIDI Key 105
-//       93:  -8:  Sustain-Pedal-On          MIDI Key 106
-//       94:  -7:  Sustain-Pedal-Off         MIDI Key 107
-//       95:  -6:  Forzando-On               MIDI Key 108
-//       96:  -5:  Forzando-Off              MIDI Key 109
-//       97:  -4:  Crescendo-On              MIDI Key 110
-//       98:  -3:  Crescendo-Off             MIDI Key 111
-//       99:  -2:  Mezzo-Forte-On            MIDI Key 112
-//       100: -1:  Mezzo-Forte-Off           MIDI Key 113
-//
-
 
 #include "RollImage.h"
 #include "HoleInfo.h"
@@ -56,35 +19,26 @@
 #include <cmath>
 
 using namespace std;
-
-namespace prp {
+using namespace prp;
 
 
 //////////////////////////////
 //
-// RollImage::RollImage --
+// RollImage::RollImage -- Constructor for RollImage class.  Initializes the
+//    variables of the object.
 //
 
 RollImage::RollImage(void) {
 	clear();
 }
 
-//////////////////////////////
-//
-// RollImage::my_to_string --
-//
-
-string RollImage::my_to_string(int value) {
-	stringstream stream;
-	stream << value;
-	return stream.str();
-}
-
 
 
 //////////////////////////////
 //
-// RollImage::clear --
+// RollImage::clear -- Set the object to an initialized state.
+//    There will be variables in RollOptions inherited class that
+//    are not currently being reset.
 //
 
 void RollImage::clear(void) {
@@ -115,7 +69,7 @@ void RollImage::clear(void) {
 
 //////////////////////////////
 //
-// RollImage::~RollImage --
+// RollImage::~RollImage -- Destructor. Clears out the contents of the object.
 //
 
 RollImage::~RollImage(void) {
@@ -150,7 +104,22 @@ RollImage::~RollImage(void) {
 
 //////////////////////////////
 //
-// RollImage::loadGreenChannel --
+// RollImage::my_to_string -- Similar to to_string(), but implemented for
+//    older C++ compilers that do not have to_string().
+//
+
+string RollImage::my_to_string(int value) {
+	stringstream stream;
+	stream << value;
+	return stream.str();
+}
+
+
+
+//////////////////////////////
+//
+// RollImage::loadGreenChannel -- Load the green channel of the input image
+//   and trim at the brightness threshold for the paper/hole boundary.
 //
 
 void RollImage::loadGreenChannel(int threshold) {
@@ -175,16 +144,14 @@ void RollImage::loadGreenChannel(int threshold) {
 
 //////////////////////////////
 //
-// RollImage::analyze --
+// RollImage::analyze -- Analyze the loaded image to detect holes and
+//   generate analysis report (including embedded MIDI file).
 //
 
 void RollImage::analyze(void) {
 #ifndef DONOTUSEFFT
 	start_time = std::chrono::system_clock::now();
 #endif
-
-	setRollTypeRedWelte();
-cerr << "REWIND HOLE MIDI " << getRewindHoleMidi() << endl;
 
 	if (m_debug) { cerr << "STEP 1: analyzeBasicMargins" << endl; }
 	analyzeBasicMargins();
@@ -494,12 +461,10 @@ void RollImage::assignMidiKeyNumbersToHoles(void) {
 	}
 
 	int rewindholemidi = getRewindHoleMidi();
-	rewindholemidi = 104; // hardwired for red-welte for now.
 	if (!rewindholemidi) {
-		// don't know what type of piano roll, so do not try to 
+		// don't know what type of piano roll, so do not try to
 		// make a correction for the expected rewind hole location.
 		cerr << "REWIND HOLE IS UNDEFINED (set with -r option for red-welte probably)" << endl;
-		cerr << "Rewind hole MIDI is: " << rewindholemidi << endl;
 		return;
 	}
 
@@ -515,15 +480,6 @@ void RollImage::assignMidiKeyNumbersToHoles(void) {
 		}
 		midiKey[i] = trackerArray[i][0]->midikey;
 		firstHole[i] = trackerArray[i][0]->origin.first;
-
-/*
-cerr << "INDEX\t" << i 
-<< "\tSIZE: " << trackerArray[i].size()
-<< "\tFIRST: " << trackerArray[i][0]->origin.first 
-<< "\tSECOND: " << trackerArray[i][0]->origin.second 
-<< "\tTRACK: " << trackerArray[i][0]->track 
-<< "\tMIDI: " << trackerArray[i][0]->midikey << endl;
-*/
 
 		if (firstHole[i] > maxorigin) {
 			maxorigin = firstHole[i];
@@ -577,7 +533,9 @@ cerr << "INDEX\t" << i
 
 	for (int i=0; i<(int)trackerArray.size(); i++) {
 		for (int j=0; j<(int)trackerArray[i].size(); j++) {
-			trackerArray[i][j]->midikey += shifting;
+			if (trackerArray[i][j]->midikey >= 0) {
+				trackerArray[i][j]->midikey += shifting;
+			}
 			trackerArray[i][j]->track += shifting;
 		}
 	}
@@ -1245,7 +1203,7 @@ void RollImage::analyzeTrackerBarSpacing(void) {
 	for (ulongint i=4096; i<input.size(); i++) {
 		input.at(i) = 0.0;
 	}
-	
+
 #ifndef DONOTUSEFFT
 
 	FFT(spectrum, input);
@@ -3356,7 +3314,7 @@ void RollImage::removeBadLeaderHoles(void) {
 
 //////////////////////////////
 //
-// RollImage::getLastMusicHoleStartEnd --
+// RollImage::getLastMusicHoleEnd --
 //
 
 ulongint RollImage::getLastMusicHoleEnd(void) {
@@ -4141,8 +4099,11 @@ void RollImage::generateMidifile(MidiFile& midifile) {
 
 	assignMidiKeyNumbersToHoles();
 
-	midifile.setTPQ(510);
+	// TPQ is 6 times the tempo (so 591 = 6 * 98.5)
+	// 591 is for Red Welte tempo of 98.5 (~3 meters/minute).
+	midifile.setTPQ(591);
 
+	// These are the values to use for 300 dpi images:
 	// tempo 30 = 180
 	// tempo 35 = 210
 	// tempo 40 = 240
@@ -4167,17 +4128,30 @@ void RollImage::generateMidifile(MidiFile& midifile) {
 	// tempo 135 = 810
 	// tempo 140 = 840
 
+	// Tracks are organized by real notes first, then expression tracks.
+	// This is so that the expression tracks can be easily thrown away
+	// if needed; and otherwise, the first two tracks contain the real notes
+	// which makes things less confusing when viewing in sequencer software interface.
 	midifile.addTracks(4);
+	// track 0 = acceleration emulation (via tempo changes), and metadata
 	// track 1 = bass notes
 	// track 2 = treble notes
 	// track 3 = bass expression
 	// track 4 = treble expression
 
-	midifile.addController(3, 0, 3, 7, 0); // mute channel 3 notes (they are bass expression holes)
-	midifile.addController(4, 0, 4, 7, 0); // mute channel 4 notes (they are treble expression holes)
+	// The MIDI channels are from bass expression (left) to treble expression (right).
+	// MIDI channels (0 offset):
+	// track 0 does not contain notes
+	// track 1 = channel 2
+	// track 2 = channel 3
+	// track 3 = channel 1
+	// track 4 = channel 4
 
-	midifile.addController(1, 0, 1, 10, 32); // bass notes pan leftish
-	midifile.addController(2, 0, 2, 10, 96); // treble notes pan rightish
+	int tick = 0;
+	midifile.addController(m_bass_exp_track,   tick, m_bass_exp_ch,   7,  0); // mute bass expression holes
+	midifile.addController(m_treble_exp_track, tick, m_treble_exp_ch, 7,  0); // mute treble expression holes
+	midifile.addController(m_bass_track,       tick, m_bass_ch,      10, 32); // bass notes pan leftish
+	midifile.addController(m_treble_track,     tick, m_treble_ch,    10, 96); // treble notes pan rightish
 
 	ulongint mintime = holes[0]->origin.first;
 	ulongint maxtime = 0;
@@ -4195,22 +4169,22 @@ void RollImage::generateMidifile(MidiFile& midifile) {
 
 		// estimate the location of the expression tracks and the
 		// bass/treble register split (refine later):
-		if (key < 24) {          // Bass expression: for red Welte specifically
-			track    = 3;
-			channel  = 0;
-			velocity = 1;
-		} else if (key < 64) {   // Bass register: for red Welte specifically
-			track    = 1;
-			channel  = 1;
-			velocity = 64;
-		} else if (key < 104) {  // Treble register: for red Welte specifically
-			track    = 2;
-			channel  = 2;
-			velocity = 64;
-		} else {                  // Treble expression: for red Welte specifically
-			track    = 4;
-			channel  = 3;
-			velocity = 1;
+		if (key < m_bassNotesTrackStartMidi) { // Bass expression
+			track    = m_bass_exp_track;
+			channel  = m_bass_exp_ch;
+			velocity = 1; // very quiet, but channel volume will be set to 0
+		} else if (key < m_trebleNotesTrackStartMidi) { // Bass register
+			track    = m_bass_track;
+			channel  = m_bass_ch;
+			velocity = 64; // mf for now; will be refined by expression rendering later
+		} else if (key < m_trebleExpressionTrackStartMidi) {  // Treble register
+			track    = m_treble_track;
+			channel  = m_treble_ch;
+			velocity = 64;  // mf for now; will be refined by expression rendering later
+		} else { // Treble expression
+			track    = m_treble_exp_track;
+			channel  = m_treble_exp_ch;
+			velocity = 1; // very quiet, and channel volume will be set to 0
 		}
 		midifile.addNoteOn(track, hi->origin.first - mintime, channel, hi->midikey, velocity);
 		midifile.addNoteOff(track, hi->offtime - mintime, channel, hi->midikey);
@@ -4397,19 +4371,19 @@ void RollImage::insertRollImageProperties(MidiFile& midifile) {
 	midifile.addText(0, 0, ss.str()); ss.str("");
 	ss << "@TRACKER_HOLES:\t\t"     << trackerholes                  << " (estimate)";
 	midifile.addText(0, 0, ss.str()); ss.str("");
-	ss << "@SOFTWARE_DATE:\t\t"     << __DATE__ << " " << __TIME__ << endl;
+	ss << "@SOFTWARE_DATE:\t\t"     << __DATE__ << " " << __TIME__   << "";
 	midifile.addText(0, 0, ss.str()); ss.str("");
 #ifndef DONOTUSEFFT
 	ss << "@ANALYSIS_DATE:\t\t"     << std::ctime(&current_time);
 	midifile.addText(0, 0, ss.str()); ss.str("");
-	ss << "@ANALYSIS_TIME:\t\t"     << int(processing_time.count()*100.0+0.5)/100.0 << "sec" << endl;
+	ss << "@ANALYSIS_TIME:\t\t"     << int(processing_time.count()*100.0+0.5)/100.0 << "sec" << "";
 	midifile.addText(0, 0, ss.str()); ss.str("");
 #endif
-	ss << "@COLOR_CHANNEL:\t\t"     << "green"                       << endl;
+	ss << "@COLOR_CHANNEL:\t\t"     << "green"                       << "";
 	midifile.addText(0, 0, ss.str()); ss.str("");
-	ss << "@CHANNEL_MD5:\t\t"       << getDataMD5Sum()               << endl;
+	ss << "@CHANNEL_MD5:\t\t"       << getDataMD5Sum()               << "";
 	midifile.addText(0, 0, ss.str()); ss.str("");
-	ss << "@MANUAL_EDITS:\t\t"      << "no "                         << endl;
+	ss << "@MANUAL_EDITS:\t\t"      << "no "                         << "";
 	midifile.addText(0, 0, ss.str()); ss.str("");
 }
 
@@ -4833,7 +4807,7 @@ void RollImage::setWarningOff(void) {
 
 //////////////////////////////
 //
-// RollImage::setThreshold --
+// RollImage::setThreshold -- Should probably be moved to RollOptions class.
 //
 
 void RollImage::setThreshold(int value) {
@@ -4844,7 +4818,7 @@ void RollImage::setThreshold(int value) {
 
 //////////////////////////////
 //
-// RollImage::getThreshold --
+// RollImage::getThreshold -- Should probably be moved to RollOptions class.
 //
 
 int RollImage::getThreshold(void) {
@@ -4852,19 +4826,6 @@ int RollImage::getThreshold(void) {
 }
 
 
-
-//////////////////////////////
-//
-// RollImage::setRollTypeRedWelte --
-//
-
-void RollImage::setRollTypeRedWelte(void) {
-
-}
-
-
-
-} // end of namespace prp
 
 
 

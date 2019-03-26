@@ -1,7 +1,7 @@
 //
 // Programmer:    Craig Stuart Sapp <craig@ccrma.stanford.edu>
 // Creation Date: Thu Dec  7 21:46:42 PST 2017
-// Last Modified: Thu Dec  7 21:46:45 PST 2017
+// Last Modified: Mon Mar 25 22:38:36 PDT 2019
 // Filename:      RollOptions.cpp
 // Web Address:
 // Syntax:        C++
@@ -13,8 +13,7 @@
 #include "RollOptions.h"
 
 using namespace std;
-
-namespace prp  {
+using namespace prp;
 
 
 //////////////////////////////
@@ -278,11 +277,11 @@ std::string RollOptions::getRollType(void) {
 
 //////////////////////////////
 //
-// RollOptions::setRollTypeRedWelte -- Apply settings suitable for Red Welte piano rolls.
+// RollOptions::setRollTypeRedWelte -- Apply settings suitable for Red Welte (T-100) piano rolls.
 //
 // red Welte tracker holes:
 //
-//   10 expression on left side:
+//   10 expression on bass side:
 //       1:  MF-Off                          MIDI Key 14
 //       2:  MF-On                           MIDI Key 15
 //       3:  Crescendo-Off                   MIDI Key 16
@@ -293,15 +292,15 @@ std::string RollOptions::getRollType(void) {
 //       8:  Soft-Pedal-On                   MIDI Key 21
 //       9:  Motor-Off                       MIDI Key 22
 //       10: Motor-On                        MIDI Key 23
-//   Then 80 notes from C1 to G7 (MIDI note 24 to 103
+//   Then 80 notes from C1 to G7 (MIDI notes 24 to 103)
 //       11: C1                              MIDI Key 24
 //       ...
-//       50:  D#4                            MIDI Key 63
-//    Treble register:
-//       51:  E4                             MIDI Key 64
+//       53:  F#4                            MIDI Key 66
+//    Treble register (note bass register has more notes):
+//       54:  G4                             MIDI Key 67
 //       ...
 //       90:  G7                             MIDI Key 103
-//   Then 10 expression holes on the right side:
+//   10 expression holes on the treble side:
 //       91:  -10: Rewind                    MIDI Key 104
 //       92:  -9:  Electric-Cutoff           MIDI Key 105
 //       93:  -8:  Sustain-Pedal-On          MIDI Key 106
@@ -316,24 +315,78 @@ std::string RollOptions::getRollType(void) {
 //
 
 void RollOptions::setRollTypeRedWelte(void) {
-		m_rollType = "welte-red";
-		m_maxHoleCount = 100;
-		m_minHoleCount = 100;
-		m_minTrackerSpacingToPaperEdge = 1.6;
-		m_rewindHole = 91;  // 91st hole from left (bass)
-		m_rewindHoleMidi = 104;
-cerr << ">>> SETTING REWIND HOLE TO " << m_rewindHoleMidi << endl;
+	m_rollType = "welte-red";
+	m_minTrackerSpacingToPaperEdge = 1.6;
+	m_rewindHole = 91;  // 91st hole from left (bass)
+	m_rewindHoleMidi = 104;
 
-		m_bassExpressionTrackStartNumberLeft = 1;
-		m_bassExpressionTrackStartMidi = 14;
-		m_bassNotesTrackStartNumberLeft = 11;
-		m_bassNotesTrackStartMidi = 24;
-		m_trebleNotesTrackStartNumberLeft = 51;
-		m_trebleNotesTrackStartMidi = 64;
-		m_trebleExpressionTrackStartNumberLeft = 91;
-		m_trebleExpressionTrackStartMidi = 104;
-
+	m_bassExpressionTrackStartNumberLeft = 1;
+	m_bassExpressionTrackStartMidi = 14;
+	m_bassNotesTrackStartNumberLeft = 11;
+	m_bassNotesTrackStartMidi = 24;
+	m_trebleNotesTrackStartNumberLeft = 54;
+	m_trebleNotesTrackStartMidi = 67;
+	m_trebleExpressionTrackStartNumberLeft = 91;
+	m_trebleExpressionTrackStartMidi = 104;
 }
+
+
+
+//////////////////////////////
+//
+// RollOptions::setRollTypeGreenWelte -- Apply settings suitable for Red Welte (T-98) piano rolls.
+//
+// Peter Phillips dissertation: https://ses.library.usyd.edu.au/bitstream/2123/16939/1/Piano%20Rolls.pdf
+//
+// green Welte tracker holes:
+//
+//   5 expression holes on bass side:
+//       1:  Bass Sforzando piano (& rewind) MIDI Key 16
+//       2:  Bass Mezzoforte                 MIDI Key 17
+//       3:  Sustain pedal                   MIDI Key 18
+//       4:  Bass Crescendo                  MIDI Key 19
+//       5:  Bass Sforzando forte            MIDI Key 20
+//   Then 88 notes from C0 to C8 (MIDI notes 21 to 108) (but actually only 80 used)
+//       6: A0                               MIDI Key 21
+//       ...
+//       51:  F#4                            MIDI Key 66
+//    Treble register:
+//       52:  G4                             MIDI Key 67
+//       ...
+//       93:  G7                             MIDI Key 108
+//   5 expression holes on the treble side:
+//       94:  -5:  Treble Sforzando forte    MIDI Key 109
+//       95:  -4:  Treble Crescendo          MIDI Key 110
+//       96:  -3:  Soft pedal                MIDI Key 111
+//       97:  -2:  Treble Mezzoforte         MIDI Key 112
+//       98:  -1:  Treble Sforzando piano    MIDI Key 113
+//
+
+void RollOptions::setRollTypeGreenWelte(void) {
+	cerr << "GREEN ROLL NOT IMPLEMENT YET" << endl;
+	exit(1);
+
+	m_rollType = "welte-green";
+	m_minTrackerSpacingToPaperEdge = 1.6; // check
+	m_rewindHole = 1;  // 1st hole from left (bass), but only if "long"
+	m_rewindHoleMidi = 16;
+
+	m_bassExpressionTrackStartNumberLeft = 1;
+	m_bassExpressionTrackStartMidi = 16;
+	m_bassNotesTrackStartNumberLeft = 6;
+	m_bassNotesTrackStartMidi = 21;
+
+	m_trebleNotesTrackStartNumberLeft = 54;
+	m_trebleNotesTrackStartMidi = 67;
+
+	m_trebleExpressionTrackStartNumberLeft = 94;
+	m_trebleExpressionTrackStartMidi = 109;
+}
+
+
+// Duo-Art register break at D#4/E4
+
+// Ampico register break at E4/F4
 
 
 /////////////////////////////////
@@ -367,10 +420,6 @@ int RollOptions::getRewindHoleBassIndex(void) {
 int RollOptions::getRewindHoleMidi(void) {
 	return m_rewindHoleMidi;
 }
-
-
-
-} // end prp namespace
 
 
 
