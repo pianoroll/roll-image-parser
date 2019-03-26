@@ -19,7 +19,8 @@
 #include "TiffFile.h"
 
 
-namespace prp {
+using namespace prp;
+using namespace std;
 
 
 //////////////////////////////
@@ -50,7 +51,7 @@ TiffFile::~TiffFile(void) {
 //
 
 void TiffFile::close(void) {
-	std::fstream::close();
+	fstream::close();
 	TiffHeader::clear();
 }
 
@@ -58,20 +59,21 @@ void TiffFile::close(void) {
 
 //////////////////////////////
 //
-// TiffFile::openFile --
+// TiffFile::open --
 //
 
-bool TiffFile::open(const std::string& filename) {
+bool TiffFile::open(const string& filename) {
 	if (is_open()) {
 		close();
 	}
 
-	std::fstream::open(filename.c_str(), std::ios::binary | std::ios::in | std::ios::out);
+	fstream::open(filename.c_str(), ios::binary | ios::in | ios::out);
 	if (!is_open()) {
-		std::cerr << "Input filename " << filename << " cannot be opened" << std::endl;
+		cerr << "Input filename " << filename << " cannot be opened" << endl;
 		return false;
 	}
 
+	m_filename = filename;
 	return parseHeader(*this);
 }
 
@@ -84,16 +86,16 @@ bool TiffFile::open(const std::string& filename) {
 
 bool TiffFile::goToByteIndex(ulonglongint offset) {
 	if (offset <= (ulonglongint)0xffffffff) {
-		seekg((ulongint)offset, std::ios::beg);
+		seekg((ulongint)offset, ios::beg);
 	} else {
-		seekg((ulongint)0xffffffff, std::ios::beg);
+		seekg((ulongint)0xffffffff, ios::beg);
 		ulonglongint amount = offset - 0xffffffff;
 		while (amount > (ulonglongint)0xffffffff) {
-			seekg((ulongint)0xffffffff, std::ios::cur);
+			seekg((ulongint)0xffffffff, ios::cur);
 			amount -= (ulonglongint)0xffffffff;
 		}
 		if (amount > 0) {
-			seekg((ulongint)amount, std::ios::cur);
+			seekg((ulongint)amount, ios::cur);
 		}
 	}
 	return true;
@@ -128,7 +130,7 @@ ucharint TiffFile::read1UByte(void) {
 // TiffFile::readString --
 //
 
-std::string TiffFile::readString(ulongint count) {
+string TiffFile::readString(ulongint count) {
 	return prp::readString(*this, count);
 }
 
@@ -164,11 +166,11 @@ bool TiffFile::goToRowColumnIndex(ulongint rowindex, ulongint colindex) {
 // TiffFile::getImageGreenChannel --
 //
 
-void TiffFile::getImageGreenChannel(std::vector<std::vector<ucharint> >& image) {
+void TiffFile::getImageGreenChannel(vector<vector<ucharint> >& image) {
 	this->goToPixelIndex((int)0);
 	ulongint rows = this->getRows();
 	ulongint cols = this->getCols();
-	std::vector<ucharint> pixel(3);
+	vector<ucharint> pixel(3);
 	image.resize(rows);
 	for (ulongint r=0; r<rows; r++) {
 		image.at(r).resize(cols);
@@ -205,9 +207,14 @@ void TiffFile::writeDirectoryOffset(ulonglongint offset) {
 
 
 
+//////////////////////////////
+//
+// TiffFile::getFilename --
+//
 
-
-} // end of namespace prp
+std::string TiffFile::getFilename(void) {
+	return m_filename;
+}
 
 
 

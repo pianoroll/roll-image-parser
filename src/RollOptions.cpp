@@ -259,7 +259,7 @@ void RollOptions::setHoleShiftCutoff(double value) {
 //////////////////////////////
 //
 // RollOptions::getRollType -- Return the roll type being processed:
-//   "" = unknown
+//   "" = unknown/unspecified
 //   "welte-red"      = Welte Mignon T-100 red roll
 //   "welte-green"    = Welte Mignon T-98 green roll
 //   "welte-licensee" = Welte Mignon (Deluxe) Licensee
@@ -319,6 +319,7 @@ void RollOptions::setRollTypeRedWelte(void) {
 	m_minTrackerSpacingToPaperEdge = 1.6;
 	m_rewindHole = 91;  // 91st hole from left (bass)
 	m_rewindHoleMidi = 104;
+	m_trackerHoles = 100;
 
 	m_bassExpressionTrackStartNumberLeft = 1;
 	m_bassExpressionTrackStartMidi = 14;
@@ -370,6 +371,7 @@ void RollOptions::setRollTypeGreenWelte(void) {
 	m_minTrackerSpacingToPaperEdge = 1.6; // check
 	m_rewindHole = 1;  // 1st hole from left (bass), but only if "long"
 	m_rewindHoleMidi = 16;
+	m_trackerHoles = 98;
 
 	m_bassExpressionTrackStartNumberLeft = 1;
 	m_bassExpressionTrackStartMidi = 16;
@@ -419,6 +421,29 @@ int RollOptions::getRewindHoleBassIndex(void) {
 
 int RollOptions::getRewindHoleMidi(void) {
 	return m_rewindHoleMidi;
+}
+
+
+
+/////////////////////////////////
+//
+// RollOptions::getBridgeFactor(void) -- Returns the ratio of width to length
+//     distance which will force the merging of adjacent holes.
+//
+
+double RollOptions::getBridgeFactor(void) {
+	return m_bridgeFactor;
+}
+
+
+
+//////////////////////////////
+//
+// RollOptions::getExpectedTrackerHoleCount -- Returns 0 if roll type is undefined.
+//
+
+int RollOptions::getExpectedTrackerHoleCount(void) {
+	return m_trackerHoles;
 }
 
 

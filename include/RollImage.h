@@ -1,7 +1,7 @@
 //
 // Programmer:    Craig Stuart Sapp <craig@ccrma.stanford.edu>
 // Creation Date: Fri Dec  1 16:44:12 PST 2017
-// Last Modified: Fri Dec  1 16:44:18 PST 2017
+// Last Modified: Tue Mar 26 09:40:48 EDT 2019
 // Filename:      RollImage.h
 // Web Address:
 // Syntax:        C++
@@ -148,6 +148,7 @@ class RollImage : public TiffFile, public RollOptions {
 		void            setWarningOff                 (void);
 		void            setThreshold                  (int value);
 		int             getThreshold                  (void);
+		std::string     getDruid                      (std::string input = "");
 
 		// pixelType: a bitmask which contains enumerated types for the
 		// functions of pixels (the PIX_* defines above):
@@ -279,7 +280,7 @@ class RollImage : public TiffFile, public RollOptions {
 		void       fillColumn                  (ulongint col, ulongint toprow, ulongint botrow,
 		                                        ulongint target, ulongint threshold, ulongint replacement,
 		                                        std::vector<int>& margin);
-		int        getTrackerHoleCount         (void);
+		int        getMeasuredTrackerHoleCount (void);
 		void       recalculateFirstMusicHole   (void);
 		void       removeBadLeaderHoles        (void);
 		void       addDriftInfoToHoles         (void);

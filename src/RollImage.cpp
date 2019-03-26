@@ -16,6 +16,7 @@
 #include "CheckSum.h"
 
 #include <algorithm>
+#include <string>
 #include <cmath>
 
 using namespace std;
@@ -373,7 +374,7 @@ void RollImage::groupHoles(void) {
 
 void RollImage::groupHoles(ulongint index) {
 	vector<HoleInfo*>& hi = trackerArray[index];
-	double scalefactor = 1.37;
+	double scalefactor = getBridgeFactor();
 	double length = getAverageMusicalHoleWidth() * scalefactor;
 	if (hi.empty()) {
 		return;
@@ -801,7 +802,7 @@ void RollImage::analyzeMidiKeyMapping(void) {
 		midiToTrackMapping.at(i + adjustment) = i;
 	}
 
-	int trackerholes = getTrackerHoleCount();
+	int trackerholes = getMeasuredTrackerHoleCount();
 
 	if (trackerholes == 65) {
 		// re-map up a major second
@@ -4012,10 +4013,10 @@ void RollImage::sortTearsByArea(void) {
 
 //////////////////////////////
 //
-// RollImage::getTrackerHoleCount -- Simple algorithm for now
+// RollImage::getMeasuredTrackerHoleCount -- Simple algorithm for now
 //
 
-int RollImage::getTrackerHoleCount(void) {
+int RollImage::getMeasuredTrackerHoleCount(void) {
 	int counter = 0;
 	for (ulongint i=0; i<midiToTrackMapping.size(); i++) {
 		if (midiToTrackMapping[i]) {
@@ -4275,7 +4276,14 @@ void RollImage::insertRollImageProperties(MidiFile& midifile) {
 	double rightCol = m_lastHolePosition - driftCorrection.at(getFirstMusicHoleStart());
 	rightCol = rightMarginIndex.at(getFirstMusicHoleStart()) - rightCol;
 
-	int trackerholes = getTrackerHoleCount();
+	int trackerholes = getExpectedTrackerHoleCount();
+	string trackerstring;
+	if (!trackerholes) {
+		trackerholes = getMeasuredTrackerHoleCount();
+		trackerstring = my_to_string(trackerholes) + " (estimate)";
+	} else {
+		trackerstring = my_to_string(trackerholes);
+	}
 
 	ulongint musicnotecount = 0;
 	for (ulongint i=0; i<holes.size(); i++) {
@@ -4305,7 +4313,13 @@ void RollImage::insertRollImageProperties(MidiFile& midifile) {
 #endif
 
 	stringstream ss;
+	ss << "@DRUID:\t\t\t"            << getDruid()                   << "";
+	midifile.addText(0, 0, ss.str()); ss.str("");
+	ss << "@ROLL_TYPE:\t\t"         << getRollType()                 << "";
+	midifile.addText(0, 0, ss.str()); ss.str("");
 	ss << "@THRESHOLD:\t\t"         << getThreshold()                << "";
+	midifile.addText(0, 0, ss.str()); ss.str("");
+	ss << "@LENGTH_DPI:\t\t"        << 300.25                        << "ppi";
 	midifile.addText(0, 0, ss.str()); ss.str("");
 	ss << "@IMAGE_WIDTH:\t\t"       << getCols()                     << "px";
 	midifile.addText(0, 0, ss.str()); ss.str("");
@@ -4369,10 +4383,13 @@ void RollImage::insertRollImageProperties(MidiFile& midifile) {
 	midifile.addText(0, 0, ss.str()); ss.str("");
 	ss << "@HOLE_OFFSET:\t\t"       << holeOffset                    << "px";
 	midifile.addText(0, 0, ss.str()); ss.str("");
-	ss << "@TRACKER_HOLES:\t\t"     << trackerholes                  << " (estimate)";
+	ss << "@TRACKER_HOLES:\t\t"     << trackerholes                  << "";
 	midifile.addText(0, 0, ss.str()); ss.str("");
 	ss << "@SOFTWARE_DATE:\t\t"     << __DATE__ << " " << __TIME__   << "";
-	midifile.addText(0, 0, ss.str()); ss.str("");
+	string sss = ss.str();
+	sss = ss.str();
+	sss.erase(remove(sss.begin(), sss.end(), '\n'), sss.end());
+	midifile.addText(0, 0, sss); ss.str("");
 #ifndef DONOTUSEFFT
 	ss << "@ANALYSIS_DATE:\t\t"     << std::ctime(&current_time);
 	midifile.addText(0, 0, ss.str()); ss.str("");
@@ -4382,6 +4399,8 @@ void RollImage::insertRollImageProperties(MidiFile& midifile) {
 	ss << "@COLOR_CHANNEL:\t\t"     << "green"                       << "";
 	midifile.addText(0, 0, ss.str()); ss.str("");
 	ss << "@CHANNEL_MD5:\t\t"       << getDataMD5Sum()               << "";
+	midifile.addText(0, 0, ss.str()); ss.str("");
+	ss << "@BRIDGE_FACTOR:\t\t"     << getBridgeFactor()             << "";
 	midifile.addText(0, 0, ss.str()); ss.str("");
 	ss << "@MANUAL_EDITS:\t\t"      << "no "                         << "";
 	midifile.addText(0, 0, ss.str()); ss.str("");
@@ -4415,7 +4434,14 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 	double rightCol = m_lastHolePosition - driftCorrection.at(getFirstMusicHoleStart());
 	rightCol = rightMarginIndex.at(getFirstMusicHoleStart()) - rightCol;
 
-	int trackerholes = getTrackerHoleCount();
+	int trackerholes = getExpectedTrackerHoleCount();
+	string trackerstring;
+	if (!trackerholes) {
+		trackerholes = getMeasuredTrackerHoleCount();
+		trackerstring = my_to_string(trackerholes) + " (estimate)";
+	} else {
+		trackerstring = my_to_string(trackerholes);
+	}
 
 	ulongint musicnotecount = 0;
 	for (ulongint i=0; i<holes.size(); i++) {
@@ -4455,7 +4481,10 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 
 	out << "@@ Description of extracted parameters:\n";
 	out << "@@\n";
+	out << "@@ DRUID:\t\t"             << "Stanford Libraries Dig. Rep. Unique ID" << std::endl;
+	out << "@@ ROLL_TYPE:\t\t"         << "Brand/format of the piano roll" << std::endl;
 	out << "@@ THRESHOLD:\t\t"         << "Threshold byte value for non-paper boundary" << std::endl;
+	out << "@@ LENGTH_DPI:\t\t"        << "Scan DPI resolution along the length of the roll" << std::endl;
 	out << "@@ IMAGE_WIDTH:\t\t"       << "Width of the input image in pixels." << std::endl;
 	out << "@@ IMAGE_LENGTH:\t"        << "Length of the input image in pixels." << std::endl;
 	out << "@@ ROLL_WIDTH:\t\t"        << "Measured average width of the piano-roll in pixels." << std::endl;
@@ -4468,7 +4497,7 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 	out << "@@ MAX_TREBLE_DRIFT:\t"    << "Maximum range of the \"soft\" margin on the treble side: the margin" << std::endl;
 	out << "@@ \t\t\tarea where the roll edge will temporarily enter." << std::endl;
 	out << "@@ AVG_SOFT_MARGIN_SUM:\t" << "Average sum of the bass and treble soft margins." << std::endl;
-	out << "@@ DRIFT_RANGE:\t"         << "Total drift range in pixels." << std::endl;
+	out << "@@ DRIFT_RANGE:\t\t"       << "Total drift range in pixels." << std::endl;
 	out << "@@ DRIFT_MIN:\t\t"         << "Leftmost drift from average position in pixels." << std::endl;
 	out << "@@ DRIFT_MAX:\t\t"         << "Rightmost drift from average position in pixels." << std::endl;
 	out << "@@ PRELEADER_ROW:\t"     << "Last pixel row of the portion of the image which contains" << std::endl;
@@ -4503,7 +4532,7 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 	out << "@@ \t\t\tbar hole spacings)." << std::endl;
 	out << "@@ HOLE_OFFSET:\t\t"       << "The offset of the tracker bar spacing pattern with respect to" << std::endl;
 	out << "@@ \t\t\tthe first column of the image." << std::endl;
-	out << "@@ TRACKER_HOLES:\t"       << "The esitmated number of tracker bar holes that reads this roll." << std::endl;
+	out << "@@ TRACKER_HOLES:\t"       << "The (esitmated) number of tracker bar holes that reads this roll." << std::endl;
 	out << "@@ SOFTWARE_DATE:\t"       << "The compiling date for the software that generates this file." << std::endl;
 	out << "@@ ANALYSIS_DATE:\t"       << "The date that the analysis was done." << std::endl;
 	out << "@@ ANALYSIS_TIME:\t"       << "The duration of the analysis phase of the software (excluding" << std::endl;
@@ -4512,10 +4541,14 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 	out << "@@ COLOR_CHANNEL:\t"       << "The color channel used to generate this analysis data." << std::endl;
 	out << "@@ CHANNEL_MD5:\t\t"       << "The MD5 checksum of the color channel pixels used" << std::endl;
 	out << "@@ \t\t\tin this analysis." << std::endl;
-	out << "@@ MANUAL_EDITS:\t\t"      << "Set this field to \"yes\" if any manual edits are made to this file." << std::endl;
+	out << "@@ BRIDGE_FACTOR:\t"       << "Aspect ratio merging distance for adjacent holes." << std::endl;
+	out << "@@ MANUAL_EDITS:\t"        << "Set this field to \"yes\" if any manual edits are made to this file." << std::endl;
 	out << "\n";
 
+	out << "@DRUID:\t\t\t"           << getDruid()                    << "\n";
+	out << "@ROLL_TYPE:\t\t"         << getRollType()                 << "\n";
 	out << "@THRESHOLD:\t\t"         << getThreshold()                << "\n";
+	out << "@LENGTH_DPI:\t\t"        << 300.25                        << "ppi\n";
 	out << "@IMAGE_WIDTH:\t\t"       << getCols()                     << "px\n";
 	out << "@IMAGE_LENGTH:\t\t"      << getRows()                     << "px\n";
 	out << "@ROLL_WIDTH:\t\t"        << averageRollWidth              << "px\n";
@@ -4547,7 +4580,7 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 	out << "@SHIFTS:\t\t"            << shifts.size()                 << "\n";
 	out << "@HOLE_SEPARATION:\t"     << holeSeparation                << "px\n";
 	out << "@HOLE_OFFSET:\t\t"       << holeOffset                    << "px\n";
-	out << "@TRACKER_HOLES:\t\t"     << trackerholes                  << " (estimate)\n";
+	out << "@TRACKER_HOLES:\t\t"     << trackerstring                 << "\n";
 	out << "@SOFTWARE_DATE:\t\t"     << __DATE__ << " " << __TIME__ << endl;
 #ifndef DONOTUSEFFT
 	out << "@ANALYSIS_DATE:\t\t"     << std::ctime(&current_time);
@@ -4555,6 +4588,7 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 #endif
 	out << "@COLOR_CHANNEL:\t\t"     << "green"                       << endl;
 	out << "@CHANNEL_MD5:\t\t"       << getDataMD5Sum()               << endl;
+	out << "@BRIDGE_FACTOR:\t\t"     << getBridgeFactor()             << endl;
 	out << "@MANUAL_EDITS:\t\t"      << "no"                          << endl;
 
 
@@ -4826,6 +4860,53 @@ int RollImage::getThreshold(void) {
 }
 
 
+//////////////////////////////
+//
+// RollImage::getDruid -- Return the Stanford Libraries Digital Repository
+//     Unique ID for the roll.  This is inferred from the filename of the
+//     TIFF image being read.  The format for a DRUID is  ZZ999ZZ9999
+//     Z = letter (lowercase), 9 = digit.
+//     default option: input = ""
+//
+
+std::string RollImage::getDruid(std::string input) {
+	if (input.empty()) {
+		input = getFilename();
+	}
+	auto loc = input.find('_');
+	if (loc != string::npos) {
+		input = input.substr(0, loc);
+	}
+	loc = input.find('.');
+	if (loc != string::npos) {
+		input = input.substr(0, loc);
+	}
+	loc = input.find('-');
+	if (loc != string::npos) {
+		input = input.substr(0, loc);
+	}
+
+	if (input.size() != 11) {
+		return "";
+	}
+
+	if (!isdigit(input[10])) { return ""; }
+	if (!isdigit(input[ 9])) { return ""; }
+	if (!isdigit(input[ 8])) { return ""; }
+	if (!isdigit(input[ 7])) { return ""; }
+
+	if (!isalpha(input[ 6])) { return ""; }
+	if (!isalpha(input[ 5])) { return ""; }
+
+	if (!isdigit(input[ 4])) { return ""; }
+	if (!isdigit(input[ 3])) { return ""; }
+	if (!isdigit(input[ 2])) { return ""; }
+
+	if (!isalpha(input[ 1])) { return ""; }
+	if (!isalpha(input[ 0])) { return ""; }
+
+	return input;
+}
 
 
 

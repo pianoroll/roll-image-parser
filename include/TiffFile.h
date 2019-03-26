@@ -39,12 +39,14 @@ class TiffFile : public std::fstream, public TiffHeader {
 		void        getImageGreenChannel        (std::vector<std::vector<ucharint> >& image);
 		bool        goToPixelIndex              (ulonglongint pindex);
 		bool        goToRowColumnIndex          (ulongint rowindex, ulongint colindex);
+		std::string getFilename                 (void);
 
 		// header updates on disk
 		bool        writeSamplesPerPixel        (int count);
 		void        writeDirectoryOffset        (ulonglongint offset);
 
 	private:
+		std::string m_filename;
 		// std::fstream m_input;
 
 };

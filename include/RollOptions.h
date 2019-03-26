@@ -51,6 +51,9 @@ class RollOptions {
 		int      getRewindHoleBassIndex    (void);
 		int      getRewindHoleMidi         (void);
 
+		double   getBridgeFactor           (void);
+		int      getExpectedTrackerHoleCount(void);
+
 	protected: // (maybe make private, but will have to create accessor functions)
 		// m_minTrackerSpacingToPaperEdge: minimum distance from paper
 		// edge to first tracker line on the roll.  The units are in terms
@@ -112,6 +115,9 @@ class RollOptions {
 		int m_trebleExpressionTrackStartNumberLeft = 0;
 		int m_trebleExpressionTrackStartMidi = 0;
 
+		// m_trackerHoles == number of holes in the tracker bar
+		int m_trackerHoles = 0;
+
 		// MIDI file track assignments (offset from 0, with track 0 note having notes):
 		int m_bass_track       = 1;
 		int m_treble_track     = 2;
@@ -123,6 +129,9 @@ class RollOptions {
 		int m_bass_ch          = 1;
 		int m_treble_ch        = 2;
 		int m_treble_exp_ch    = 3;
+
+		// Bridging factor to merge adjacent holes:
+		double m_bridgeFactor = 1.37;
 };
 
 
