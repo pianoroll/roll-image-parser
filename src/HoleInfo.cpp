@@ -116,8 +116,9 @@ std::ostream& HoleInfo::printAton(std::ostream& out) {
 	if (attack) {
 		out << "@NOTE_ATTACK:\t" << origin.first << "px" << std::endl;
 		out << "@OFF_TIME:\t"    << offtime      << "px" << std::endl;
-		out << "@MIDI_KEY:\t"    << midikey              << std::endl;
 	}
+	out << "@TRACKER_HOLE:\t" << track               << std::endl;
+	out << "@MIDI_KEY:\t"     << midikey             << std::endl;
 
 	#define HOLE_SHIFT 3.0
 

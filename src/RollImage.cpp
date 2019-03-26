@@ -514,7 +514,17 @@ void RollImage::assignMidiKeyNumbersToHoles(void) {
 			continue;
 		}
 		midiKey[i] = trackerArray[i][0]->midikey;
-		firstHole[i] = trackerArray[i][0]->origin.second;
+		firstHole[i] = trackerArray[i][0]->origin.first;
+
+/*
+cerr << "INDEX\t" << i 
+<< "\tSIZE: " << trackerArray[i].size()
+<< "\tFIRST: " << trackerArray[i][0]->origin.first 
+<< "\tSECOND: " << trackerArray[i][0]->origin.second 
+<< "\tTRACK: " << trackerArray[i][0]->track 
+<< "\tMIDI: " << trackerArray[i][0]->midikey << endl;
+*/
+
 		if (firstHole[i] > maxorigin) {
 			maxorigin = firstHole[i];
 			maxmidi = trackerArray[i][0]->midikey;
