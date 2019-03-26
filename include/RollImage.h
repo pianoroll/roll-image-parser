@@ -136,9 +136,12 @@ class RollImage : public TiffFile, public RollOptions {
 		void            markShift                     (int index);
 		void            generateNoteMidiFileHex       (ostream& output);
 		void            generateNoteMidiFileBinasc    (ostream& output);
+		void            generateHoleMidiFileHex       (ostream& output);
+		void            generateHoleMidiFileBinasc    (ostream& output);
 
 #ifndef DONOTUSEFFT
 		void            generateMidifile              (MidiFile& midifile);
+		void            generateHoleMidifile          (MidiFile& midifile);
 #endif
 
 		void            assignMidiKeyNumbersToHoles   (void);

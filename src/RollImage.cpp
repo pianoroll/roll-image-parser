@@ -702,7 +702,8 @@ int RollImage::findNextPerimeterPoint(pair<ulongint, ulongint>& point, int dir) 
 
 //////////////////////////////
 //
-// RollImage::analyzeMidiKeyMapping -- assign tracker bar positions to MIDI key numbers.
+// RollImage::analyzeMidiKeyMapping -- assign tracker bar positions
+//     to MIDI key numbers.
 //
 
 void RollImage::analyzeMidiKeyMapping(void) {
@@ -4071,6 +4072,22 @@ void RollImage::generateNoteMidiFileHex(ostream& output) {
 
 //////////////////////////////
 //
+// RollImage::generateHoldMidiFileHex -- Generate MIDI file where holes are not grouped into notes.
+//   I.e., no brige merging.
+//
+
+void RollImage::generateHoleMidiFileHex(ostream& output) {
+#ifndef DONOTUSEFFT
+	MidiFile midifile;
+	generateHoleMidifile(midifile);
+	midifile.writeHex(output, 25);
+#endif
+}
+
+
+
+//////////////////////////////
+//
 // RollImage::generateNoteMidiFileBinasc -- Generate MIDI file where holes are grouped into notes.
 //
 
@@ -4081,6 +4098,147 @@ void RollImage::generateNoteMidiFileBinasc(ostream& output) {
 	midifile.writeBinasc(output);
 #endif
 }
+
+
+
+//////////////////////////////
+//
+// RollImage::generateHoleMidiFileBinasc -- Generate MIDI file where holes are not grouped into notes.
+//
+
+void RollImage::generateHoleMidiFileBinasc(ostream& output) {
+#ifndef DONOTUSEFFT
+	MidiFile midifile;
+	generateHoleMidifile(midifile);
+	midifile.writeBinasc(output);
+#endif
+}
+
+
+
+//////////////////////////////
+//
+// RollImage::generateHoleMidifile --
+//
+
+#ifndef DONOTUSEFFT
+void RollImage::generateHoleMidifile(MidiFile& midifile) {
+
+	if (holes.empty()) {
+		return;
+	}
+
+	insertRollImageProperties(midifile);
+	midifile.addText(0, 0, "@MIDIFILE_TYPE:\t\thole");
+
+	assignMidiKeyNumbersToHoles();
+
+	// TPQ is 6 times the tempo (so 591 = 6 * 98.5)
+	// 591 is for Red Welte tempo of 98.5 (~3 meters/minute).
+	midifile.setTPQ(591);
+
+	// Tracks are organized by real notes first, then expression tracks.
+	// This is so that the expression tracks can be easily thrown away
+	// if needed; and otherwise, the first two tracks contain the real notes
+	// which makes things less confusing when viewing in sequencer software interface.
+	midifile.addTracks(5);
+	// track 0 = acceleration emulation (via tempo changes), and metadata
+	// track 1 = bass notes
+	// track 2 = treble notes
+	// track 3 = bass expression
+	// track 4 = treble expression
+	// track 5 = bad holes
+
+	// The MIDI channels are from bass expression (left) to treble expression (right).
+	// MIDI channels (0 offset):
+	// track 0 does not contain notes
+	// track 1 = channel 1
+	// track 2 = channel 2
+	// track 3 = channel 0
+	// track 4 = channel 3
+	// track 5 = channel 4
+
+	int tick = 0;
+	// midifile.addController(m_bass_exp_track,   tick, m_bass_exp_ch,   7,  0); // mute bass expression holes
+	// midifile.addController(m_treble_exp_track, tick, m_treble_exp_ch, 7,  0); // mute treble expression holes
+
+	midifile.addController(m_bass_exp_track,   tick, m_bass_ch,   10, 0); // bass notes pan hard left
+	midifile.addController(m_treble_exp_track, tick, m_treble_ch, 10, 127); // treble notes pan hard right
+	midifile.addController(m_bass_track,       tick, m_bass_ch,   10, 32); // bass notes pan leftish
+	midifile.addController(m_treble_track,     tick, m_treble_ch, 10, 96); // treble notes pan rightish
+
+	ulongint mintime = holes[0]->origin.first;
+	ulongint maxtime = 0;
+
+	int track;
+	int key;
+	int channel;
+	int velocity;
+	bool attackQ = false;
+
+	for (ulongint i=0; i<holes.size(); i++) {
+		if (holes[i]->attack) {
+			attackQ = true;
+		} else {
+			attackQ = false;
+		}
+		HoleInfo* hi = holes[i];
+		key = hi->midikey;
+
+		// estimate the location of the expression tracks and the
+		// bass/treble register split (refine later):
+		if (key < m_bassNotesTrackStartMidi) { // Bass expression
+			track    = m_bass_exp_track;
+			channel  = m_bass_exp_ch;
+			velocity = 32; // quiet
+		} else if (key < m_trebleNotesTrackStartMidi) { // Bass register
+			track    = m_bass_track;
+			channel  = m_bass_ch;
+			velocity = 64; // mf for now; will be refined by expression rendering later
+			if (attackQ) {
+				velocity += 32;
+			} else {
+				velocity -= 16;
+			}
+		} else if (key < m_trebleExpressionTrackStartMidi) {  // Treble register
+			track    = m_treble_track;
+			channel  = m_treble_ch;
+			velocity = 64;  // mf for now; will be refined by expression rendering later
+			if (attackQ) {
+				velocity += 32;
+			} else {
+				velocity -= 16;
+			}
+		} else { // Treble expression
+			track    = m_treble_exp_track;
+			channel  = m_treble_exp_ch;
+			velocity = 32; // quiet
+		}
+
+		midifile.addNoteOn(track, hi->origin.first - mintime, channel, hi->midikey, velocity);
+		midifile.addNoteOff(track, hi->origin.first - mintime + hi->width.first, channel, hi->midikey);
+		if (hi->offtime > maxtime) {
+			maxtime = hi->offtime;
+		}
+
+	}
+
+	// should also add bad holes into track 5 here.
+
+	// add tempo correction
+	double timevalue = 1.0;
+	double tempo;
+	ulongint curtime = 0;
+	while (curtime < maxtime - mintime) {
+		tempo = 60 / timevalue;
+      midifile.addTempo(0, curtime, tempo);
+		curtime += 3600;
+		timevalue /= 1.0004;
+	}
+
+	midifile.sortTracks();
+}
+#endif
 
 
 
@@ -4097,6 +4255,7 @@ void RollImage::generateMidifile(MidiFile& midifile) {
 	}
 
 	insertRollImageProperties(midifile);
+	midifile.addText(0, 0, "@MIDIFILE_TYPE:\t\tnote");
 
 	assignMidiKeyNumbersToHoles();
 
@@ -4385,14 +4544,20 @@ void RollImage::insertRollImageProperties(MidiFile& midifile) {
 	midifile.addText(0, 0, ss.str()); ss.str("");
 	ss << "@TRACKER_HOLES:\t\t"     << trackerholes                  << "";
 	midifile.addText(0, 0, ss.str()); ss.str("");
+
 	ss << "@SOFTWARE_DATE:\t\t"     << __DATE__ << " " << __TIME__   << "";
 	string sss = ss.str();
 	sss = ss.str();
 	sss.erase(remove(sss.begin(), sss.end(), '\n'), sss.end());
 	midifile.addText(0, 0, sss); ss.str("");
+
 #ifndef DONOTUSEFFT
 	ss << "@ANALYSIS_DATE:\t\t"     << std::ctime(&current_time);
-	midifile.addText(0, 0, ss.str()); ss.str("");
+	sss = ss.str();
+	sss = ss.str();
+	sss.erase(remove(sss.begin(), sss.end(), '\n'), sss.end());
+	midifile.addText(0, 0, sss); ss.str("");
+
 	ss << "@ANALYSIS_TIME:\t\t"     << int(processing_time.count()*100.0+0.5)/100.0 << "sec" << "";
 	midifile.addText(0, 0, ss.str()); ss.str("");
 #endif
@@ -4751,11 +4916,19 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 	}
 
 	out << "\n@@BEGIN: MIDIFILES\n\n";
+
 	out << "@MIDIFILE:\n";
 	stringstream ss;
 	generateNoteMidiFileBinasc(ss);
 	out << ss.str();
 	out << "\n@@END: MIDIFILE\n";
+
+	ss.str("");
+	out << "\n@BEGIN:\tHOLE_MIDIFILE:\n";
+	generateHoleMidiFileBinasc(ss);
+	out << ss.str();
+	out << "\n@@END:\tHOLE_MIDIFILE\n";
+
 	out << "\n@@END: MIDIFILES\n\n";
 
 	// The following section is for displaying intermediate analysis data, mostly about
