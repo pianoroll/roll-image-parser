@@ -37,7 +37,7 @@
 using namespace std;
 using namespace smf;
 
-namespace prp  {
+namespace rip  {
 
 
 // Track function:
@@ -352,7 +352,7 @@ class RollImage : public TiffFile, public RollOptions {
 
 };
 
-} // end prp namespace
+} // end rip namespace
 
 #endif /* _ROLLIMAGE_H */
 

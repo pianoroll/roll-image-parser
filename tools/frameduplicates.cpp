@@ -23,7 +23,7 @@
 #include <iomanip>
 
 using namespace std;
-using namespace prp;
+using namespace rip;
 
 class DuplicateInfo {
 	public:

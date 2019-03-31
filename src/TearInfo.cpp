@@ -12,7 +12,7 @@
 
 #include "TearInfo.h"
 
-namespace prp  {
+namespace rip  {
 
 
 //////////////////////////////
@@ -88,7 +88,7 @@ std::ostream& operator<<(std::ostream& out, TearInfo* hi) {
 
 
 
-} // end prp namespace
+} // end rip namespace
 
 
 

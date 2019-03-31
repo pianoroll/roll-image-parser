@@ -20,7 +20,8 @@
 #include <cmath>
 
 using namespace std;
-using namespace prp;
+
+namespace rip  {
 
 
 //////////////////////////////
@@ -2976,7 +2977,7 @@ void RollImage::mergePixelOverlay(std::fstream& output) {
 
 			}
 			offset = this->getPixelOffset(r, c);
-			prp::goToByteIndex(output, offset);
+			rip::goToByteIndex(output, offset);
 			output.write((char*)pixel.data(), 3);
 		}
 	}
@@ -5080,6 +5081,9 @@ std::string RollImage::getDruid(std::string input) {
 
 	return input;
 }
+
+
+} // end rip namespace
 
 
 

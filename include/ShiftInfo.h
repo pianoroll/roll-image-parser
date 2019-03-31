@@ -17,7 +17,7 @@
 #include <iostream>
 #include <string>
 
-namespace prp  {
+namespace rip  {
 
 // typedef uint32_t ulongint;
 typedef unsigned long ulongint;
@@ -35,7 +35,7 @@ class ShiftInfo {
 };
 
 
-} // end prp namespace
+} // end rip namespace
 
 #endif /* _SHIFTINFO_H */
 

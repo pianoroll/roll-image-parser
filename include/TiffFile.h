@@ -22,7 +22,7 @@
 
 #include "TiffHeader.h"
 
-namespace prp  {
+namespace rip  {
 
 
 class TiffFile : public std::fstream, public TiffHeader {
@@ -51,7 +51,7 @@ class TiffFile : public std::fstream, public TiffHeader {
 
 };
 
-} // end prp namespace
+} // end rip namespace
 
 #endif /* _TIFFFILE_H */
 

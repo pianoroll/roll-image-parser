@@ -17,7 +17,7 @@
 #include <iostream>
 
 using namespace std;
-using namespace prp;
+using namespace rip;
 
 ///////////////////////////////////////////////////////////////////////////
 

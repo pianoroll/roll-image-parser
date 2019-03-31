@@ -16,7 +16,7 @@
 #include <utility>
 #include <iostream>
 
-namespace prp  {
+namespace rip  {
 
 class RollOptions {
 	public:
@@ -135,7 +135,7 @@ class RollOptions {
 };
 
 
-} // end prp namespace
+} // end rip namespace
 
 #endif /* _ROLLOPTIONS_H */
 

@@ -13,7 +13,7 @@
 
 #include "Utilities.h"
 
-namespace prp {
+namespace rip {
 
 
 //////////////////////////////
@@ -299,6 +299,6 @@ bool goToByteIndex(std::fstream& file, ulonglongint offset) {
 
 
 
-} // end namespace prp
+} // end namespace rip
 
 

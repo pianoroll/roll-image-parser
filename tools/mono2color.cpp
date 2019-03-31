@@ -17,7 +17,7 @@
 #include <fstream>
 
 using namespace std;
-using namespace prp;
+using namespace rip;
 
 void duplicateSamples(fstream& output, TiffFile& image);
 
@@ -65,7 +65,7 @@ int main(int argc, char** argv) {
 	ulonglongint position = image.tellg();
 	image.seekg(0, std::ios::end);
 	ulonglongint endpos = image.tellg();
-	prp::goToByteIndex(image, position);
+	rip::goToByteIndex(image, position);
 	ulonglongint trailersize = endpos - position;
 	string trailer = image.readString(trailersize);
 	output.write(trailer.data(), trailer.size());

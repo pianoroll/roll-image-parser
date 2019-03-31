@@ -20,7 +20,7 @@
 
 #include "Utilities.h"
 
-namespace prp  {
+namespace rip  {
 
 class TiffFile;
 
@@ -112,10 +112,10 @@ class TiffHeader {
 };
 
 
-std::ostream& operator<<(std::ostream& output, const prp::TiffHeader& header);
+std::ostream& operator<<(std::ostream& output, const rip::TiffHeader& header);
 
 
-} // end prp namespace
+} // end rip namespace
 
 #endif /* _TIFFHEADER_H */
 

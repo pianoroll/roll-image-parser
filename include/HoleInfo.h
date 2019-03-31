@@ -20,7 +20,7 @@
 #include <iostream>
 #include <string>
 
-namespace prp  {
+namespace rip  {
 
 // typedef int64_t  longlong;
 // typedef uint64_t ulonglongint;
@@ -72,7 +72,7 @@ class HoleInfo {
 std::ostream& operator<<(std::ostream& out, HoleInfo& hi);
 std::ostream& operator<<(std::ostream& out, HoleInfo* hi);
 
-} // end prp namespace
+} // end rip namespace
 
 #endif /* _HOLEINFO_H */
 

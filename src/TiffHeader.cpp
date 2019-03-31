@@ -37,7 +37,7 @@
 
 
 
-namespace prp {
+namespace rip {
 
 
 //////////////////////////////
@@ -1044,7 +1044,7 @@ ulonglongint TiffHeader::getDirectoryOffset(void) const {
 
 
 
-} // std::end namespace prp
+} // std::end namespace rip
 
 
 
@@ -1053,7 +1053,7 @@ ulonglongint TiffHeader::getDirectoryOffset(void) const {
 // operator<< --
 //
 
-std::ostream& operator<<(std::ostream& out, const prp::TiffHeader& header) {
+std::ostream& operator<<(std::ostream& out, const rip::TiffHeader& header) {
 	out << "ROWS:\t"           << header.getRows()                     << std::endl;
 	out << "COLS:\t"           << header.getCols()                     << std::endl;
 	out << "ORIENTATION:\t"    << header.getOrientation()              << std::endl;

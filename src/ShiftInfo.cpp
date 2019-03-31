@@ -12,7 +12,7 @@
 
 #include "ShiftInfo.h"
 
-namespace prp  {
+namespace rip  {
 
 
 //////////////////////////////
@@ -69,7 +69,7 @@ std::ostream& ShiftInfo::printAton(std::ostream& out) {
 
 
 
-} // end prp namespace
+} // end rip namespace
 
 
 

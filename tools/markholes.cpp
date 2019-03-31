@@ -29,7 +29,7 @@
 #include <vector>
 
 using namespace std;
-using namespace prp;
+using namespace rip;
 
 ///////////////////////////////////////////////////////////////////////////
 

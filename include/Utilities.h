@@ -22,7 +22,7 @@
 #include <utility>
 #include <cmath>
 
-namespace prp {
+namespace rip {
 
 //typedef int64_t  longlongint;
 //typedef uint64_t ulonglongint;
@@ -89,7 +89,7 @@ double getAverage(std::vector<TYPE>& array, ulongint startindex, ulongint length
 
 
 
-} // end namespace prp
+} // end namespace rip
 
 
 #endif /* _UTILITIES_H */

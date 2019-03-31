@@ -20,7 +20,7 @@
 using namespace std::complex_literals;
 
 
-namespace prp {
+namespace rip {
 
 
 //////////////////////////////
@@ -167,7 +167,7 @@ int bitrev(int n, int B) {
 
 
 
-} // end namespace prp
+} // end namespace rip
 
 
 #endif /* DONOTUSEFFT */

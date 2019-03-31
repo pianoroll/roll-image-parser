@@ -19,8 +19,10 @@
 #include "TiffFile.h"
 
 
-using namespace prp;
 using namespace std;
+
+
+namespace rip  {
 
 
 //////////////////////////////
@@ -109,7 +111,7 @@ bool TiffFile::goToByteIndex(ulonglongint offset) {
 //
 
 ushortint TiffFile::readLittleEndian2ByteUInt(void) {
-	return prp::readLittleEndian2ByteUInt(*this);
+	return rip::readLittleEndian2ByteUInt(*this);
 }
 
 
@@ -120,7 +122,7 @@ ushortint TiffFile::readLittleEndian2ByteUInt(void) {
 //
 
 ucharint TiffFile::read1UByte(void) {
-	return prp::read1UByte(*this);
+	return rip::read1UByte(*this);
 }
 
 
@@ -131,7 +133,7 @@ ucharint TiffFile::read1UByte(void) {
 //
 
 string TiffFile::readString(ulongint count) {
-	return prp::readString(*this, count);
+	return rip::readString(*this, count);
 }
 
 
@@ -215,6 +217,9 @@ void TiffFile::writeDirectoryOffset(ulonglongint offset) {
 std::string TiffFile::getFilename(void) {
 	return m_filename;
 }
+
+
+} // end rip namespace
 
 
 

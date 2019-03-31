@@ -19,7 +19,7 @@
 #include <stdlib.h>
 
 using namespace std;
-using namespace prp;
+using namespace rip;
 
 ///////////////////////////////////////////////////////////////////////////
 

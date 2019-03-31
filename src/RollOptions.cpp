@@ -13,7 +13,8 @@
 #include "RollOptions.h"
 
 using namespace std;
-using namespace prp;
+
+namespace rip  {
 
 
 //////////////////////////////
@@ -445,6 +446,9 @@ double RollOptions::getBridgeFactor(void) {
 int RollOptions::getExpectedTrackerHoleCount(void) {
 	return m_trackerHoles;
 }
+
+
+} // end rip namespace
 
 
 

@@ -17,7 +17,7 @@
 
 #include "HoleInfo.h"
 
-namespace prp  {
+namespace rip  {
 
 
 //////////////////////////////
@@ -170,8 +170,7 @@ std::ostream& operator<<(std::ostream& out, HoleInfo* hi) {
 }
 
 
-
-} // end prp namespace
+} // end rip namespace
 
 
 

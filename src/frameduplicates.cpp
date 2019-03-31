@@ -170,14 +170,14 @@ void markImageDuplicateFrame(fstream& output, TiffHeader& header, int color,
 	if (dupnum == 1) {
 		for (int i = 0; i<framesize; i++) {
 			offset = header.dataoffset + (firstrow + i) * header.cols * 3;
-			prp::goToByteIndex(output, offset);
+			rip::goToByteIndex(output, offset);
 			output.write(quarterrow.data(), qsize * 3);
 		}
 	}
 
 	for (int i = 0; i<framesize; i++) {
 		offset = header.dataoffset + (otherrow + i) * header.cols * 3 + side * 3 * qsize * 3;
-		prp::goToByteIndex(output, offset);
+		rip::goToByteIndex(output, offset);
 		output.write(quarterrow.data(), qsize * 3);
 	}
 }
@@ -190,7 +190,7 @@ void markImageDuplicateFrame(fstream& output, TiffHeader& header, int color,
 //
 
 void getRowCheckSums(vector<ulongint>& checksums, fstream& input, TiffHeader& header) {
-	prp::goToByteIndex(input, header.dataoffset);
+	rip::goToByteIndex(input, header.dataoffset);
 	int rowbytecount = header.cols * 3;
 	string rowbytes;
 

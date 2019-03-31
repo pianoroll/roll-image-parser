@@ -19,7 +19,7 @@
 
 typedef std::complex<double> mycomplex;
 
-namespace prp {
+namespace rip {
 
 #define two(x) (1 << (x))	 /* 2**x by left-shifting */
 
@@ -34,7 +34,7 @@ void       fft_destructive  (std::vector<mycomplex>& X);
 bool       isPowerOfTwo     (int value);
 
 
-} // end namespace prp
+} // end namespace rip
 
 
 #endif /* _FFT_H */

@@ -21,7 +21,7 @@
 #include <utility>
 #include <iostream>
 
-namespace prp  {
+namespace rip  {
 
 class PreTearInfo {
 	PreTearInfo(void) {
@@ -52,7 +52,7 @@ class TearInfo : public HoleInfo {
 std::ostream& operator<<(std::ostream& out, TearInfo& hi);
 std::ostream& operator<<(std::ostream& out, TearInfo* hi);
 
-} // end prp namespace
+} // end rip namespace
 
 #endif /* _TEARINFO_H */
 
