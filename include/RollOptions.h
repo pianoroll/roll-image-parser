@@ -16,43 +16,47 @@
 #include <utility>
 #include <iostream>
 
+#include "Utilities.h"
+
 namespace rip  {
 
 class RollOptions {
 	public:
-		         RollOptions               (void);
-		        ~RollOptions               ();
+		         RollOptions                (void);
+		        ~RollOptions                ();
 
-		void     reset                     (void);
+		void     reset                      (void);
 
-		double   getMinTrackerEdge         (void);
-		void     setMinTrackerEdge         (double value);
-		double   getMaxHoleTrackerWidth    (void);
-		void     setMaxHoleTrackerWidth    (double value);
-		double   getAspectRatioThreshold   (void);
-		void     setAspectRatioThreshold   (double value);
-		double   getMajorAxisCutoff        (void);
-		void     setMajorAxisCutoff        (double value);
-		double   getCircularityThreshold   (void);
-		void     setCircularityThreshold   (double value);
-		int      getMaxHoleCount           (void);
-		void     setMaxHoleCount           (int value);
-		int      getMaxTearFill            (void);
-		void     setMaxTearFill            (int value);
-		int      getAttackLineSpacing      (void);
-		void     setAttackLineSpacing      (int value);
-		double   getHoleShiftCutoff        (void);
-		void     setHoleShiftCutoff        (double value);
+		double   getMinTrackerEdge          (void);
+		void     setMinTrackerEdge          (double value);
+		double   getMaxHoleTrackerWidth     (void);
+		void     setMaxHoleTrackerWidth     (double value);
+		double   getAspectRatioThreshold    (void);
+		void     setAspectRatioThreshold    (double value);
+		double   getMajorAxisCutoff         (void);
+		void     setMajorAxisCutoff         (double value);
+		double   getCircularityThreshold    (void);
+		void     setCircularityThreshold    (double value);
+		int      getMaxHoleCount            (void);
+		void     setMaxHoleCount            (int value);
+		int      getMaxTearFill             (void);
+		void     setMaxTearFill             (int value);
+		int      getAttackLineSpacing       (void);
+		void     setAttackLineSpacing       (int value);
+		double   getHoleShiftCutoff         (void);
+		void     setHoleShiftCutoff         (double value);
 
-		std::string getRollType            (void);
-		void     setRollTypeRedWelte       (void);
-		void     setRollTypeGreenWelte     (void);
-		int      getRewindHoleBassNumber   (void);
-		int      getRewindHoleBassIndex    (void);
-		int      getRewindHoleMidi         (void);
+		std::string getRollType             (void);
+		void     setRollTypeRedWelte        (void);
+		void     setRollTypeGreenWelte      (void);
+		int      getRewindHoleBassNumber    (void);
+		int      getRewindHoleBassIndex     (void);
+		int      getRewindHoleMidi          (void);
 
-		double   getBridgeFactor           (void);
+		double   getBridgeFactor            (void);
 		int      getExpectedTrackerHoleCount(void);
+		void     setThreshold               (int value);
+		int      getThreshold               (void);
 
 	protected: // (maybe make private, but will have to create accessor functions)
 		// m_minTrackerSpacingToPaperEdge: minimum distance from paper
@@ -131,7 +135,10 @@ class RollOptions {
 		int m_treble_exp_ch    = 3;
 
 		// Bridging factor to merge adjacent holes:
-		double m_bridgeFactor = 1.37;
+		double m_bridgeFactor  = 1.37;
+
+		// m_threshold: brightness threshold (0-255) for separation of paper and non-paper.
+		int m_threshold        = 249;
 };
 
 

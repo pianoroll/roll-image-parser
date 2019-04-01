@@ -149,8 +149,6 @@ class RollImage : public TiffFile, public RollOptions {
 		void            setDebugOff                   (void);
 		void            setWarningOn                  (void);
 		void            setWarningOff                 (void);
-		void            setThreshold                  (int value);
-		int             getThreshold                  (void);
 		std::string     getDruid                      (std::string input = "");
 
 		// pixelType: a bitmask which contains enumerated types for the
@@ -312,7 +310,6 @@ class RollImage : public TiffFile, public RollOptions {
 //		bool       m_analyzedAdvancedMargins   = false;
 //		int        hardMarginLeftIndex         = 0;
 //		int        hardMarginRightIndex        = 0;
-//		int        m_threshold                 = 255;
 //		ulongint   preleaderIndex              = 0;
 //		ulongint   leaderIndex                 = 0;
 //		ulongint   firstMusicRow               = 0;
@@ -331,7 +328,6 @@ class RollImage : public TiffFile, public RollOptions {
 		bool       m_analyzedAdvancedMargins;
 		int        hardMarginLeftIndex;
 		int        hardMarginRightIndex;
-		int        m_threshold;
 		ulongint   preleaderIndex;
 		ulongint   leaderIndex;
 		ulongint   firstMusicRow;
