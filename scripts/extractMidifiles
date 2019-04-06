@@ -1,0 +1,96 @@
+#!/usr/bin/perl
+#
+# Programmer:    Craig Stuart Sapp <craig.stanford.edu>
+# Creation Date: Sat Apr  6 01:56:29 EDT 2019
+# Last Modified: Sat Apr  6 02:09:05 EDT 2019
+# Filename:      extractMidifiles
+# Syntax:        perl 5
+# vim:           ts=3
+#
+# Description:   This program extracts MIDI files from a tiff2holes
+#                analysis text file.  The binasc program needs to be 
+#                installed for the final conversion from the binasc
+#                format into a binary MIDI file.  If binasc is not found,
+#                then the MIDI files will be left in the binasc format,
+#                with the .asc extension.  Two files will be extracted:
+#                one that has the postfix string "-raw" added to the 
+#                DRUID.  This is the "raw" MIDI file containing a MIDI
+#                note for each hole in the piano roll.  The second MIDI
+#                file has the postfix string "-note" added to the DRUID.
+#                This file is given as input to the expression rendering
+#                software, and it merges groups of holes into single notes.
+#
+# Usage:
+#                extractMidifiles *.txt
+#
+#                This will process all analysis text files in the directory,
+#                creating two files for each file: the "raw" and the "note"
+#                MIDI files embedded in the analysis file. If the binasc
+#                program is not found, then the MIDI files will be left in
+#                the binasc format, with the extension ".asc".
+#
+
+use strict;
+
+my $binasc = `which binasc`;
+chomp $binasc;
+
+my @files = @ARGV;
+
+foreach my $file (@files) {
+	print "PROCESSING FILE $file\n";
+	processFile($file);
+}
+
+
+##############################
+##
+## processFile --
+##
+
+sub processFile {
+	my ($filename) = @_;
+	my $base = $filename;
+	$base =~ s/\.[^\.]*$//;
+	$base =~ s/_.*$//;
+	open (FILE, $filename) or die "Cannot read $filename";
+	my @contents = <FILE>;
+	close FILE;
+
+	my $NOTEMIDIFILE = "";
+	my $RAWMIDIFILE = "";
+
+	for (my $i=0; $i<@contents; $i++) {
+		next if $contents[$i] !~ /^\@MIDIFILE:/;
+		for (my $j=$i+1; $j<@contents; $j++) {
+			last if $contents[$j] =~ /^\@/;
+			$NOTEMIDIFILE .= $contents[$j];
+		}
+	}
+
+	for (my $i=0; $i<@contents; $i++) {
+		next if $contents[$i] !~ /HOLE_MIDIFILE:/;
+		for (my $j=$i+1; $j<@contents; $j++) {
+			last if $contents[$j] =~ /^\@/;
+			$RAWMIDIFILE .= $contents[$j];
+		}
+	}
+
+	open (MFILE, ">$base-note.asc") or die "Cannot write $base.asc";
+	print MFILE $NOTEMIDIFILE;
+	close MFILE;
+
+	open (RFILE, ">$base-raw.asc") or die "Cannot write $base-raw.asc";
+	print RFILE $RAWMIDIFILE;
+	close RFILE;
+
+	if ($binasc !~ /^\s*$/) {
+		# print "\t$binasc -c $base-note.mid $base-note.asc && rm -f $base-note.asc\n";
+		`$binasc -c $base-note.mid $base-note.asc && rm -f $base-note.asc`;
+		# print "\t$binasc -c $base-raw.mid $base-raw.asc && rm -f $base-raw.asc\n";
+		`$binasc -c $base-raw.mid $base-raw.asc && rm -f $base-raw.asc`;
+	}
+}
+
+
+
