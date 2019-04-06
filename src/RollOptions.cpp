@@ -448,6 +448,27 @@ int RollOptions::getExpectedTrackerHoleCount(void) {
 }
 
 
+
+//////////////////////////////
+//
+// RollOptions::setThreshold -- 
+//
+
+void RollOptions::setThreshold(int value) {
+	m_threshold = value;
+}
+
+
+
+//////////////////////////////
+//
+// RollOptions::getThreshold -- 
+//
+
+int RollOptions::getThreshold(void) {
+	return (ucharint)m_threshold;
+}
+
 } // end rip namespace
 
 

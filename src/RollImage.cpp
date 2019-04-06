@@ -54,7 +54,6 @@ void RollImage::clear(void) {
 	m_analyzedAdvancedMargins   = false;
 	hardMarginLeftIndex         = 0;
 	hardMarginRightIndex        = 0;
-	m_threshold                 = 255;
 	preleaderIndex              = 0;
 	leaderIndex                 = 0;
 	firstMusicRow               = 0;
@@ -363,7 +362,16 @@ return; // disabling for now
 //////////////////////////////
 //
 // RollImage::groupHoles -- Mark whether or not holes are the
-//   start of a note attack or not.
+//   start of a note attack or not.  This function identifies
+//   whether or not holes should be grouped into longer virtual
+//   holes the represent a note (or expression "note").  In
+//   other words, this function removes the bridging for long
+//   notes.  The program does not actually remove the individual
+//   visual holes, but rather identifies and marks the start
+//   of a group of holes representing a single virtual note
+//   hole.  One of the output MIDI files will preserve the
+//   individual holes, and the other will output notes duration
+//   that are merges of the individual holes.
 //
 
 void RollImage::groupHoles(void) {
@@ -1164,7 +1172,9 @@ ulongint RollImage::storeWeightedCentroidGroup(ulongint startindex) {
 
 //////////////////////////////
 //
-// RollImage::storeCorrectedCentroidHistogram --
+// RollImage::storeCorrectedCentroidHistogram -- Create a histogram of the
+//     hole centroids that have the horizontal drift analysis correction
+//     applied to the positions
 //
 
 void RollImage::storeCorrectedCentroidHistogram(void) {
@@ -1185,7 +1195,9 @@ void RollImage::storeCorrectedCentroidHistogram(void) {
 
 //////////////////////////////
 //
-// RollImage::analyzeTrackerBarSpacing --
+// RollImage::analyzeTrackerBarSpacing -- Calculate the expected spacing of the
+//    tracker-bar holes.  Search for the first harmonic in the Fourier Transform
+//    which is at the frequency of the spacing of the holes.
 //
 
 void RollImage::analyzeTrackerBarSpacing(void) {
@@ -4561,6 +4573,8 @@ void RollImage::insertRollImageProperties(MidiFile& midifile) {
 	midifile.addText(0, 0, ss.str()); ss.str("");
 	ss << "@TRACKER_HOLES:\t\t"     << trackerholes                  << "";
 	midifile.addText(0, 0, ss.str()); ss.str("");
+	ss << "@HOLE_SOFTWARE:\t\t"     << "https://github.com/pianoroll/roll-image-parser" << "";
+	midifile.addText(0, 0, ss.str()); ss.str("");
 
 	ss << "@SOFTWARE_DATE:\t\t"     << __DATE__ << " " << __TIME__   << "";
 	string sss = ss.str();
@@ -4715,6 +4729,7 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 	out << "@@ HOLE_OFFSET:\t\t"       << "The offset of the tracker bar spacing pattern with respect to" << std::endl;
 	out << "@@ \t\t\tthe first column of the image." << std::endl;
 	out << "@@ TRACKER_HOLES:\t"       << "The (esitmated) number of tracker bar holes that reads this roll." << std::endl;
+	out << "@@ HOLE_SOFTWARE:\t"       << "The software that extracted the holes from the image." << std::endl;
 	out << "@@ SOFTWARE_DATE:\t"       << "The compiling date for the software that generates this file." << std::endl;
 	out << "@@ ANALYSIS_DATE:\t"       << "The date that the analysis was done." << std::endl;
 	out << "@@ ANALYSIS_TIME:\t"       << "The duration of the analysis phase of the software (excluding" << std::endl;
@@ -4763,6 +4778,7 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 	out << "@HOLE_SEPARATION:\t"     << holeSeparation                << "px\n";
 	out << "@HOLE_OFFSET:\t\t"       << holeOffset                    << "px\n";
 	out << "@TRACKER_HOLES:\t\t"     << trackerstring                 << "\n";
+	out << "@HOLE_SOFTWARE:\t\t"     << "https://github.com/pianoroll/roll-image-parser" << "\n";
 	out << "@SOFTWARE_DATE:\t\t"     << __DATE__ << " " << __TIME__ << endl;
 #ifndef DONOTUSEFFT
 	out << "@ANALYSIS_DATE:\t\t"     << std::ctime(&current_time);
@@ -5032,31 +5048,11 @@ void RollImage::setWarningOff(void) {
 
 //////////////////////////////
 //
-// RollImage::setThreshold -- Should probably be moved to RollOptions class.
-//
-
-void RollImage::setThreshold(int value) {
-	m_threshold = value;
-}
-
-
-
-//////////////////////////////
-//
-// RollImage::getThreshold -- Should probably be moved to RollOptions class.
-//
-
-int RollImage::getThreshold(void) {
-	return (ucharint)m_threshold;
-}
-
-
-//////////////////////////////
-//
 // RollImage::getDruid -- Return the Stanford Libraries Digital Repository
 //     Unique ID for the roll.  This is inferred from the filename of the
 //     TIFF image being read.  The format for a DRUID is  ZZ999ZZ9999
-//     Z = letter (lowercase), 9 = digit.
+//     Z = letter (lowercase), 9 = digit.  If the DRUID cannot be found,
+//     the an empty string will be returned.
 //     default option: input = ""
 //
 
