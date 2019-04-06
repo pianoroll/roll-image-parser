@@ -4129,6 +4129,14 @@ void RollImage::generateHoleMidifile(MidiFile& midifile) {
 		return;
 	}
 
+	string filename = getDruid();
+	if (!filename.empty()) {
+		filename += "-raw.mid";
+		string entry = "@FILENAME:\t\t";
+		entry += filename;
+		midifile.addText(0, 0, entry);
+	}
+
 	insertRollImageProperties(midifile);
 	midifile.addText(0, 0, "@MIDIFILE_TYPE:\t\thole");
 
@@ -4253,6 +4261,14 @@ void RollImage::generateMidifile(MidiFile& midifile) {
 
 	if (holes.empty()) {
 		return;
+	}
+
+	string filename = getDruid();
+	if (!filename.empty()) {
+		filename += ".mid";
+		string entry = "@FILENAME:\t\t";
+		entry += filename;
+		midifile.addText(0, 0, entry);
 	}
 
 	insertRollImageProperties(midifile);
@@ -4831,6 +4847,7 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 			out << "@@BEGIN: TREBLE_TEARS\n";
 			for (ulongint i=0; i<trebleTears.size(); i++) {
 				trebleTears.at(i)->printAton(out);
+				out << "\n";
 			}
 			out << "@@END: TREBLE_TEARS\n";
 		}
@@ -4845,6 +4862,7 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 			out << "\n@@BEGIN: BASS_TEARS\n";
 			for (ulongint i=0; i<bassTears.size(); i++) {
 				bassTears.at(i)->printAton(out);
+				out << "\n";
 			}
 			out << "@@END: BASS_TEARS\n";
 		}
@@ -4922,14 +4940,13 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 	stringstream ss;
 	generateNoteMidiFileBinasc(ss);
 	out << ss.str();
-	out << "\n@@END: MIDIFILE\n";
+	out << endl;
 
 	ss.str("");
 	out << "\n@BEGIN:\tHOLE_MIDIFILE:\n";
 	generateHoleMidiFileBinasc(ss);
 	out << ss.str();
-	out << "\n@@END:\tHOLE_MIDIFILE\n";
-
+	out << endl;
 	out << "\n@@END: MIDIFILES\n\n";
 
 	// The following section is for displaying intermediate analysis data, mostly about
@@ -4942,7 +4959,7 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 	out << "@@ (2) the drift-corrected positions of the hole centers\n";
 	out << "@@ (3) the weighted-average positions of the hole centers from (2) for each tracker bar position\n";
 	out << "@@ (4) the modeled position of the tracker bar positions\n";
-	out << "\n@@HOLE_HISTOGRAM:" << endl;
+	out << "\n@HOLE_HISTOGRAM:" << endl;
 	std::vector<int> three(getCols(), 0);
 	for (ulongint i=0; i< rawRowPositions.size(); i++) {
 		three.at(rawRowPositions.at(i).first + 0.5) += rawRowPositions.at(i).second;
