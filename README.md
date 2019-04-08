@@ -4,7 +4,7 @@ This repository is used to extract musical information from scans
 of piano rolls that are scanned with the Stanford Libraries' scanner
 for its collection of piano and organ rolls.
 
-### Compiling
+## Compiling
 
 To compile the library and tools, type:
 
@@ -14,13 +14,14 @@ make
 
 GNU make must be installed, and gcc version 4.9 or higher (or most versions of clang on macOS).
 
-### Tools
+## Tools
 
 
 | Name                | Description |
 |---------------------|--------------------- |
-| tiff2holes          | Main program to identify musical holes in a TIFF image of a piano roll.
-| markholes           | The same as tiff2holes, but takes two identical images as input, analyzing the first, and then writing analysis marks on the second for debugging and quality analysis. |
+| [tiff2holes](#tiff2holes)          | Main program to identify musical holes in a TIFF image of a piano roll.
+| [markholes](#markholes)           | The same as tiff2holes, but takes two identical images as input, analyzing the first, and then writing analysis marks on the second for debugging and quality analysis. |
+| [straighten](#straighten)          | Takes the analysis.txt data as an argument along with the original image and then create a straightened version of the image so that the musical holes are aligned vertically in the image. |
 | channelhistograms   | |
 | checkquality        | Some basic image quality checks. |
 | frameduplicates     | Check for visual defects in the TIFF images (checking for a now resolved acquisition software bug). |
@@ -31,15 +32,11 @@ GNU make must be installed, and gcc version 4.9 or higher (or most versions of c
 | tifflength          | |
 | tifforientation     | |
 
-### tiff2holes output
+## tiff2holes
 
-The tiff2holes (and the markholes) tools output a text file containing
-information about the holes on the paper and also drift analyses
-as well as two embedded MIDI files based on the hole analysis.
-[Here](https://github.com/pianoroll/roll-image-parser/blob/master/example/gg384dv5303.txt)
-is an example output file.
+The tiff2holes toll is a optical hole recognition (OHR) program used to identify musical holes in an image of a piano roll.  The input is an uncompressed TIFF image, and the output is a [textual analysis report](https://github.com/pianoroll/roll-image-parser/blob/master/example/gg384dv5303.txt) described below.  Extracted MIDI data files are also embedded in the output from tiff2hole.
 
-#### Extracted parameters
+### Extracted parameters
 
 At the start of the file are a list of extracted features from the image:
 
@@ -89,7 +86,7 @@ At the start of the file are a list of extracted features from the image:
 | BRIDGE_FACTOR		| Aspect ratio merging distance for adjacent holes. |
 | MANUAL_EDITS		| Set this field to "yes" if any manual edits are made to this file. |
 
-#### Hole list
+### Hole list
 
 Then comes a list of the identified musical holes on the paper, both regular notes and expression holes.
 The holes are sorted in time (in other words by row in the image) from the top of the image to the
@@ -119,7 +116,7 @@ conversion to MIDI data.  This will remove unwanted notes, but sometimes will al
 Manual post-processing of the analysis would be required to examine "bad" holes for a more accurate final result.
 
 
-#### Drift analysis
+### Drift analysis
 
 Next comes a list of the tears along the edges of the roll.  The information extracted from each tear:
 
@@ -144,15 +141,30 @@ second column.  Each entry in the table updates the drift when it
 changes by more than 1/10th of a pixel.
 
 
-#### MIDI files
+### MIDI files
 
 Next comes two MIDI files.  The first is one that removes bridging to group multiple holes into single notes.
 The second one contains individual MIDI notes for each musical hole on the image (preserving bridging).
 
-#### Hole histograms
+### Hole histograms
 
 The last section analyzes the vertical positions of musical holes before and after drift analysis has been done,
 as well as the final vertical position assignment after the Fourier Transform analysis has been done.
+
+## markholes
+
+The markholes tool is similar to [tiff2holes](#tiff2holes), but will add graphical markup of the analysis to a copy of the image file given as a second argument.
+
+## straighten
+
+The straighten tool extract the drift analysis from the output of [tiff2holes](#tiff2holes) or [markholes](#markholes) and applies a reverse of the drift analysis to the original image to straighten the paper and align the musical holes vertically.  The command-line use of the straighten tool is:
+
+```bash
+straighten analysis.txt input.tiff output.tiff
+```
+
+Where `analysis.txt` is the output textual analysis report from [tiff2holes](#tiff2holes), `input.tiff` is the original image that generated the report, and `output.tiff` is the filename for the straightened image.
+
 
 
 
