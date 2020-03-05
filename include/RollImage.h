@@ -134,6 +134,7 @@ class RollImage : public TiffFile, public RollOptions {
 		void            markSnakeBites                (void);
 		void            markShifts                    (void);
 		void            markShift                     (int index);
+		void            setMidiFileTempo              (MidiFile& midifile);
 		void            generateNoteMidiFileHex       (ostream& output);
 		void            generateNoteMidiFileBinasc    (ostream& output);
 		void            generateHoleMidiFileHex       (ostream& output);

@@ -268,6 +268,8 @@ void RollOptions::setHoleShiftCutoff(double value) {
 //   "ampico-a"       = AMPICO roll, earlier model
 //   "ampico-b"       = AMPICO roll, later model
 //   "duoart"         = Aeolean Duo-Art
+//   "65-note"        = 64-note roll (6 holes/inch)
+//   "88-note"        = 88-note roll standard (9 holes/inch)
 //
 
 std::string RollOptions::getRollType(void) {
@@ -322,6 +324,9 @@ void RollOptions::setRollTypeRedWelte(void) {
 	m_rewindHoleMidi = 104;
 	m_trackerHoles = 100;
 
+	m_bass_midi = 14;   // first MIDI Note on bass side of paper
+	m_treble_midi = 113; // first MIDI Note on treble side of paper
+
 	m_bassExpressionTrackStartNumberLeft = 1;
 	m_bassExpressionTrackStartMidi = 14;
 	m_bassNotesTrackStartNumberLeft = 11;
@@ -330,6 +335,8 @@ void RollOptions::setRollTypeRedWelte(void) {
 	m_trebleNotesTrackStartMidi = 67;
 	m_trebleExpressionTrackStartNumberLeft = 91;
 	m_trebleExpressionTrackStartMidi = 104;
+
+	hasExpressionMidiFileSetup();
 }
 
 
@@ -374,6 +381,9 @@ void RollOptions::setRollTypeGreenWelte(void) {
 	m_rewindHoleMidi = 16;
 	m_trackerHoles = 98;
 
+	m_bass_midi = 16;   // first MIDI Note on bass side of paper
+	m_treble_midi = 113; // first MIDI Note on treble side of paper
+
 	m_bassExpressionTrackStartNumberLeft = 1;
 	m_bassExpressionTrackStartMidi = 16;
 	m_bassNotesTrackStartNumberLeft = 6;
@@ -384,12 +394,130 @@ void RollOptions::setRollTypeGreenWelte(void) {
 
 	m_trebleExpressionTrackStartNumberLeft = 94;
 	m_trebleExpressionTrackStartMidi = 109;
+
+	hasExpressionMidiFileSetup();
 }
 
 
 // Duo-Art register break at D#4/E4
 
 // Ampico register break at E4/F4
+
+//////////////////////////////
+//
+// RollOptions::setRollType65Note -- Apply settings suitable for 65-note piano rolls.
+//   * Aeolian "universal"
+//   * 11.125" width
+//   * 6 holes to the inch
+//   * 4.23 mm /hole
+//   * First bass hole centered about 107 pixels @ 300 DPI from bass edge.
+//   * First treble hole centered about 98 pixels @ 300 DPI from bass edge.
+//   * Punch widths about 31 pixels at 300 DPI.
+//   * Paper width 3406 @ 300 DPI = 11.35 inches
+//   * about 50 pixels between tracker bar holes
+//   * Lowest note A1 (MIDI note 33)
+//   * Highest note C#7 (MIDI note 97)
+//   * No sustain pedal
+//
+//
+
+void RollOptions::setRollType65Note(void) {
+	m_rollType = "65-note";
+	m_bridgeFactor  = 1.25;
+	m_minTrackerSpacingToPaperEdge = 2.0;
+	m_rewindHole = 0;  // no rewind hole
+	m_rewindHoleMidi = 0;
+	m_trackerHoles = 65;
+
+	m_bass_midi   = 33; // first MIDI note/expression on bass side of paper
+	m_treble_midi = 97; // first MIDI note/expression on treble side of paper
+
+	// no bass expression
+	m_bassExpressionTrackStartNumberLeft = 0;
+	m_bassExpressionTrackStartMidi = 0;
+	m_bassNotesTrackStartNumberLeft = 0;
+	m_bassNotesTrackStartMidi = 0;
+
+	// no treble expression
+	m_trebleNotesTrackStartNumberLeft = 0;
+	m_trebleNotesTrackStartMidi = 0;
+	m_trebleExpressionTrackStartNumberLeft = 0;
+	m_trebleExpressionTrackStartMidi = 0;
+
+	hasNoExpressionMidiFileSetup();
+}
+
+
+
+//////////////////////////////
+//
+// RollOptions::setRollType88Note -- Apply settings suitable for 88-note piano rolls.
+//   * Introduced in 1900
+//   * United States standardized to 88 note scale in 1909
+//   * 9 holes/inch
+//   * 100 positions with 6 mostly empty slots on each edge (for expression)
+//   * Pedal is at position 4, which is MIDI note 18
+//   * 88 notes are A0 (MIDI 21) at position 7 though C7 (MIDI 108) at position 94.
+//   * The notes are evenly centered on the roll, with the middle of the 88 notes
+//     occurring at the middle of the paper (E4 is last note on bass half of paper,
+//     and F4 is first note on treble half of paper.
+//
+//   Position     MIDI    Meaning
+//   ==============================
+//       1        15      unused
+//       2        16      unused, sometimes rewind hole
+//       3        17      unused
+//       4        18      sustain pedal
+//       5        19      unused
+//       6        20      unused
+//       7        21      A0
+//       ...
+//       50       64      E4  Pretend Bass register
+//       -------------------------
+//       51       65      F4  Pretend Treble register
+//       ...
+//       94      108      C7
+//       95      109      unused
+//       96      110      unused
+//       97      111      unused
+//       98      112      unused
+//       99      113      unused
+//      100      114      unused
+//
+
+void RollOptions::setRollType88Note(void) {
+	m_rollType = "88-note";
+	m_bridgeFactor  = 0.85;
+	m_minTrackerSpacingToPaperEdge = 1.6;
+	m_rewindHole = 0;  // no rewind hole (but can be at position 2, MIDI 16)
+	m_rewindHoleMidi = 0;
+	m_trackerHoles = 100;
+
+	// m_bass_midi == first MIDI note/expression on bass side of paper.
+	// This is the first tracker bar position on the roll (left side,
+	// or bass side).
+	m_bass_midi   = 15;  
+
+	// m_treble_midi == first MIDI note/expression on the treble side of the paper.
+	// This is the last tracker bar position on the roll (right side, or
+	// treble side).
+	m_treble_midi = 114; // first MIDI note/expression on treble side of paper
+
+	// bass expression (not really used except for pedal)
+	m_bassExpressionTrackStartNumberLeft = 1;
+	m_bassExpressionTrackStartMidi = 15;
+	m_bassNotesTrackStartNumberLeft = 7;
+	m_bassNotesTrackStartMidi = 21;
+
+	// treble expression (not used)
+	m_trebleNotesTrackStartNumberLeft = 51;
+	m_trebleNotesTrackStartMidi = 65;
+	m_trebleExpressionTrackStartNumberLeft = 95;
+	m_trebleExpressionTrackStartMidi = 109;
+
+	hasNoExpressionMidiFileSetup();
+}
+
 
 
 /////////////////////////////////
@@ -468,6 +596,57 @@ void RollOptions::setThreshold(int value) {
 int RollOptions::getThreshold(void) {
 	return (ucharint)m_threshold;
 }
+
+
+
+//////////////////////////////
+//
+// RollOptions::hasNoExpressionMidiFileSetup -- The roll has no 
+//   expression, so the output MIDI files will contain two
+//   tracks: the 0th track is the tempo and metadata track with no
+//   notes, and the 1st track contains all of the notes from the roll.
+//
+
+void RollOptions::hasNoExpressionMidiFileSetup(void) { 
+	// MIDI file track assignments (offset from 0, with track 0 note having no notes):
+	m_bass_track       = 1;
+	m_treble_track     = 1;
+	m_bass_exp_track   = 1;
+	m_treble_exp_track = 1;
+
+	// MIDI file channel assignments for each track, (offset from 0):
+	m_bass_exp_ch      = 0;
+	m_bass_ch          = 0;
+	m_treble_ch        = 0;
+	m_treble_exp_ch    = 0;
+}
+
+
+
+//////////////////////////////
+//
+// RollOptions::hasExpressionMidiFileSetup --  The roll has expression, so the output
+//     MIDI files will contain two tracks: the 0th track is the tempo and metadata
+//     track with no notes, the 1st track contains the bass notes, the 2nd track
+//     contains the treble notes, the 3rd track contains the bass expression, and
+//     the fourth track contains the treble expression.
+//
+
+void RollOptions::hasExpressionMidiFileSetup(void) {
+	// MIDI file track assignments (offset from 0, with track 0 note having notes):
+	m_bass_track       = 1;
+	m_treble_track     = 2;
+	m_bass_exp_track   = 3;
+	m_treble_exp_track = 4;
+
+	// MIDI file channel assignments for each track, (offset from 0):
+	m_bass_exp_ch      = 0;
+	m_bass_ch          = 1;
+	m_treble_ch        = 2;
+	m_treble_exp_ch    = 3;
+}
+
+
 
 } // end rip namespace
 

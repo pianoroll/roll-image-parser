@@ -1,0 +1,103 @@
+#!/usr/local/bin/perl
+#
+# Programmer:    Craig Stuart Sapp <craig.stanford.edu>
+# Creation Date: Mon Mar  2 18:04:17 PST 2020
+# Last Modified: Mon Mar  2 18:04:20 PST 2020
+# Filename:      extractmidifiles
+# Syntax:        perl 5
+# vim:           ts=3
+#
+# Description:   Extract pre-expression MIDI file and raw MIDI file from
+#                textual output of tiff2holes program.
+#
+
+use strict;
+
+my $binasc = `which binasc`;
+chomp $binasc;
+if ($binasc =~ /^\s*$/) {
+	die "Error: cannot find binasc command.  Install binasc (https://github.com/craigsapp/binasc.)";
+}
+
+my @files = @ARGV;
+
+foreach my $file (@files) {
+	extractMidifiles($file);
+}
+
+
+exit(0);
+
+
+##############################
+##
+## extractMidifiles -- there are two files, one labeled 
+##     @MIDIFILE: which contains the input for expression processing.
+##         This MIDI file removes the bridging of @HOLE_MIDIFILE, but
+##         does not adjust the durations of holes to emulate the tracker
+##         bar hole widths.
+##     @HOLE_MIDIFILE:
+##
+
+sub extractMidifiles {
+	my ($filename) = @_;
+	my $base = $filename;
+	$base =~ s/.*\///;
+	$base =~ s/\.[^.]*$//;
+	$base =~ s/_.*//;
+	open (FILE, $filename) or die "Cannot read $filename\n";
+	my @contents = <FILE>;
+	close FILE;
+	chomp @contents;
+	my $preexpmidi = "";
+	my $rawmidi = "";
+
+	my $pre = 0;
+	my $raw = 0;
+
+	for (my $i=0; $i<@contents; $i++) {
+		my $line = $contents[$i];
+		if ($line =~ /^\@MIDIFILE:\s*$/) {
+			$pre = 1;
+			$raw = 0;
+			next;
+		} elsif ($line =~ /^\@HOLE_MIDIFILE:\s*$/) {
+			$pre = 0;
+			$raw = 1;
+			next;
+		} elsif ($line =~ /^\@/) {
+			$pre = 0;
+			$raw = 0;
+			next;
+		}
+		if ($pre) {
+			$preexpmidi .= "$line\n";
+		} elsif ($raw) {
+			$rawmidi .= "$line\n";
+		}
+	}
+
+	if ($preexpmidi =~ /^\s*$/) {
+		die "Error: cannot find MIDI data for pre-exp MIDI file\n";
+	}
+	if ($rawmidi =~ /^\s*$/) {
+		die "Error: cannot find MIDI data for raw MIDI file\n";
+	}
+
+	open (PREMIDI, ">${base}_note.txt") || die "Cannot write ${base}_note.txt\n";
+	print PREMIDI $preexpmidi;
+	close PREMIDI;
+
+	open (RAWMIDI, ">${base}_raw.txt") || die "Cannot write ${base}_raw.txt\n";
+	print RAWMIDI $rawmidi;
+	close RAWMIDI;
+
+	print STDERR "CREATING ${base}_note.mid\n";
+	`$binasc ${base}_note.txt -c ${base}_note.mid`;
+
+	print STDERR "CREATING ${base}_raw.mid\n";
+	`$binasc ${base}_raw.txt -c ${base}_raw.mid`;
+
+}
+
+

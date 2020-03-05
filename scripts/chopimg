@@ -1,0 +1,145 @@
+#!/usr/bin/perl
+#
+# Programmer:    Craig Stuart Sapp <craig.stanford.edu>
+# Creation Date: Mon Mar  2 12:36:17 PST 2020
+# Last Modified: Mon Mar  2 12:36:20 PST 2020
+# Filename:      chopimg
+# Syntax:        perl 5
+# vim:           ts=3
+#
+# Description:   Split long image files into smaller pieces using 
+#                imagemagick command-line tools.  Also needs tiffinfo tool.
+#
+# Options:
+#      -s #      Rows of the image in each segment.  Default is 8192 pixels.
+#      -b string Base name of the output file, the default is "out", after which
+#                numbers will be added, then .png for the output format.
+#
+
+#!/usr/bin/perl
+
+use strict;
+use Getopt::Long;
+
+
+my $magick = `which magick`;
+chomp $magick;
+if ($magick =~ /^\s*$/) {
+	die "Error: cannot find magick command.  Install ImageMagick.";
+}
+
+my $tiffinfo = `which tiffinfo`;
+chomp $tiffinfo;
+if ($tiffinfo =~ /^\s*$/) {
+	die "Error: cannot find tiffinfo command.  Install it.";
+}
+
+
+Getopt::Long::Configure("bundling");
+my $base = "out";
+my $segment = 4096 * 2;
+my $page = 0;
+GetOptions (
+   'b|base=s' => \$base,
+   'p|page=s' => \$page,
+   's|segment=s' => \$segment
+);
+# Minimum segment size is 128 pixel rows.
+$segment = 4096 if $segment < 128;
+
+die "Usage: $0 $ARGV[0]\n" if @ARGV != 1;
+my $filename = $ARGV[0];
+my ($width, $height) = getImageDimensions($filename);
+
+# print "WIDTH: $width HEIGH $height\n";
+
+my $count = $height / $segment;
+my $icount = int($count);
+my $rest = $count * $segment - $icount * $segment;
+
+print "FRAMES $icount files of size $segment and REMAINDER $rest will be created\n";
+
+my $command;
+my $x;
+my $y;
+my $outfile;
+my $ii;
+my $outfile;
+
+if ($page > 0) {
+	# print a particular page
+	$ii = $page;
+	$ii = "0$ii" if $page < 10;
+	$ii = "0$ii" if $page < 100;
+	$outfile = $base;
+	$outfile .= $ii;
+	$outfile .= ".png";
+	$x = 0;
+	$y = $segment * ($page-1);
+	$command = "$magick $filename +repage -depth 8 -crop ";
+	$command .= "${width}x$segment+0+$y +repage $outfile";
+	print "$command\n";
+	`$command`;
+} else {
+	for (my $i=0; $i<$count; $i++) {
+		$ii = $i + 1;
+		$ii = "0$ii" if $i+1 < 10;
+		$ii = "0$ii" if $i+1 < 100;
+		$outfile = $base;
+		$outfile .= $ii;
+		$outfile .= ".png";
+		$x = 0;
+		$y = $segment * $i;
+		$command = "$magick $filename +repage -depth 8 -crop ";
+		$command .= "${width}x$segment+0+$y +repage $outfile";
+		print "$command\n";
+		`$command`;
+	}
+	if ($rest > 600) {
+		$ii = $count + 1;
+		$ii = "00$ii" if $count+1 < 10;
+		$ii = "0$ii" if $count+1 < 100;
+		$outfile = "out";
+		$outfile .= $ii;
+		$outfile .= ".png";
+		$x = 0;
+		$y = $segment * $count;
+		$command = "$magick $filename +repage -depth 8 -crop ";
+		$command .= "${width}x$count+0+$y +repage $outfile";
+	}
+}
+
+
+#/ magick 36105225770473_sb078nd6764_0001_gr.tif  +repage -depth 8 -crop 4096x4096+0+0 +repage z.jpg
+
+
+
+
+##############################
+##
+## getImageDimensions --
+##
+##  Image Width: 4096 Image Length: 319440
+##  Resolution: 300, 300 pixels/inch
+##  Bits/Sample: 8
+##  Compression Scheme: None
+##  Photometric Interpretation: min-is-black
+##  FillOrder: msb-to-lsb
+##  Orientation: row 0 top, col 0 lhs
+##  Samples/Pixel: 1
+##  Rows/Strip: 319440
+##  Planar Configuration: single image plane
+##  Page Number: 0-1
+##
+
+sub getImageDimensions {
+	my ($filename) = @_;
+	my $info = `$tiffinfo $filename`;
+	if ($info =~ /Image\s+Width:\s+(\d+)\s+Image\s+Length:\s+(\d+)/) {
+		return ($1, $2);
+	}
+	die "Cannot read image dimensions\n";
+}
+
+
+

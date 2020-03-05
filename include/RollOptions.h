@@ -22,41 +22,46 @@ namespace rip  {
 
 class RollOptions {
 	public:
-		         RollOptions                (void);
-		        ~RollOptions                ();
+		         RollOptions                  (void);
+		        ~RollOptions                  ();
 
-		void     reset                      (void);
+		void     reset                        (void);
 
-		double   getMinTrackerEdge          (void);
-		void     setMinTrackerEdge          (double value);
-		double   getMaxHoleTrackerWidth     (void);
-		void     setMaxHoleTrackerWidth     (double value);
-		double   getAspectRatioThreshold    (void);
-		void     setAspectRatioThreshold    (double value);
-		double   getMajorAxisCutoff         (void);
-		void     setMajorAxisCutoff         (double value);
-		double   getCircularityThreshold    (void);
-		void     setCircularityThreshold    (double value);
-		int      getMaxHoleCount            (void);
-		void     setMaxHoleCount            (int value);
-		int      getMaxTearFill             (void);
-		void     setMaxTearFill             (int value);
-		int      getAttackLineSpacing       (void);
-		void     setAttackLineSpacing       (int value);
-		double   getHoleShiftCutoff         (void);
-		void     setHoleShiftCutoff         (double value);
+		double   getMinTrackerEdge            (void);
+		void     setMinTrackerEdge            (double value);
+		double   getMaxHoleTrackerWidth       (void);
+		void     setMaxHoleTrackerWidth       (double value);
+		double   getAspectRatioThreshold      (void);
+		void     setAspectRatioThreshold      (double value);
+		double   getMajorAxisCutoff           (void);
+		void     setMajorAxisCutoff           (double value);
+		double   getCircularityThreshold      (void);
+		void     setCircularityThreshold      (double value);
+		int      getMaxHoleCount              (void);
+		void     setMaxHoleCount              (int value);
+		int      getMaxTearFill               (void);
+		void     setMaxTearFill               (int value);
+		int      getAttackLineSpacing         (void);
+		void     setAttackLineSpacing         (int value);
+		double   getHoleShiftCutoff           (void);
+		void     setHoleShiftCutoff           (double value);
+		void     hasNoExpressionMidiFileSetup (void);
+		void     hasExpressionMidiFileSetup   (void);
 
-		std::string getRollType             (void);
-		void     setRollTypeRedWelte        (void);
-		void     setRollTypeGreenWelte      (void);
-		int      getRewindHoleBassNumber    (void);
-		int      getRewindHoleBassIndex     (void);
-		int      getRewindHoleMidi          (void);
+		std::string getRollType               (void);
+		void     setRollTypeRedWelte          (void);
+		void     setRollTypeGreenWelte        (void);
+		void     setRollType65Note            (void);
+		void     setRollType88Note            (void);
 
-		double   getBridgeFactor            (void);
-		int      getExpectedTrackerHoleCount(void);
-		void     setThreshold               (int value);
-		int      getThreshold               (void);
+		int      getRewindHoleBassNumber      (void);
+		int      getRewindHoleBassIndex       (void);
+		int      getRewindHoleMidi            (void);
+
+		double   getBridgeFactor              (void);
+		int      getExpectedTrackerHoleCount  (void);
+		void     setThreshold                 (int value);
+		int      getThreshold                 (void);
 
 	protected: // (maybe make private, but will have to create accessor functions)
 		// m_minTrackerSpacingToPaperEdge: minimum distance from paper
@@ -122,7 +127,13 @@ class RollOptions {
 		// m_trackerHoles == number of holes in the tracker bar
 		int m_trackerHoles = 0;
 
-		// MIDI file track assignments (offset from 0, with track 0 note having notes):
+		// m_bass_midi == first MIDI note/expression hole on bass side of paper.
+		int m_bass_midi = 0;
+
+		// m_treble_midi == first MIDI note/expression hole on treble side of paper.
+		int m_treble_midi = 0;
+
+		// MIDI file track assignments (offset from 0, with track 0 note having no notes):
 		int m_bass_track       = 1;
 		int m_treble_track     = 2;
 		int m_bass_exp_track   = 3;
@@ -139,6 +150,19 @@ class RollOptions {
 
 		// m_threshold: brightness threshold (0-255) for separation of paper and non-paper.
 		int m_threshold        = 249;
+
+		// m_tempo_additive_acceleration_per_foot: the roll acceleration emulation.  This
+		// is the amount added to the tempo BPM for after each foot of the roll.  Value of
+		// 0.22 is from Wayne Stankhe.  The tempo is always starting at "60" and the value
+		// is relative, so the 2nd foot will be at tempo 60.22.  This emulation will need
+		// refinement in the future.  Note the the acceleration tempo is different from the 
+		// roll tempo.  The roll tempo is stored in the MIDI file ticks-per-quarter-note value,
+		// which represents the lines of the image per second (i.e., without acceleration emulation).
+		// The accleration is always starts at 60 bpm (equal to the pixel rows per second in the
+		// header), and then increases by the following amount (60.22, 60.44, 60.88) for at each foot.
+		// along the roll.
+		double m_tempo_additive_acceleration_per_foot = 0.22;
+
 };
 
 

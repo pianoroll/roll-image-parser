@@ -472,9 +472,9 @@ void RollImage::assignMidiKeyNumbersToHoles(void) {
 
 	int rewindholemidi = getRewindHoleMidi();
 	if (!rewindholemidi) {
-		// don't know what type of piano roll, so do not try to
-		// make a correction for the expected rewind hole location.
-		cerr << "REWIND HOLE IS UNDEFINED (set with -r option for red-welte probably)" << endl;
+		// don't know what type of piano roll or there is no rewind hole, so do
+		// not try to make a correction for the expected rewind hole location.
+		// cerr << "REWIND HOLE IS UNDEFINED (set with -r option for red-welte probably)" << endl;
 		return;
 	}
 
@@ -712,114 +712,70 @@ int RollImage::findNextPerimeterPoint(pair<ulongint, ulongint>& point, int dir) 
 //////////////////////////////
 //
 // RollImage::analyzeMidiKeyMapping -- assign tracker bar positions
-//     to MIDI key numbers.
+//     to MIDI key numbers. Do this by finding the position of the
+//     first bass note on the roll (left position).  This is determined
+//     by starting at the left edge of the paper, and then moving
+//     by the minTrackerEdge position into the paper to search for
+//     the nearest detected theoretical tracker bar position.
+//     The same is done for the right edge of the music, by starting
+//     at the right edge of the paper and then moving inwards
+//     by the minTrackerEdge position (maybe add a separate minTrackerEdge
+//     for each side of the paper, since 65-note rolls have a smaller
+//     margin on the right, for example).
 //
 
 void RollImage::analyzeMidiKeyMapping(void) {
 
+	ulongint r = getFirstMusicHoleStart();
+
+	// Build a horizontal position mapping of the theoretical
+	// tracker bar centers, setting them all to zero initially.
 	std::vector<double>&  position = m_normalizedPosition;
 	position.resize(trackerArray.size());
 	std::fill(position.begin(), position.end(), 0.0);
 
-	// assigned normalized pixel column positions to each hole column.
+	// Assigned normalized pixel column positions to each theoretical
+	// tracker bar column.
 	for (ulongint i=0; i<position.size(); i++) {
-		position[i] = i * holeSeparation + holeOffset;
+		position[i] = i * holeSeparation + holeOffset + driftCorrection[r];
 	}
 
-	// find the first position that has holes
-	for (ulongint i=0; i<trackerArray.size(); i++) {
-		if (trackerArray[i].empty()) {
-			continue;
-		}
-		m_firstHolePosition = position[i];
-		break;
-	}
+	// Check that the hole positions are within the bounds of the paper
+	// within the tolerance of getMinTrackerEdge().  First estimate the
+	// correct position of the first bass tracker bar position:
 
-	// find the last position which has holes
-	for (long i=(int)trackerArray.size()-1; i>=0; i--) {
-		if (trackerArray[i].empty()) {
-			continue;
-		}
-		m_lastHolePosition = position[i];
-		break;
-	}
+	double lefttarget = leftMarginIndex[r];
+	// Convert to corrected horizontal position:
+   lefttarget += driftCorrection[r];
+	// Move to the treble by the expected bass margin:
+	lefttarget += getMinTrackerEdge() * holeSeparation;
 
-	// check that the hole positions are within the bounds of the paper
-	// within the tolerance of getMinTrackerEdge():
 
-	ulongint r = getFirstMusicHoleStart();
-	double leftmin = leftMarginIndex[r];
-//	leftmin += driftCorrection[r]; // don't add drift correction?
-	leftmin += getMinTrackerEdge() * holeSeparation;
+	// Now find the position that best fits that predicted position of 
+	// the first bass hole position:
 	int leftmostIndex = 0;
-	for (ulongint i=0; i<position.size(); i++) {
-		if (position[i] > leftmin) {
+	int curdiff = 123456;
+	int difference;
+	for (ulongint i=1; i<position.size(); i++) {
+		difference = abs(position[i] - lefttarget);
+		if (difference < curdiff) {
+			curdiff = difference;
 			leftmostIndex = i;
-			break;
 		}
 	}
 
-	double rightmin = rightMarginIndex[r];
-//	rightmin += driftCorrection[r];  // don't add drift correction?
-	rightmin += -getMinTrackerEdge() * holeSeparation;
-	int rightmostIndex = position.size()-1;
-	for (ulongint i=position.size() - 1; i>0; i--) {
-		if (position[i] < rightmin) {
-			rightmostIndex = i;
-			break;
-		}
-	}
-
-	if ((rightmostIndex < (int)trackerArray.size() - 1) &&
-			!trackerArray.at(rightmostIndex+1).empty()) {
-		rightmostIndex++;
-	}
-
-	if (!trackerArray.at(leftmostIndex-1).empty()) {
-		leftmostIndex--;
-	}
-
-	if (trackerArray.at(rightmostIndex).empty() && trackerArray.at(leftmostIndex).empty()) {
-		// shrink if no holes in extreme positions of both sides
-		leftmostIndex++;
-		rightmostIndex--;
-	}
-
-	if (trackerArray[rightmostIndex].empty() && trackerArray[leftmostIndex].empty()) {
-		// shrink if no holes in extreme positions of both sides
-		leftmostIndex++;
-		rightmostIndex--;
-	}
-
-	int holecount = rightmostIndex - leftmostIndex + 1;
-	if (m_warning && (holecount > 100)) {
-		std::cerr << "Warning hole count is quite large: " << holecount << std::endl;
-	}
-	if (holecount > 105) {
-		std::cerr << "Error: way too many hole rows on paper (can't handle organ rolls yet)" << endl;
-		exit(1);
-	}
-
-	// Rough guess for now on the mapping: placing the middle hole position on E4/F4 boundary
-	int F4split = int((rightmostIndex - leftmostIndex) / 2 + leftmostIndex + 0.5); // 0.5 needed?
-
+	// Initialize the MIDI-to-track mapping:
 	midiToTrackMapping.resize(128);
 	std::fill(midiToTrackMapping.begin(), midiToTrackMapping.end(), 0);
 
-	int adjustment = 64 - F4split;
-	adjustment -= 1;  // temporary fix for red Welte rolls.
-	for (int i=leftmostIndex; i<=rightmostIndex; i++) {
-		midiToTrackMapping.at(i + adjustment) = i;
+	// Assign MIDI key positions to the mapping, starting with
+	// the first position.
+	int count = m_treble_midi - m_bass_midi + 1;
+	for (int i=0; i<count; i++) {
+		midiToTrackMapping.at(i+m_bass_midi) = i+leftmostIndex;
 	}
 
-	int trackerholes = getMeasuredTrackerHoleCount();
-
-	if (trackerholes == 65) {
-		// re-map up a major second
-		for (ulongint i=127; i>2; i--) {
-			midiToTrackMapping[i] = midiToTrackMapping[i-2];
-		}
-	}
+	// int trackerholes = getMeasuredTrackerHoleCount();
 
 }
 
@@ -2231,7 +2187,7 @@ void RollImage::extractHole(ulongint row, ulongint col) {
 void RollImage::fillHoleSimple(ulongint r, ulongint c, int target, int type, int& counter) {
 	counter++;
 	if (counter > getMaxHoleCount()) {
-		cerr << "CLEARING TOO LARGE A HOLE!" << endl;
+		// cerr << "CLEARING TOO LARGE A HOLE!" << endl;
 		return;
 	}
 	if (r >= getRows()) {
@@ -2464,7 +2420,6 @@ void RollImage::getRawMargins(void) {
 			}
 		}
 	}
-
 
 	for (ulongint r=0; r<rows; r++) {
 		std::vector<ucharint>& rowdata = pixelType.at(r);
@@ -3712,13 +3667,14 @@ void RollImage::markTrackerPositions(bool showAll) {
 		endrow = getRows() - 1;
 	}
 
-	// int cutoff = midiToTrackMapping.at(65);
-	// temporary fix for red Welte: Lowest pitch of treble register (E4)
-	int cutoff = midiToTrackMapping.at(64);
-
 	int c;
 	int color;
 	int cols = getCols();
+	int firstbassexpcol    = realcolstart;
+	int firstbassnotecol   = firstbassexpcol + (m_bassNotesTrackStartNumberLeft - m_bassExpressionTrackStartNumberLeft);
+	int firsttreblenotecol = firstbassexpcol + (m_trebleNotesTrackStartNumberLeft - m_bassExpressionTrackStartNumberLeft);
+	int firsttrebleexpcol  = firstbassexpcol + (m_trebleExpressionTrackStartNumberLeft - m_bassExpressionTrackStartNumberLeft);
+
 	for (ulongint r=startrow; r<=endrow; r++) {
 		for (int i=colstart; i<=colend; i++) {
 			// Reverse drift correction to find horizontal position in image:
@@ -3729,19 +3685,17 @@ void RollImage::markTrackerPositions(bool showAll) {
 			if (c >= cols) {
 				continue;
 			}
-			if (i < cutoff) {
-				color = PIX_TRACKER_BASS;
+
+			if (i < firstbassnotecol) {
+				color = PIX_DEBUG7;  // used for expression (purple lines)
+			} else if (i < firsttreblenotecol) {
+				color =  PIX_TRACKER_BASS;  // used for bass notes (green lines)
+			} else if (i < firsttrebleexpcol) {
+				color = PIX_TRACKER_TREBLE;  // used for treble notes (cyan lines)
 			} else {
-				color = PIX_TRACKER_TREBLE;
+				color = PIX_DEBUG7;  // used for expression (purple lines)
 			}
-			if (i < realcolstart + 10) {
-				// expression tracks on the left (for red rolls only: need to generalize)
-				color = PIX_DEBUG7;
-			}
-			if (i > realcolend-10) {
-				// expression tracks on the right (for red rolls only: need to generalize)
-				color = PIX_DEBUG7;
-			}
+			
 			if ((i < realcolstart) || (i > realcolend)) {
 				color = PIX_DEBUG2;
 				if (i == realcolstart) {
@@ -4033,7 +3987,7 @@ void RollImage::sortTearsByArea(void) {
 int RollImage::getMeasuredTrackerHoleCount(void) {
 	int counter = 0;
 	for (ulongint i=0; i<midiToTrackMapping.size(); i++) {
-		if (midiToTrackMapping[i]) {
+		if (midiToTrackMapping[i] > 0) {
 			counter++;
 		}
 	}
@@ -4154,9 +4108,7 @@ void RollImage::generateHoleMidifile(MidiFile& midifile) {
 
 	assignMidiKeyNumbersToHoles();
 
-	// TPQ is 6 times the tempo (so 591 = 6 * 98.5)
-	// 591 is for Red Welte tempo of 98.5 (~3 meters/minute).
-	midifile.setTPQ(591);
+	setMidiFileTempo(midifile);
 
 	// Tracks are organized by real notes first, then expression tracks.
 	// This is so that the expression tracks can be easily thrown away
@@ -4250,16 +4202,38 @@ void RollImage::generateHoleMidifile(MidiFile& midifile) {
 	double timevalue = 1.0;
 	double tempo;
 	ulongint curtime = 0;
+	double increment = 0.0;
 	while (curtime < maxtime - mintime) {
-		tempo = 60 / timevalue;
+		tempo = 60 / timevalue + increment;
       midifile.addTempo(0, curtime, tempo);
 		curtime += 3600;
-		timevalue /= 1.0004;
+		increment += m_tempo_additive_acceleration_per_foot;
 	}
 
 	midifile.sortTracks();
 }
 #endif
+
+
+
+//////////////////////////////
+//
+// RollImage::setMidiFileTempo -- Set the tempo according to the 
+//    roll type.  This often requires metadata input, so it can be changed later.
+//
+
+void RollImage::setMidiFileTempo(MidiFile& midifile) {
+	if (m_rollType == "welte-red") {
+		// TPQ is 6 times the tempo at 300 DPI, (so 591 = 6 * 98.5)
+		// 591 is for Red Welte tempo of 98.5 (~3 meters/minute).
+		midifile.setTPQ(591);
+	} else if (m_rollType == "88-note") {
+		midifile.setTPQ(6 * 60); 
+	} else {
+		// set to a neutral guess tempo of 80 for now if unknown, this can be adjusted later.
+		midifile.setTPQ(6 * 80); 
+	}
+}
 
 
 
@@ -4288,9 +4262,7 @@ void RollImage::generateMidifile(MidiFile& midifile) {
 
 	assignMidiKeyNumbersToHoles();
 
-	// TPQ is 6 times the tempo (so 591 = 6 * 98.5)
-	// 591 is for Red Welte tempo of 98.5 (~3 meters/minute).
-	midifile.setTPQ(591);
+	setMidiFileTempo(midifile);
 
 	// These are the values to use for 300 dpi images:
 	// tempo 30 = 180
@@ -4321,26 +4293,62 @@ void RollImage::generateMidifile(MidiFile& midifile) {
 	// This is so that the expression tracks can be easily thrown away
 	// if needed; and otherwise, the first two tracks contain the real notes
 	// which makes things less confusing when viewing in sequencer software interface.
-	midifile.addTracks(4);
+	bool hasExpressionRegions = false;
+	if ((m_bassExpressionTrackStartNumberLeft > 0) || (m_trebleNotesTrackStartNumberLeft > 0)) {
+		hasExpressionRegions = true;
+	}
+
+	// Boolean to keep track of if there are regions of the MIDI range that need to be
+	// not sounding. True means the MIDI file has five tracks and uses four channels
+	bool hasExpressionMidiFile = false;
+	if (m_bass_exp_track != m_treble_exp_track) {
+		hasExpressionMidiFile = true;
+	}
+
+
+	if (hasExpressionMidiFile) {
+		midifile.addTracks(4);
+	} else {
+		midifile.addTracks(1);
+	}
+
+	// When there is expression on the roll, then these are thre MIDI tracks:
+	//
 	// track 0 = acceleration emulation (via tempo changes), and metadata
 	// track 1 = bass notes
 	// track 2 = treble notes
 	// track 3 = bass expression
 	// track 4 = treble expression
+	// 
+	// If there is no expression, then all notes are in Track 1
+	//
+	// track 0 = acceleration emulation (via tempo changes), and metadata
+	// track 1 = all notes
+	//
 
 	// The MIDI channels are from bass expression (left) to treble expression (right).
 	// MIDI channels (0 offset):
+	//
+	// When there is expression on the roll:
+	// 
 	// track 0 does not contain notes
 	// track 1 = channel 2
 	// track 2 = channel 3
 	// track 3 = channel 1
 	// track 4 = channel 4
+	// 
+	// When there is no expression on the roll:
+	// track 0 does not contain notes
+	// track 1 = channel 1
+	//
 
 	int tick = 0;
-	midifile.addController(m_bass_exp_track,   tick, m_bass_exp_ch,   7,  0); // mute bass expression holes
-	midifile.addController(m_treble_exp_track, tick, m_treble_exp_ch, 7,  0); // mute treble expression holes
-	midifile.addController(m_bass_track,       tick, m_bass_ch,      10, 32); // bass notes pan leftish
-	midifile.addController(m_treble_track,     tick, m_treble_ch,    10, 96); // treble notes pan rightish
+	if (hasExpressionMidiFile) {
+		midifile.addController(m_bass_exp_track,   tick, m_bass_exp_ch,   7,  0); // mute bass expression holes
+		midifile.addController(m_treble_exp_track, tick, m_treble_exp_ch, 7,  0); // mute treble expression holes
+		midifile.addController(m_bass_track,       tick, m_bass_ch,      10, 32); // bass notes pan leftish
+		midifile.addController(m_treble_track,     tick, m_treble_ch,    10, 96); // treble notes pan rightish
+	}
 
 	ulongint mintime = holes[0]->origin.first;
 	ulongint maxtime = 0;
@@ -4348,7 +4356,12 @@ void RollImage::generateMidifile(MidiFile& midifile) {
 	int track;
 	int key;
 	int channel;
+	int velocityquiet = 1;
+	int velocitynormal = 64;
 	int velocity;
+	if (!hasExpressionRegions) {
+		velocityquiet= 64;
+	}
 	for (ulongint i=0; i<holes.size(); i++) {
 		if (!holes[i]->attack) {
 			continue;
@@ -4356,27 +4369,34 @@ void RollImage::generateMidifile(MidiFile& midifile) {
 		HoleInfo* hi = holes[i];
 		key = hi->midikey;
 
-		// estimate the location of the expression tracks and the
-		// bass/treble register split (refine later):
-		if (key < m_bassNotesTrackStartMidi) { // Bass expression
-			track    = m_bass_exp_track;
-			channel  = m_bass_exp_ch;
-			velocity = 1; // very quiet, but channel volume will be set to 0
-		} else if (key < m_trebleNotesTrackStartMidi) { // Bass register
-			track    = m_bass_track;
-			channel  = m_bass_ch;
-			velocity = 64; // mf for now; will be refined by expression rendering later
-		} else if (key < m_trebleExpressionTrackStartMidi) {  // Treble register
-			track    = m_treble_track;
-			channel  = m_treble_ch;
-			velocity = 64;  // mf for now; will be refined by expression rendering later
-		} else { // Treble expression
-			track    = m_treble_exp_track;
-			channel  = m_treble_exp_ch;
-			velocity = 1; // very quiet, and channel volume will be set to 0
+		if (hasExpressionRegions) {
+			if (key < m_bassNotesTrackStartMidi) { // Bass expression
+				track    = m_bass_exp_track;
+				channel  = m_bass_exp_ch;
+				velocity = velocityquiet; // very quiet, but channel volume will be set to 0
+			} else if (key < m_trebleNotesTrackStartMidi) { // Bass register
+				track    = m_bass_track;
+				channel  = m_bass_ch;
+				velocity = velocitynormal; // mf for now; will be refined by expression rendering later
+			} else if (key < m_trebleExpressionTrackStartMidi) {  // Treble register
+				track    = m_treble_track;
+				channel  = m_treble_ch;
+				velocity = 64;  // mf for now; will be refined by expression rendering later
+			} else { // Treble expression
+				track    = m_treble_exp_track;
+				channel  = m_treble_exp_ch;
+				velocity = velocityquiet; // very quiet, and channel volume will be set to 0
+			}
+		} else {
+			// No expression, so use default values assuming a regular note.
+			track = m_bass_track;
+			channel = m_bass_ch;
+			velocity = velocitynormal;
 		}
+
 		midifile.addNoteOn(track, hi->origin.first - mintime, channel, hi->midikey, velocity);
 		midifile.addNoteOff(track, hi->offtime - mintime, channel, hi->midikey);
+
 		if (hi->offtime <= 0) {
 			cerr << "ERROR OFFTIME IS ZERO: " << hi->offtime << endl;
 		}
@@ -4388,15 +4408,16 @@ void RollImage::generateMidifile(MidiFile& midifile) {
 		}
 	}
 
-	// add tempo correction
+	// Add acceleration emulation:
 	double timevalue = 1.0;
 	double tempo;
 	ulongint curtime = 0;
+	double increment = 0.0;
 	while (curtime < maxtime - mintime) {
-		tempo = 60 / timevalue;
+		tempo = 60 / timevalue + increment;
       midifile.addTempo(0, curtime, tempo);
 		curtime += 3600;
-		timevalue /= 1.0004;
+		increment += m_tempo_additive_acceleration_per_foot;
 	}
 
 	midifile.sortTracks();
@@ -4959,7 +4980,7 @@ std::ostream& RollImage::printRollImageProperties(std::ostream& out) {
 	out << endl;
 
 	ss.str("");
-	out << "\n@BEGIN:\tHOLE_MIDIFILE:\n";
+	out << "\n@HOLE_MIDIFILE:\n";
 	generateHoleMidiFileBinasc(ss);
 	out << ss.str();
 	out << endl;

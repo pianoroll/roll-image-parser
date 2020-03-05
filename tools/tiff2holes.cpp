@@ -1,9 +1,9 @@
 //
 // Programmer:    Craig Stuart Sapp <craig@ccrma.stanford.edu>
 // Creation Date: Sun Nov 26 08:10:23 PST 2017
-// Last Modified: Mon Mar 25 21:59:07 PDT 2019
+// Last Modified: Thu Mar  5 09:56:35 PST 2020
 // Filename:      tiff2holes.cpp
-// Web Address:   
+// Web Address:
 // Syntax:        C++
 // vim:           ts=3:nowrap:ft=text
 //
@@ -17,6 +17,8 @@
 //     -a         Assume an Ampico [A] (older) piano roll, but option not yet active.
 //     -b         Assume an Ampico B (newer) piano roll, but option not yet active.
 //     -d         Assume a Duo-Art piano roll, but option not yet active.
+//     --65       Assume a 65-note Duo-art universal piano roll
+//     --88       Assume a 88-note roll
 //     -t         Set the paper/hole brightness boundary (from 0-255, with 249 being the default).
 //
 
@@ -38,6 +40,8 @@ int main(int argc, char** argv) {
 	options.define("a|ampico=b", "Assume Ampico [A] piano roll (option not active yet)");
 	options.define("b|ampico-b=b", "Assume Ampico B piano roll (option not active yet)");
 	options.define("d|duo-art=b", "Assume Aeolean Duo-Art piano roll (option not active yet)");
+	options.define("5|65|65-note|65-hole=b", "Assume 65-note roll");
+	options.define("8|88|88-note|88-hole=b", "Assume 88-note roll");
 	options.define("t|threshold=i:249", "Brightness threshold for hole/paper separation");
 	options.process(argc, argv);
 
@@ -53,19 +57,29 @@ int main(int argc, char** argv) {
 		exit(1);
 	}
 
+	if (options.getBoolean("red-welte")) {
+		roll.setRollTypeRedWelte();
+	} else if (options.getBoolean("green-welte")) {
+		roll.setRollTypeGreenWelte();
+	} else if (options.getBoolean("65-note")) {
+		roll.setRollType65Note();
+	} else if (options.getBoolean("88-note")) {
+		roll.setRollType88Note();
+	} else {
+		cerr << "A Roll type is required:" << endl;
+		cerr << "   -r   == for red Welte rolls"   << endl;
+		cerr << "   -g   == for green Welte rolls" << endl;
+		cerr << "   --65 == for 65-note rolls"     << endl;
+		cerr << "   --88 == for 88-note rolls"     << endl;
+		exit(1);
+	}
+
 	int threshold = options.getInteger("threshold");
 
 	roll.setDebugOn();
 	roll.setWarningOn();
 	roll.loadGreenChannel(threshold);
-	// if (options.getBoolean("red-welte")) {
-		roll.setRollTypeRedWelte();
-	// } else if (options.getBoolean("green-welte")) {
-	// 	roll.setRollTypeGreenWelte();
-	// }
-	
 	roll.analyze();
-	cerr << "DONE ANALYZING" << endl;
 	roll.printRollImageProperties();
 
 	return 0;
