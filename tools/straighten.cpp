@@ -182,7 +182,7 @@ bool getDriftAnalysis(vector<pair<int, double>>& driftAnalysis, const string& fi
 		return false;
 	}
 	string line;
-	bool founddriftsection = false;
+	// bool founddriftsection = false;
 
 	while (getline(datafile, line)) {
 		if (line.find("@@BEGIN:") == string::npos) {
@@ -191,7 +191,7 @@ bool getDriftAnalysis(vector<pair<int, double>>& driftAnalysis, const string& fi
 		if (line.find("DRIFT") == string::npos) {
 			continue;
 		}
-		founddriftsection = true;
+		// founddriftsection = true;
 		break;
 	}
 

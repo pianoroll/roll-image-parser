@@ -482,7 +482,7 @@ void RollImage::assignMidiKeyNumbersToHoles(void) {
 	vector<int> midiKey(trackerArray.size(), 0);
 	ulongint maxorigin = 0;
 	ulongint maxmidi   = 0;
-	ulongint maxindex  = 0;
+	//ulongint maxindex  = 0;
 
 	for (int i=0; i<(int)trackerArray.size(); i++) {
 		if (trackerArray[i].empty()) {
@@ -494,7 +494,7 @@ void RollImage::assignMidiKeyNumbersToHoles(void) {
 		if (firstHole[i] > maxorigin) {
 			maxorigin = firstHole[i];
 			maxmidi = trackerArray[i][0]->midikey;
-			maxindex = i;
+			// maxindex = i;
 		}
 	}
 
@@ -523,12 +523,12 @@ void RollImage::assignMidiKeyNumbersToHoles(void) {
 	// check up to +/- 2 tracker bar holes for the rewind hole.
 	vector<int> difference(5,0);
 	int newmaxi = targetindex;
-	int newmaxorigin = firstHole[newmaxi];
+	// int newmaxorigin = firstHole[newmaxi];
 
 	for (int i=targetindex-2; i<=targetindex+2; i++) {
 		if (firstHole[i] > firstHole[newmaxi]) {
 			newmaxi = i;
-			newmaxorigin = firstHole[i];
+			// newmaxorigin = firstHole[i];
 		}
 	}
 
@@ -1779,8 +1779,8 @@ void RollImage::analyzeShifts(void) {
 	std::vector<bool> stableRight(rows, true);
 	std::vector<double> fwidths(rows, 0.0);  // fast (now raw) width of paper
 	std::vector<double> swidths(rows, 0.0);  // slow width of paper
-	double sum = 0.0;
-	int counter = 0;
+	// double sum = 0.0;
+	// int counter = 0;
 	for (ulongint r=0; r<rows; r++) {
 		double fwidth = fastRight[r] - fastLeft[r];
 		// double fwidth = rightMarginIndex[r] - leftMarginIndex[r];
@@ -1792,8 +1792,8 @@ void RollImage::analyzeShifts(void) {
 		} else {
 			if (r > 10000) {
 				// don't look at leader
-				sum += swidth;
-				counter++;
+				// sum += swidth;
+				// counter++;
 			}
 		}
 	}
