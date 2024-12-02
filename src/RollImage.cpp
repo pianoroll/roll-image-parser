@@ -2608,6 +2608,17 @@ void RollImage::analyzeLeaders(void) {
 	// std::cerr << "botLeftAvg = "  << botLeftAvg << std::endl;
 	// std::cerr << "botRightAvg = " << botRightAvg << std::endl;
 
+	// as long as the left and right margins remain within a small
+	// threshold (5 pixels), assume that no roll leader is present.
+	double threshold = 5.0;
+	if ((fabs(topLeftAvg - botLeftAvg) < threshold) &&
+			(fabs(topRightAvg - botRightAvg) < threshold)) {
+		setLeaderIndex(0);
+		setPreleaderIndex(0);
+		m_analyzedLeaders = true;
+		return;
+	}
+
 	if ((topLeftAvg > botLeftAvg) && (topRightAvg < botRightAvg)) {
 		// do nothing, everything is as expected
 	} else if ((topLeftAvg < botLeftAvg) && (topRightAvg > botRightAvg)) {
